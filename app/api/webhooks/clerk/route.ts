@@ -8,6 +8,12 @@ import {
   parseUserLifecycleEvent,
 } from "@/lib/auth/user-lifecycle";
 import { env } from "@/lib/env";
+import { applyTenantLifecycleEvent } from "@/modules/tenant/application/org-lifecycle";
+import {
+  prismaBusinessRepository,
+  prismaMembershipRepository,
+} from "@/modules/tenant/infrastructure/prisma-repositories";
+import { parseTenantLifecycleEvent } from "@/modules/tenant/schemas/org-lifecycle.schema";
 
 export async function POST(req: NextRequest) {
   let event;
@@ -20,10 +26,10 @@ export async function POST(req: NextRequest) {
     return new Response("Verification failed", { status: 400 });
   }
 
-  let lifecycleEvent;
+  let userLifecycleEvent;
 
   try {
-    lifecycleEvent = parseUserLifecycleEvent(event);
+    userLifecycleEvent = parseUserLifecycleEvent(event);
   } catch (error) {
     if (error instanceof ZodError) {
       return new Response("Invalid payload", { status: 400 });
@@ -32,11 +38,34 @@ export async function POST(req: NextRequest) {
     throw error;
   }
 
-  if (!lifecycleEvent) {
+  if (userLifecycleEvent) {
+    await applyUserLifecycleEvent(prismaApplicationUserStore, userLifecycleEvent);
     return new Response("OK", { status: 200 });
   }
 
-  await applyUserLifecycleEvent(prismaApplicationUserStore, lifecycleEvent);
+  let tenantLifecycleEvent;
+
+  try {
+    tenantLifecycleEvent = parseTenantLifecycleEvent(event);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return new Response("Invalid payload", { status: 400 });
+    }
+
+    throw error;
+  }
+
+  if (tenantLifecycleEvent) {
+    await applyTenantLifecycleEvent(
+      {
+        userStore: prismaApplicationUserStore,
+        businessRepository: prismaBusinessRepository,
+        membershipRepository: prismaMembershipRepository,
+      },
+      tenantLifecycleEvent
+    );
+    return new Response("OK", { status: 200 });
+  }
 
   return new Response("OK", { status: 200 });
 }

@@ -87,9 +87,9 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Project setup         | Complete    |
 | Design system         | Complete    |
 | Authentication        | Complete    |
-| Business setup        | Not Started |
-| Multi-tenancy         | Not Started |
-| Database              | Not Started |
+| Business setup        | Complete    |
+| Multi-tenancy         | Complete    |
+| Database              | In Progress |
 | Customers             | Not Started |
 | Products              | Not Started |
 | Inventory             | Not Started |
@@ -113,6 +113,14 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 # Completed
 
+* Business / tenant setup — Clerk Organizations + application Business (`04-tenant-business-setup.md`):
+  * Prisma `Business` and `Membership` models with unique `clerkOrganizationId`; migration `20260819072015_add_business_and_membership`.
+  * `modules/tenant/` documents Clerk Organization ↔ Business mapping and the `tenantId` scoping pattern for future tables.
+  * Idempotent owner flow creates Clerk Organization + application Business + owner membership; compensates by deleting the Clerk Organization when Business persistence fails.
+  * `lib/tenant/` resolves tenant context from trusted Clerk session org + application membership, verifies live Clerk organization membership, and fails closed (`requireCurrentTenant`, `requireTenantForTrustedResource`).
+  * Verified webhook handlers for `organization.*` and `organizationMembership.*` (duplicate replay, out-of-order events, revocation-before-delivery).
+  * `/app/setup` business creation, `/app/settings` profile editor (owner/admin), `/app/settings/members` Clerk Organization invitations.
+  * Tenant isolation tests reject cross-tenant ID tampering; GSTIN and financial year persist on Business.
 * Authentication — Clerk (`03-authentication-clerk.md`):
   * Installed `@clerk/nextjs` and wrapped the App Router with `ClerkProvider`.
   * Added Next.js 16 `proxy.ts` with `clerkMiddleware()`, protecting application routes and keeping sign-in, sign-up, `/`, and the Clerk webhook public.
@@ -165,7 +173,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Next implementable spec:** `context/feature-specs/04-tenant-business-setup.md`
+**Next implementable spec:** `context/feature-specs/05-authorization.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 

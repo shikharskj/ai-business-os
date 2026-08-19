@@ -13,5 +13,80 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  ownedBusinesses Business[]   @relation("BusinessOwner")
+  memberships     Membership[]
+
   @@map("users")
+}
+
+enum BusinessType {
+  PROPRIETORSHIP
+  PARTNERSHIP
+  PRIVATE_LIMITED
+  LLP
+  OTHER
+}
+
+enum GstRegistrationStatus {
+  NOT_REGISTERED
+  REGISTERED
+  COMPOSITION
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  STAFF
+  ACCOUNTANT
+}
+
+enum MembershipStatus {
+  ACTIVE
+  REVOKED
+}
+
+model Business {
+  id                    String                @id @default(uuid())
+  clerkOrganizationId   String                @unique
+  name                  String
+  type                  BusinessType
+  ownerUserId           String
+  addressLine1          String
+  addressLine2          String?
+  city                  String
+  state                 String
+  postalCode            String
+  country               String                @default("IN")
+  phone                 String
+  email                 String
+  gstRegistrationStatus GstRegistrationStatus
+  gstin                 String?
+  financialYearStartMonth Int
+  timezone              String                @default("Asia/Kolkata")
+  currency              String                @default("INR")
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  owner       User         @relation("BusinessOwner", fields: [ownerUserId], references: [id])
+  memberships Membership[]
+
+  @@map("businesses")
+}
+
+model Membership {
+  id                            String           @id @default(uuid())
+  userId                        String
+  tenantId                      String
+  role                          MembershipRole
+  status                        MembershipStatus @default(ACTIVE)
+  clerkOrganizationMembershipId String?          @unique
+  createdAt                     DateTime         @default(now())
+  updatedAt                     DateTime         @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId, status])
+  @@map("memberships")
 }

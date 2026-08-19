@@ -21,7 +21,7 @@ Next numbered spec
 * Implement **one spec at a time**.
 * Do **not** skip a numbered dependency.
 * Do **not** implement later specs “while you are here.”
-* `01-design-system.md` is complete. `02-project-foundation.md` is complete. `03-authentication-clerk.md` is complete. Next implementable spec is `04-tenant-business-setup.md`.
+* `01-design-system.md` is complete. `02-project-foundation.md` is complete. `03-authentication-clerk.md` is complete. `04-tenant-business-setup.md` is complete. Next implementable spec is `05-authorization.md`.
 * Specs are implementation briefs. Architecture, UI, and coding rules live in the context files — follow those pointers instead of inventing behavior.
 * Do **not** silently reverse Accepted decisions in `context/progress-tracker.md`. Confirm any *new* open question with the project owner before choosing a vendor or expanding scope.
 
