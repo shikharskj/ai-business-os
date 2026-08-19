@@ -113,6 +113,17 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 # Completed
 
+* Application shell (`06-application-shell.md`):
+  * `components/shell/app-sidebar.tsx` — full sidebar nav with Dashboard, Sales (Invoices/Customers/Payments), Purchases (Suppliers/Bills/Payments), Inventory (Products/Stock), Expenses, Accounting, Reports, AI Assistant, Settings. Uses shadcn `Sidebar` primitives with `render` prop pattern. Current section highlighted, collapsible to icon mode.
+  * `components/shell/app-top-bar.tsx` — top bar with sidebar trigger, separator, content slot, and `UserButton`.
+  * `components/shell/page-header.tsx` — reusable page header with title, description, and actions slot.
+  * `components/shell/empty-state.tsx`, `error-state.tsx`, `loading-state.tsx`, `coming-soon.tsx` — reusable page states.
+  * `app/app/(workspace)/layout.tsx` — workspace layout with `SidebarProvider`, resolves tenant and redirects to `/app/setup` if missing.
+  * `app/app/(workspace)/loading.tsx` + `error.tsx` — workspace-level loading/error boundaries.
+  * Placeholder routes for all nav items render "Coming soon" empty states.
+  * Settings pages moved into `(workspace)` group, use `PageHeader` and `authorize()`.
+  * `/app/setup` remains outside workspace layout (no sidebar before business creation).
+
 * Authorization policy layer (`05-authorization.md`):
   * `lib/security/permissions.ts` — 23 capability-based permissions; role→permission map for OWNER, ADMIN, STAFF, ACCOUNTANT.
   * `lib/security/authorize.ts` — `authorize(permission)` resolves tenant + checks role permission, fails closed with `AuthorizationError`. `authorizeSync` variant for pre-resolved tenant contexts.
@@ -181,7 +192,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Next implementable spec:** `context/feature-specs/06-application-shell.md`
+**Next implementable spec:** `context/feature-specs/07-shared-kernel.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
