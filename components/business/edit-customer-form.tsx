@@ -22,7 +22,7 @@ export function EditCustomerForm({ customer }: { customer: Customer }) {
     <form action={formAction} className="flex flex-col gap-6">
       <input type="hidden" name="customerId" value={customer.id} />
       <CustomerFormFields
-        defaultValues={customer}
+        defaultValues={state.values ?? customer}
         fieldErrors={state.fieldErrors}
       />
       {state.error ? (

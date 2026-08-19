@@ -19,7 +19,10 @@ export function CreateCustomerForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
-      <CustomerFormFields fieldErrors={state.fieldErrors} />
+      <CustomerFormFields
+        defaultValues={state.values}
+        fieldErrors={state.fieldErrors}
+      />
       {state.error ? (
         <p className="text-sm text-destructive" role="alert">
           {state.error}

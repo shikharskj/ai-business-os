@@ -20,6 +20,19 @@ import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-par
 export type CustomerActionState = {
   error?: string;
   fieldErrors?: Record<string, string>;
+  values?: {
+    name?: string;
+    phone?: string;
+    email?: string;
+    billingAddressLine1?: string;
+    billingAddressLine2?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+    gstRegistrationStatus?: string;
+    gstin?: string;
+  };
 };
 
 const audit = createPrismaAuditRepository(prisma);
@@ -56,6 +69,20 @@ export async function createCustomerAction(
 ): Promise<CustomerActionState> {
   let customerId: string;
 
+  const submittedValues = {
+    name: String(formData.get("name") || ""),
+    phone: String(formData.get("phone") || ""),
+    email: String(formData.get("email") || ""),
+    billingAddressLine1: String(formData.get("billingAddressLine1") || ""),
+    billingAddressLine2: String(formData.get("billingAddressLine2") || ""),
+    city: String(formData.get("city") || ""),
+    state: String(formData.get("state") || ""),
+    postalCode: String(formData.get("postalCode") || ""),
+    country: String(formData.get("country") || "IN"),
+    gstRegistrationStatus: String(formData.get("gstRegistrationStatus") || "NOT_REGISTERED"),
+    gstin: String(formData.get("gstin") || ""),
+  };
+
   try {
     const tenant = await authorize("customer:create");
     const fields = readCustomerFields(formData);
@@ -70,13 +97,13 @@ export async function createCustomerAction(
     customerId = customer.id;
   } catch (error) {
     if (error instanceof ZodError) {
-      return { fieldErrors: formatZodErrors(error) };
+      return { fieldErrors: formatZodErrors(error), values: submittedValues };
     }
     if (error instanceof AuthorizationError) {
       return { error: "You don't have permission to create customers." };
     }
     if (error instanceof PartyError) {
-      return { error: error.message };
+      return { error: error.message, values: submittedValues };
     }
     throw error;
   }
@@ -90,6 +117,20 @@ export async function updateCustomerAction(
   formData: FormData
 ): Promise<CustomerActionState> {
   const customerId = String(formData.get("customerId") ?? "");
+
+  const submittedValues = {
+    name: String(formData.get("name") || ""),
+    phone: String(formData.get("phone") || ""),
+    email: String(formData.get("email") || ""),
+    billingAddressLine1: String(formData.get("billingAddressLine1") || ""),
+    billingAddressLine2: String(formData.get("billingAddressLine2") || ""),
+    city: String(formData.get("city") || ""),
+    state: String(formData.get("state") || ""),
+    postalCode: String(formData.get("postalCode") || ""),
+    country: String(formData.get("country") || "IN"),
+    gstRegistrationStatus: String(formData.get("gstRegistrationStatus") || "NOT_REGISTERED"),
+    gstin: String(formData.get("gstin") || ""),
+  };
 
   try {
     const tenant = await authorize("customer:update");
@@ -105,13 +146,13 @@ export async function updateCustomerAction(
     });
   } catch (error) {
     if (error instanceof ZodError) {
-      return { fieldErrors: formatZodErrors(error) };
+      return { fieldErrors: formatZodErrors(error), values: submittedValues };
     }
     if (error instanceof AuthorizationError) {
       return { error: "You don't have permission to update this customer." };
     }
     if (error instanceof PartyError) {
-      return { error: error.message };
+      return { error: error.message, values: submittedValues };
     }
     throw error;
   }
@@ -145,9 +186,7 @@ export async function deactivateCustomerAction(
     if (error instanceof PartyError) {
       return { error: error.message };
     }
-    return {
-      error:
-        error instanceof Error ? error.message : "Unable to deactivate customer.",
-    };
+    console.error("Unexpected error deactivating customer:", error);
+    throw error;
   }
 }

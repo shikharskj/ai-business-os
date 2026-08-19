@@ -143,6 +143,9 @@ describe("deactivateCustomer", () => {
     });
 
     expect(deactivated.status).toBe("INACTIVE");
+    expect(audit.records.map((record) => record.action)).toContain(
+      "customer.deactivated"
+    );
     expect(outbox.events.map((event) => event.eventType)).toContain(
       "CustomerDeactivated"
     );

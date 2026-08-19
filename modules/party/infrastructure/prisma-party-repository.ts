@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Prisma } from "@/generated/prisma/client";
+import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import type { Customer } from "@/modules/party/domain/types";
 import type {
@@ -51,9 +51,12 @@ function mapCustomer(record: {
   };
 }
 
-export const prismaPartyRepository: PartyRepository = {
+export function createPrismaPartyRepository(
+  client: Pick<PrismaClient, "party">
+): PartyRepository {
+  return {
   async createCustomer(input) {
-    const record = await prisma.party.create({
+    const record = await client.party.create({
       data: {
         tenantId: input.tenantId,
         kind: "CUSTOMER",
@@ -75,7 +78,7 @@ export const prismaPartyRepository: PartyRepository = {
   },
 
   async updateCustomer(input) {
-    const existing = await prisma.party.findFirst({
+    const existing = await client.party.findFirst({
       where: {
         id: input.customerId,
         tenantId: input.tenantId,
@@ -86,7 +89,7 @@ export const prismaPartyRepository: PartyRepository = {
       return null;
     }
 
-    const record = await prisma.party.update({
+    const record = await client.party.update({
       where: { id: existing.id },
       data: {
         name: input.fields.name,
@@ -106,7 +109,7 @@ export const prismaPartyRepository: PartyRepository = {
   },
 
   async findCustomerById(tenantId, customerId) {
-    const record = await prisma.party.findFirst({
+    const record = await client.party.findFirst({
       where: { id: customerId, tenantId, kind: "CUSTOMER" },
     });
     return record ? mapCustomer(record) : null;
@@ -135,7 +138,7 @@ export const prismaPartyRepository: PartyRepository = {
         : {}),
     };
 
-    const records = await prisma.party.findMany({
+    const records = await client.party.findMany({
       where,
       orderBy: { name: "asc" },
     });
@@ -143,17 +146,30 @@ export const prismaPartyRepository: PartyRepository = {
   },
 
   async deactivateCustomer(tenantId, customerId) {
-    const existing = await prisma.party.findFirst({
-      where: { id: customerId, tenantId, kind: "CUSTOMER" },
-    });
-    if (!existing) {
+    try {
+      const record = await client.party.updateMany({
+        where: {
+          id: customerId,
+          tenantId,
+          kind: "CUSTOMER",
+          status: "ACTIVE",
+        },
+        data: { status: "INACTIVE" },
+      });
+
+      if (record.count === 0) {
+        return null;
+      }
+
+      const updated = await client.party.findFirst({
+        where: { id: customerId, tenantId, kind: "CUSTOMER" },
+      });
+      return updated ? mapCustomer(updated) : null;
+    } catch {
       return null;
     }
-
-    const record = await prisma.party.update({
-      where: { id: existing.id },
-      data: { status: "INACTIVE" },
-    });
-    return mapCustomer(record);
   },
-};
+  };
+}
+
+export const prismaPartyRepository = createPrismaPartyRepository(prisma);

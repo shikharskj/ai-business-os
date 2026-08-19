@@ -33,10 +33,13 @@ export default async function CustomersPage({
 }) {
   const tenant = await authorize("customer:read");
   const params = await searchParams;
-  const filters = customerSearchSchema.parse({
+  const parseResult = customerSearchSchema.safeParse({
     q: params.q,
     status: params.status,
   });
+  const filters = parseResult.success
+    ? parseResult.data
+    : { q: "", status: "ACTIVE" as const };
   const canCreate = roleHasPermission(tenant.membership.role, "customer:create");
   const customers = await listCustomers({
     tenantId: tenant.tenantId,
@@ -97,14 +100,14 @@ export default async function CustomersPage({
       {customers.length === 0 ? (
         <EmptyState
           icon={Users}
-          title={filters.q ? "No matching customers" : "No customers yet"}
+          title={filters.q || filters.status !== "ACTIVE" ? "No matching customers" : "No customers yet"}
           description={
-            filters.q
+            filters.q || filters.status !== "ACTIVE"
               ? "Try a different name, phone, email, or GSTIN."
               : "Add your first customer to start tracking sales and outstanding balances."
           }
           action={
-            canCreate ? (
+            canCreate && !filters.q && filters.status === "ACTIVE" ? (
               <Button
                 nativeButton={false}
                 render={<Link href="/app/sales/customers/new" />}

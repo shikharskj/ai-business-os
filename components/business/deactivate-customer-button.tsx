@@ -31,6 +31,7 @@ export function DeactivateCustomerButton({
           }
 
           startTransition(async () => {
+            setError(null);
             const result = await deactivateCustomerAction(customerId);
             if (result.error) {
               setError(result.error);

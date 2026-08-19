@@ -124,7 +124,7 @@ export function CustomerFormFields({
           </Field>
           <Field label="State" name="state" fieldErrors={fieldErrors}>
             <Select name="state" defaultValue={defaultValues?.state ?? ""}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="state" className="w-full">
                 <SelectValue placeholder="Select state" />
               </SelectTrigger>
               <SelectContent>
@@ -160,7 +160,7 @@ export function CustomerFormFields({
             name="gstRegistrationStatus"
             defaultValue={defaultValues?.gstRegistrationStatus ?? "NOT_REGISTERED"}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger id="gstRegistrationStatus" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
