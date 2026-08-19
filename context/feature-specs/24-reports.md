@@ -41,7 +41,11 @@ We're adding MVP reports that read authoritative business and accounting data: s
 
 ### Open questions
 
-None beyond existing GST/accounting convention questions — do not expand report packs without confirmation.
+None remaining.
+
+**Decided:** GST-ready summaries (spec `22`) and simple double-entry ledger/TB (spec `21`). Do not expand into filing packs or statutory auditor reports.
+
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

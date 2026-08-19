@@ -43,9 +43,11 @@ We're adding the accounting workspace UI and period handling on top of the posti
 
 ### Open questions
 
-- Which Indian accounting conventions should be implemented in the first release? Confirm before adding statutory reports beyond TB/ledger.
+None remaining.
 
-See `context/progress-tracker.md` → Open Questions.
+**Decided:** accounting is **simple Indian double-entry**. This spec is ledger, trial balance, period close, and reversals — not statutory reports beyond TB/ledger.
+
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

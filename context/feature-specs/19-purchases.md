@@ -48,7 +48,7 @@ We're adding purchase/supplier bills: supplier, lines, tax, totals, inventory in
 
 ### Open questions
 
-GST/accounting convention questions remain; use modules from specs `08` and `09`.
+GST/accounting conventions are decided (GST-ready + simple Indian double-entry). Use modules from specs `08` and `09`. Do not add filing or statutory packs.
 
 ### Check when done
 

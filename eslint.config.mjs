@@ -5,9 +5,34 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  // Override default ignores of eslint-config-next.
+  {
+    files: ["modules/**/*.{js,jsx,ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@clerk/nextjs",
+              message:
+                "Domain modules must not import Clerk. Use lib/auth instead.",
+            },
+            {
+              name: "@clerk/nextjs/server",
+              message:
+                "Domain modules must not import Clerk. Use lib/auth instead.",
+            },
+            {
+              name: "@clerk/nextjs/webhooks",
+              message:
+                "Domain modules must not import Clerk. Use lib/auth instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   globalIgnores([
-    // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",

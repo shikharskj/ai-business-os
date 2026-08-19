@@ -36,7 +36,7 @@ We're adding Clerk as the sole authentication provider: sign-up, sign-in, sign-o
 - Add Auth.js, Better Auth, NextAuth, Supabase Auth, Firebase Auth, custom JWT/session cookies, or a second auth provider.
 - Treat frontend signed-in state as authorization.
 - Accept a client-supplied `userId` instead of Clerk server identity.
-- Use Clerk Organizations as the business/tenant model (see spec `04`).
+- Map Clerk Organizations to application Business/membership in this spec (that is spec `04`).
 - Put Clerk types or SDK calls inside domain modules.
 - Hard-code secrets.
 
@@ -49,13 +49,11 @@ We're adding Clerk as the sole authentication provider: sign-up, sign-in, sign-o
 
 ### Open questions
 
-None for the auth provider (Clerk is already accepted).
+None remaining.
 
-Do **not** silently resolve related items; confirm with the project owner if they come up:
+**Decided:** Clerk Organizations **will** be the tenant/workspace boundary. This spec still covers Clerk **user** identity, sessions, and application-user mapping only. Organization → Business mapping is spec `04`.
 
-- Should Clerk Organizations be used for multi-user business/workspace membership, or should the MVP use an application-level Business membership model backed by Clerk user identity? *(this spec: Clerk identity only; membership is spec `04`)*
-
-See `context/progress-tracker.md` → Open Questions.
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

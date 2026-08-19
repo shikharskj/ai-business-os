@@ -32,7 +32,7 @@ We're adding the automated test suites required by the tracker: unit, integratio
   - expense → accounting/report
   - AI question → verified business answer
   - sign out → protected resources inaccessible
-- CI runs unit/integration always; E2E on CI with documented env (Clerk test instance, local Postgres).
+- CI runs unit/integration always; E2E on CI with documented env (Clerk test instance, Postgres — local in CI, **Neon** for hosted/production-like runs).
 
 ### Do not
 
@@ -49,7 +49,11 @@ We're adding the automated test suites required by the tracker: unit, integratio
 
 ### Open questions
 
-CI against hosted Postgres/Clerk will need credentials — do not commit secrets. Confirm providers with the owner when wiring production-like CI.
+None remaining for vendor choice.
+
+**Decided:** hosted PostgreSQL is **Neon**; AI is **OpenAI**. CI against hosted Postgres/Clerk still needs credentials — do not commit secrets.
+
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

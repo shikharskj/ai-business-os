@@ -42,9 +42,11 @@ We're adding GST-oriented summaries and exportable data from stored tax breakdow
 
 ### Open questions
 
-- How much GST functionality belongs in the MVP versus a later release? Confirm before adding filing formats.
+None remaining.
 
-See `context/progress-tracker.md` → Open Questions.
+**Decided:** GST depth is **GST-ready, not a GST-filing platform**. Summaries and export only — no GSTR JSON, e-invoice, or e-way-bill.
+
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

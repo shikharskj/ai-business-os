@@ -8,21 +8,21 @@
 | UI                               | **Tailwind CSS + shadcn/ui**                                        | Consistent, responsive, accessible business application UI                                              |
 | Client State                     | **Zustand**                                                         | Local UI state and lightweight client-side state; server state remains server/API driven                |
 | Forms                            | **React Hook Form + Zod**                                           | Form management, validation, and shared client/server schemas                                           |
-| Authentication                   | **Clerk**                                                           | User authentication, sign-in/sign-up, sessions, identity, user management, and authentication state     |
+| Authentication                   | **Clerk**                                                           | User authentication, sign-in/sign-up, sessions, identity, **Organizations as the tenant/workspace boundary**, and authentication state |
 | Authentication SDK               | **`@clerk/nextjs`**                                                 | Official Clerk integration with Next.js                                                                 |
 | Authentication Development Skill | **Clerk/Cursor Skill**                                              | Authoritative implementation guidance for Clerk authentication tasks inside the AI development workflow |
 | Authorization                    | **Application RBAC + Policy Layer**                                 | Tenant isolation, roles, permissions, resource-level access, and action authorization                   |
 | Backend                          | **Next.js Server Actions + Route Handlers**                         | Application/API boundary and orchestration                                                              |
 | Architecture                     | **Modular Monolith**                                                | Keep all core business domains in one deployable application while enforcing strong module boundaries   |
-| Database                         | **PostgreSQL**                                                      | Primary source of truth for business, transactional, accounting, and relational data                    |
+| Database                         | **PostgreSQL (Neon in production; local in development)**           | Primary source of truth for business, transactional, accounting, and relational data                    |
 | ORM                              | **Prisma**                                                          | Type-safe database access, migrations, and persistence mapping                                          |
 | Validation                       | **Zod**                                                             | Runtime validation at API, form, integration, and AI-tool boundaries                                    |
 | Accounting                       | **Domain-specific double-entry ledger**                             | Financial transaction recording, journals, ledger, and accounting invariants                            |
 | Background Jobs                  | **PostgreSQL-backed job queue / worker**                            | Async processing, reminders, report generation, document processing, and scheduled tasks                |
-| File Storage                     | **S3-compatible object storage**                                    | Invoices, receipts, attachments, and business documents                                                 |
+| File Storage                     | **Cloudflare R2 (S3-compatible)**                                   | Invoices, receipts, attachments, and business documents                                                 |
 | Search                           | **PostgreSQL Full-Text Search + indexed queries**                   | Global business search for MVP without introducing unnecessary infrastructure                           |
 | Cache                            | **Optional Redis**                                                  | Caching, rate limiting, short-lived state, and distributed coordination when required                   |
-| AI Gateway                       | **Provider-agnostic AI service layer**                              | Centralized model access, prompts, tool calling, usage tracking, and provider abstraction               |
+| AI Gateway                       | **Provider-agnostic AI service layer (OpenAI initially)**           | Centralized model access, prompts, tool calling, usage tracking, and provider abstraction               |
 | AI Tools                         | **Typed business tools**                                            | Safe interface through which AI can query or mutate business data                                       |
 | AI Knowledge                     | **PostgreSQL + embeddings/vector capability when required**         | Retrieval of business documents and contextual knowledge                                                |
 | Events                           | **Domain Events + Outbox Pattern**                                  | Reliable propagation of business events to async consumers                                              |
@@ -31,7 +31,7 @@
 | Observability                    | **Structured logging + OpenTelemetry-compatible tracing + metrics** | Production debugging, monitoring, and performance visibility                                            |
 | Testing                          | **Vitest + React Testing Library + Playwright**                     | Unit, component, integration, and end-to-end verification                                               |
 | API Contracts                    | **Typed schemas + OpenAPI where needed**                            | Stable contracts for internal/external API consumers                                                    |
-| Deployment                       | **Docker + managed PostgreSQL + cloud deployment**                  | Reproducible production deployment                                                                      |
+| Deployment                       | **Docker + Neon PostgreSQL + cloud deployment**                     | Reproducible production deployment                                                                      |
 | CI/CD                            | **GitHub Actions**                                                  | Automated validation, testing, builds, migrations, and deployment                                       |
 | Configuration                    | **Environment variables + typed configuration**                     | Environment-specific configuration without hardcoding secrets                                           |
 
@@ -258,9 +258,9 @@ Clerk User
      ▼
 Application User
      │
-     │ membership
+     │ Clerk Organization + membership
      ▼
-Business / Tenant
+Business / Tenant  (clerkOrganizationId)
      │
      ▼
 Business Resources
@@ -410,6 +410,10 @@ tenantId
 Tenant identity must be resolved from trusted authenticated server context.
 
 The application must never trust an arbitrary client-provided `tenantId` as proof of ownership.
+
+**Clerk Organizations** are the tenant/workspace identity boundary. Each application Business stores a unique `clerkOrganizationId`. Clerk owns organization membership at the identity layer; the application Business remains the owner of GSTIN, financial year, and all business data. Multi-user membership is in scope from foundation — do not implement owner-only tenancy.
+
+Never trust a client-supplied Clerk `orgId` as the sole authorization check. Resolve Organization → Business → Membership on the server.
 
 ---
 
@@ -1763,6 +1767,16 @@ Clerk provides:
 * Security infrastructure.
 
 Application authorization remains owned by the application.
+
+---
+
+## ADR-001a — Clerk Organizations Are the Workspace Boundary
+
+**Status:** Accepted
+
+Clerk Organizations are the tenant/workspace identity. Application Business records map 1:1 via `clerkOrganizationId`. Multi-user membership is in scope from foundation.
+
+Clerk Organizations do **not** replace application Business data, GSTIN, financial year, or application RBAC.
 
 ---
 
