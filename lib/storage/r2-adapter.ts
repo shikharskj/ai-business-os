@@ -4,7 +4,6 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import { NodeHttpHandler } from "@smithy/node-http-handler";
 
 import { assertSafeStorageKey } from "@/lib/storage/keys";
 import {
@@ -41,12 +40,12 @@ export function createR2StorageAdapter(options: {
       accessKeyId: options.accessKeyId,
       secretAccessKey: options.secretAccessKey,
     },
-    requestHandler: new NodeHttpHandler({
-      connectionTimeout: 30000,
-      socketTimeout: 30000,
-    }),
-    requestTimeout: 60000,
-    throwOnRequestTimeout: true,
+    requestHandler: {
+      connectionTimeout: 30_000,
+      socketTimeout: 30_000,
+      requestTimeout: 60_000,
+      throwOnRequestTimeout: true,
+    },
   });
 
   return {
