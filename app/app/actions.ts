@@ -9,15 +9,15 @@ import { requireCurrentUser } from "@/lib/auth/current-user";
 import {
   clerkInvitationGateway,
   clerkOrganizationGateway,
-  requireBusinessSettingsAccess,
-  requireCurrentTenant,
   requireTenantForTrustedResource,
 } from "@/lib/tenant";
+import { authorize, AuthorizationError } from "@/lib/security";
 import {
   createBusinessWithOrganization,
   inviteOrganizationMember,
   updateBusinessProfile,
 } from "@/modules/tenant";
+import { assignMemberRole } from "@/modules/tenant/application/assign-role";
 import {
   businessProfileInputSchema,
   inviteMemberInputSchema,
@@ -108,7 +108,7 @@ export async function updateBusinessProfileAction(
   _prevState: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const tenant = await requireBusinessSettingsAccess();
+  const tenant = await authorize("settings:update");
 
   let profile;
 
@@ -163,7 +163,7 @@ export async function inviteMemberAction(
   formData: FormData
 ): Promise<ActionState> {
   const user = await requireCurrentUser();
-  const tenant = await requireBusinessSettingsAccess();
+  const tenant = await authorize("settings:update");
 
   let invite;
 
@@ -201,4 +201,42 @@ export async function inviteMemberAction(
 
 export async function assertTenantAccessAction(clientTenantId: string) {
   await requireTenantForTrustedResource({ tenantId: clientTenantId });
+}
+
+export async function assignMemberRoleAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const tenant = await authorize("settings:role:assign");
+
+  const targetUserId = formData.get("targetUserId");
+  const newRole = formData.get("role");
+
+  if (typeof targetUserId !== "string" || !targetUserId) {
+    return { error: "Target user is required" };
+  }
+
+  if (
+    typeof newRole !== "string" ||
+    !["ADMIN", "STAFF", "ACCOUNTANT"].includes(newRole)
+  ) {
+    return { error: "Invalid role" };
+  }
+
+  try {
+    await assignMemberRole({
+      targetUserId,
+      tenantId: tenant.tenantId,
+      newRole: newRole as "ADMIN" | "STAFF" | "ACCOUNTANT",
+      membershipRepository: prismaMembershipRepository,
+    });
+
+    revalidatePath("/app/settings/members");
+    return {};
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Unable to assign role",
+    };
+  }
 }

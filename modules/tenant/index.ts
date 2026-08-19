@@ -39,3 +39,7 @@ export {
   type BusinessRepository,
   type MembershipRepository,
 } from "@/modules/tenant/infrastructure/repositories";
+export {
+  assignMemberRole,
+  RoleAssignmentError,
+} from "@/modules/tenant/application/assign-role";

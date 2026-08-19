@@ -113,6 +113,14 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 # Completed
 
+* Authorization policy layer (`05-authorization.md`):
+  * `lib/security/permissions.ts` — 23 capability-based permissions; role→permission map for OWNER, ADMIN, STAFF, ACCOUNTANT.
+  * `lib/security/authorize.ts` — `authorize(permission)` resolves tenant + checks role permission, fails closed with `AuthorizationError`. `authorizeSync` variant for pre-resolved tenant contexts.
+  * `modules/tenant/application/assign-role.ts` — `assignMemberRole` use case; blocks OWNER reassignment, only allows ADMIN/STAFF/ACCOUNTANT as assignable targets.
+  * Existing server actions (`updateBusinessProfileAction`, `inviteMemberAction`) and settings pages migrated from ad-hoc `requireBusinessSettingsAccess` to `authorize("settings:update")`.
+  * New `assignMemberRoleAction` gated by `authorize("settings:role:assign")` (OWNER-only).
+  * 14 unit tests: permission matrix for all 4 roles, OWNER superset invariant, authorize allow/deny, role assignment happy path + edge cases.
+
 * Business / tenant setup — Clerk Organizations + application Business (`04-tenant-business-setup.md`):
   * Prisma `Business` and `Membership` models with unique `clerkOrganizationId`; migration `20260819072015_add_business_and_membership`.
   * `modules/tenant/` documents Clerk Organization ↔ Business mapping and the `tenantId` scoping pattern for future tables.
@@ -173,7 +181,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Next implementable spec:** `context/feature-specs/05-authorization.md`
+**Next implementable spec:** `context/feature-specs/06-application-shell.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 

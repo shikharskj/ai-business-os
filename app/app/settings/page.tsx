@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { EditBusinessProfileForm } from "@/components/business/edit-business-profile-form";
 import { Button } from "@/components/ui/button";
-import { requireBusinessSettingsAccess } from "@/lib/tenant";
+import { authorize } from "@/lib/security";
 
 export default async function BusinessSettingsPage({
   searchParams,
@@ -13,7 +13,7 @@ export default async function BusinessSettingsPage({
   let tenant;
 
   try {
-    tenant = await requireBusinessSettingsAccess();
+    tenant = await authorize("settings:update");
   } catch {
     redirect("/app/setup");
   }
