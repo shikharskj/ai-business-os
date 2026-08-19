@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDevLogChunk, formatDevLogLine } from "@/lib/observability/format-dev-output";
+import { formatDevLogChunk, formatDevLogLine, flushPending } from "@/lib/observability/format-dev-output";
 
 describe("formatDevLogLine", () => {
   it("formats Next.js request logs as a single colored line with a blank line after", () => {
@@ -55,5 +55,14 @@ describe("formatDevLogChunk", () => {
     expect(second.output).toContain("\u001B[36mGET   \u001B[0m");
     expect(second.output).toContain("/app");
     expect(second.pending).toBe("");
+  });
+});
+
+describe("flushPending", () => {
+  it("formats leftover buffered text on shutdown", () => {
+    expect(flushPending(" GET /app/sales/customers 200 in 10ms")).toContain(
+      "\u001B[36mGET   \u001B[0m",
+    );
+    expect(flushPending("")).toBe("");
   });
 });

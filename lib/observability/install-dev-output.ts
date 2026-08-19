@@ -1,8 +1,32 @@
-import { formatDevLogChunk } from "@/lib/observability/format-dev-output";
+import { formatDevLogChunk, flushPending } from "@/lib/observability/format-dev-output";
 
 let pendingStdout = "";
 let pendingStderr = "";
 let installed = false;
+
+function forwardEnd(
+  originalEnd: NodeJS.WriteStream["end"],
+  chunk?: string | Uint8Array | (() => void),
+  encoding?: BufferEncoding | (() => void),
+  callback?: () => void,
+) {
+  if (typeof chunk === "function") {
+    return originalEnd(chunk);
+  }
+  if (chunk === undefined) {
+    if (typeof encoding === "function") {
+      return originalEnd(encoding);
+    }
+    return originalEnd(callback);
+  }
+  if (typeof encoding === "function") {
+    return originalEnd(chunk, encoding);
+  }
+  if (typeof chunk === "string" && typeof encoding === "string") {
+    return originalEnd(chunk, encoding, callback);
+  }
+  return originalEnd(chunk, callback);
+}
 
 function wrapStream(
   stream: NodeJS.WriteStream,
@@ -10,6 +34,7 @@ function wrapStream(
   setPending: (value: string) => void
 ) {
   const originalWrite = stream.write.bind(stream);
+  const originalEnd = stream.end.bind(stream);
 
   stream.write = ((
     chunk: string | Uint8Array,
@@ -26,11 +51,29 @@ function wrapStream(
     const { output, pending } = formatDevLogChunk(chunk, getPending());
     setPending(pending);
     if (output.length === 0) {
-      done?.(null);
+      if (done) {
+        process.nextTick(done, null);
+      }
       return true;
     }
     return originalWrite(output, enc, done);
   }) as typeof stream.write;
+
+  stream.end = ((
+    chunk?: string | Uint8Array | (() => void),
+    encoding?: BufferEncoding | (() => void),
+    callback?: () => void
+  ) => {
+    const pending = getPending();
+    if (pending.length > 0) {
+      const flushed = flushPending(pending);
+      setPending("");
+      if (flushed.length > 0) {
+        originalWrite(flushed);
+      }
+    }
+    return forwardEnd(originalEnd, chunk, encoding, callback);
+  }) as typeof stream.end;
 }
 
 export function installDevOutputFormatting() {

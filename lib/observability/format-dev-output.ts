@@ -118,3 +118,10 @@ export function formatDevLogChunk(chunk: string, pending: string): {
   const output = parts.map((line) => formatDevLogLine(`${line}\n`)).join("");
   return { output, pending: nextPending };
 }
+
+export function flushPending(pending: string): string {
+  if (pending.length === 0) {
+    return "";
+  }
+  return formatDevLogLine(`${pending}\n`);
+}
