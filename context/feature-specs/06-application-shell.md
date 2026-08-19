@@ -65,7 +65,7 @@ Placeholder nav items that are not yet implemented must not pretend the feature 
 
 ### Check when done
 
-- Authenticated member with a business sees the workspace shell.
+- Authenticated application member with an active application Membership on a Business sees the workspace shell. Clerk Organization membership alone is insufficient.
 - Current section is highlighted.
 - Unauthenticated users never see the shell.
 - Mobile navigation works via drawer/sheet.

@@ -30,6 +30,12 @@ We're adding the server-side authorization/policy layer so every business operat
   - plus matching customer, supplier, product, and settings permissions needed by later specs
 - Roles as a convenience layer: define `OWNER`, `ADMIN`, `STAFF`, `ACCOUNTANT`.
 - Implement **OWNER**, **ADMIN**, **STAFF**, and **ACCOUNTANT** with explicit permission sets. Multi-user is in scope from foundation (spec `04`). OWNER has all MVP permissions.
+- Normative MVP permission sets (OWNER includes every permission below):
+  - **ADMIN**: full operational access including customers, suppliers, products, and business settings; no role assignment or tenant ownership transfer.
+  - **STAFF**: customer create/read/update; supplier and product read; operational create/read permissions defined in later specs; no accounting post, settings write, or role changes.
+  - **ACCOUNTANT**: operational read access, `accounting:post`, and `report:read`; no settings write or role changes.
+  - Explicit permissions for customers, suppliers, products, and settings (for example `customer:create`, `customer:read`, `customer:update`, `supplier:*`, `product:*`, `settings:read`, `settings:update`, `settings:role:assign`).
+- Role state is persisted on application Membership, not inferred from Clerk Organization membership alone. Only OWNER and ADMIN may change roles, gated by server-side `settings:role:assign`.
 - Server-side `authorize(user, tenant, permission)` that fails closed.
 - UI may hide actions the user cannot perform, but that is not the security boundary.
 - Basic member role assignment for users already in the Clerk Organization / application Membership (full invite UX may live in spec `04`; this spec owns the policy).
@@ -58,7 +64,8 @@ See `context/progress-tracker.md` → Architecture Decisions.
 ### Check when done
 
 - OWNER can pass policy checks for defined permissions; ADMIN/STAFF/ACCOUNTANT match their defined subsets.
-- Missing membership or unknown permission fails closed.
+- Missing membership, unknown permission, or unauthorized role change fails closed.
+- Allow/deny tests cover OWNER, ADMIN, STAFF, ACCOUNTANT, and role-change attempts.
 - Use cases that exist today (business profile) go through the policy helper, not UI-only checks.
 - Unit tests cover allow/deny for OWNER, a non-owner role, and unauthenticated/no-membership cases.
 - Production build succeeds.

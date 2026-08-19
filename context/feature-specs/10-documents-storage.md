@@ -20,7 +20,7 @@ We're adding document metadata and a storage adapter so later expenses, invoices
 ### Scope
 
 - `lib/storage/` adapter interface: upload, download, delete, content-type, size limits.
-- Local/dev implementation (filesystem or equivalent). Production adapter is **Cloudflare R2** (S3-compatible) behind the same interface. This spec may document R2 env vars and implement the R2 adapter, or leave R2 wiring to spec `30` if only the interface + local adapter land here — prefer implementing the R2 adapter behind feature flags/env so production is not a rewrite.
+- Local/dev implementation (filesystem or equivalent). Production adapter is **Cloudflare R2** (S3-compatible) behind the same interface. Production adapter selection fails closed: missing or invalid R2 configuration must reject startup or adapter initialization — never silently fall back to local/filesystem storage. Local storage is only for explicitly configured local/dev environments, enforced by adapter selection plus env/feature-flag validation. This spec may document R2 env vars and implement the R2 adapter, or leave R2 wiring to spec `30` if only the interface + local adapter land here — prefer implementing the R2 adapter behind feature flags/env so production is not a rewrite.
 - `modules/documents/`: tenant-scoped metadata (owner record type/id, filename, content type, size, storage key, uploaded by, timestamps).
 - Authorization on upload/view/download. Documents are untrusted input — validate type/size; never execute uploaded content.
 - Use existing Attachment UI primitive for display where needed; do not modify `components/ui/*`.

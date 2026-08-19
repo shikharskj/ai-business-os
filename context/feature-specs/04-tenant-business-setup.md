@@ -23,14 +23,14 @@ We're adding the application Business/tenant that owns all business data, mapped
 
 - `modules/tenant/` with Prisma models for Business and Membership.
 - Clerk Organizations are the tenant/workspace boundary. Persist an explicit mapping: Clerk Organization id → application Business (`clerkOrganizationId` unique). Document the mapping in the tenant module.
-- After sign-in, a user with no organization/business can create one. Creation must create (or attach) a Clerk Organization and the application Business in one owner flow.
+- After sign-in, a user with no organization/business can create one. Creation must create (or attach) a Clerk Organization and the application Business in one owner flow. Retries must be idempotent, enforce unique `clerkOrganizationId`, compensate partial failures (Clerk Organization created without Business, or the reverse), and reconcile unrecoverable inconsistencies. On attach, validate the authenticated actor's Clerk Organization role on the server before linking to a Business.
 - Minimum business fields: name, type, owner, address, phone, email, GST registration status, GSTIN where applicable, financial year, timezone, currency.
 - Membership: authenticated Clerk user mapped to application user + membership on the created business. Use Clerk Organization membership as the workspace membership source; keep application Membership for roles used by spec `05`.
 - Support multiple members per business from this foundation (invite / add member using Clerk Organization invitation or equivalent official Clerk flow). Do not ship an owner-only model.
 - Tenant identity resolved only from trusted server auth context (Clerk Organization + application membership). Never trust a client-supplied `tenantId` or `orgId` as proof of ownership.
-- Helpers to require current tenant and fail closed if the user has no membership.
+- Helpers to require current tenant and fail closed if the user has no application membership, the trusted Clerk organization-membership check fails, or synchronized membership state is stale or unavailable. Do not rely on `organizationMembership.deleted` webhook delivery as the sole revocation signal.
 - Settings UI to view/edit the business profile (owner/admin for this spec; finer roles in spec `05`).
-- Verified, idempotent webhooks for relevant Organization / organizationMembership lifecycle events, in addition to the user mapping from spec `03`.
+- Verified, idempotent webhooks for relevant Organization / organizationMembership lifecycle events, in addition to the user mapping from spec `03`. Processing must tolerate duplicate and out-of-order events. Tests must cover revocation before webhook delivery, duplicate replay, out-of-order events, and unavailable membership state.
 - Every future tenant-scoped table must include or resolve to `tenantId` — document the pattern in the tenant module.
 
 ### Do not

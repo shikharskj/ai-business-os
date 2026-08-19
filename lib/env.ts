@@ -64,9 +64,11 @@ export const env = envSchema.parse({
 
 if (
   env.NODE_ENV === "production" &&
-  (!env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || !env.CLERK_SECRET_KEY)
+  (!env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
+    !env.CLERK_SECRET_KEY ||
+    !env.CLERK_WEBHOOK_SIGNING_SECRET)
 ) {
   throw new Error(
-    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY are required in production"
+    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY, and CLERK_WEBHOOK_SIGNING_SECRET are required in production"
   );
 }

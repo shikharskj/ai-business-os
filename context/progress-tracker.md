@@ -775,32 +775,6 @@ Impact:
 [What parts of the system are affected?]
 ```
 
-# Open Questions
-
-Record unresolved decisions here.
-
-Format:
-
-```text
-### [Question]
-
-Status: Open
-
-Question:
-[What needs to be decided?]
-
-Options:
-- Option A
-- Option B
-- Option C
-
-Decision required before:
-[Feature / implementation unit]
-
-Impact:
-[What parts of the system are affected?]
-```
-
 Current questions:
 
 * None. The previous vendor, multi-user, payment-method, GST-depth, accounting, and Clerk Organizations questions are **Accepted** — see Architecture Decisions below.
@@ -1033,7 +1007,7 @@ The first objective is to deliver a complete, reliable business workflow for sma
 
 # Implementation Unit Log
 
-### 2026-08-19 — Owner product decisions
+## 2026-08-19 — Owner product decisions
 
 Status: Complete *(documentation only)*
 
@@ -1060,7 +1034,7 @@ Notes:
 
 ---
 
-### 2026-08-19 — Authentication — Clerk
+## 2026-08-19 — Authentication — Clerk
 
 Status: Complete
 
@@ -1107,7 +1081,7 @@ Notes:
 
 ---
 
-### 2026-08-19 — Project Foundation
+## 2026-08-19 — Project Foundation
 
 Status: Complete
 
@@ -1148,7 +1122,7 @@ Notes:
 
 ---
 
-### 2026-08-19 — Feature Spec Catalog
+## 2026-08-19 — Feature Spec Catalog
 
 Status: Complete *(documentation only — no product features implemented)*
 
@@ -1172,7 +1146,7 @@ Notes:
 
 ---
 
-### 2026-08-19 — Design System and UI Primitives
+## 2026-08-19 — Design System and UI Primitives
 
 Status: Complete
 
@@ -1215,7 +1189,7 @@ Every meaningful implementation unit should be recorded.
 Use:
 
 ```text
-### YYYY-MM-DD — [Feature / Unit]
+## YYYY-MM-DD — [Feature / Unit]
 
 Status: Complete
 

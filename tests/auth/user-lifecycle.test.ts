@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
 
 import { createMemoryApplicationUserStore } from "@/lib/auth/application-user-store";
@@ -39,12 +39,12 @@ describe("parseUserLifecycleEvent", () => {
 describe("applyUserLifecycleEvent", () => {
   it("upserts users idempotently for created and updated events", async () => {
     const store = createMemoryApplicationUserStore();
+    const upsert = vi.spyOn(store, "upsertByClerkUserId");
 
     await applyUserLifecycleEvent(store, {
       type: "user.created",
       clerkUserId: "user_123",
     });
-    const first = await store.upsertByClerkUserId("user_123");
 
     await applyUserLifecycleEvent(store, {
       type: "user.created",
@@ -54,9 +54,9 @@ describe("applyUserLifecycleEvent", () => {
       type: "user.updated",
       clerkUserId: "user_123",
     });
-    const second = await store.upsertByClerkUserId("user_123");
 
-    expect(second).toEqual(first);
+    expect(upsert).toHaveBeenCalledTimes(3);
+    expect(upsert).toHaveBeenCalledWith("user_123");
   });
 
   it("deletes users idempotently", async () => {

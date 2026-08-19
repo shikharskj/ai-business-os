@@ -19,7 +19,7 @@ export const shadcn = {
       normal: "var(--font-weight-normal)",
       medium: "var(--font-weight-medium)",
       semibold: "var(--font-weight-semibold)",
-      bold: "var(--font-weight-semibold)",
+      bold: "var(--font-weight-bold)",
     },
   },
   elements: {
