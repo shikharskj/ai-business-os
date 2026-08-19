@@ -272,6 +272,27 @@ export function BusinessProfileFields({
           />
         </Field>
         <Field
+          label="Default GST rate"
+          name="defaultGstRateBps"
+          fieldErrors={fieldErrors}
+        >
+          <Select
+            name="defaultGstRateBps"
+            defaultValue={String(defaultValues?.defaultGstRateBps ?? 1800)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select GST rate" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">0%</SelectItem>
+              <SelectItem value="500">5%</SelectItem>
+              <SelectItem value="1200">12%</SelectItem>
+              <SelectItem value="1800">18%</SelectItem>
+              <SelectItem value="2800">28%</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field
           label="Financial year starts in"
           name="financialYearStartMonth"
           fieldErrors={fieldErrors}

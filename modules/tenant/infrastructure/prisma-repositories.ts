@@ -35,6 +35,7 @@ function mapBusiness(record: {
   financialYearStartMonth: number;
   timezone: string;
   currency: string;
+  defaultGstRateBps: number;
 }): BusinessProfile {
   return {
     id: record.id,
@@ -55,6 +56,7 @@ function mapBusiness(record: {
     financialYearStartMonth: record.financialYearStartMonth,
     timezone: record.timezone,
     currency: record.currency,
+    defaultGstRateBps: record.defaultGstRateBps,
   };
 }
 
@@ -93,6 +95,7 @@ function toBusinessData(input: BusinessProfileInput | CreateBusinessRecordInput)
     financialYearStartMonth: input.financialYearStartMonth,
     timezone: input.timezone,
     currency: input.currency.toUpperCase(),
+    defaultGstRateBps: input.defaultGstRateBps ?? 1800,
   };
 }
 

@@ -101,6 +101,7 @@ export function createMemoryBusinessRepository(
         financialYearStartMonth: input.financialYearStartMonth,
         timezone: input.timezone,
         currency: input.currency,
+        defaultGstRateBps: input.defaultGstRateBps ?? 1800,
       };
 
       businesses.set(created.id, created);
@@ -132,6 +133,7 @@ export function createMemoryBusinessRepository(
         financialYearStartMonth: input.financialYearStartMonth,
         timezone: input.timezone,
         currency: input.currency,
+        defaultGstRateBps: input.defaultGstRateBps ?? existing.defaultGstRateBps,
       };
 
       businesses.set(tenantId, updated);

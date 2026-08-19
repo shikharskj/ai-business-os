@@ -33,6 +33,7 @@ describe("tenant org lifecycle", () => {
       financialYearStartMonth: 4,
       timezone: "Asia/Kolkata",
       currency: "INR",
+      defaultGstRateBps: 1800,
     },
   ]);
 

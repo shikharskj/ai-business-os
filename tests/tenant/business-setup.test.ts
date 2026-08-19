@@ -29,6 +29,7 @@ describe("createBusinessWithOrganization", () => {
         financialYearStartMonth: 4,
         timezone: "Asia/Kolkata",
         currency: "INR",
+        defaultGstRateBps: 1800,
       },
       idempotencyKey: "alpha-key",
       businessRepository,

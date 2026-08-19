@@ -27,6 +27,7 @@ function makeTenant(
       financialYearStartMonth: 4,
       timezone: "Asia/Kolkata",
       currency: "INR",
+      defaultGstRateBps: 1800,
     },
     membership: {
       id: "mem_1",

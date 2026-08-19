@@ -64,6 +64,7 @@ model Business {
   financialYearStartMonth Int
   timezone              String                @default("Asia/Kolkata")
   currency              String                @default("INR")
+  defaultGstRateBps     Int                   @default(1800)
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
@@ -71,6 +72,8 @@ model Business {
   memberships Membership[]
   auditRecords AuditRecord[]
   outboxEvents OutboxEvent[]
+  taxRates     TaxRate[]
+  hsnSacCodes  HsnSacCode[]
 
   @@map("businesses")
 }
@@ -127,4 +130,41 @@ model OutboxEvent {
   @@index([processedAt, createdAt])
   @@index([tenantId, eventType])
   @@map("outbox_events")
+}
+
+model TaxRate {
+  id            String    @id @default(uuid())
+  tenantId      String
+  name          String
+  rateBps       Int
+  isDefault     Boolean   @default(false)
+  effectiveFrom String
+  effectiveTo   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, isDefault])
+  @@index([tenantId, effectiveFrom])
+  @@map("tax_rates")
+}
+
+model HsnSacCode {
+  id            String   @id @default(uuid())
+  tenantId      String
+  code          String
+  description   String
+  kind          String
+  taxRateBps    Int
+  effectiveFrom String
+  effectiveTo   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, code])
+  @@index([tenantId, effectiveFrom])
+  @@map("hsn_sac_codes")
 }

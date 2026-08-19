@@ -33,6 +33,7 @@ export type BusinessProfile = {
   financialYearStartMonth: number;
   timezone: string;
   currency: string;
+  defaultGstRateBps: number;
 };
 
 export type TenantMembership = {

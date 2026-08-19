@@ -71,6 +71,7 @@ export async function createBusinessAction(
       financialYearStartMonth: formData.get("financialYearStartMonth") || 4,
       timezone: formData.get("timezone") || "Asia/Kolkata",
       currency: formData.get("currency") || "INR",
+      defaultGstRateBps: formData.get("defaultGstRateBps") || 1800,
     });
   } catch (error) {
     if (error instanceof ZodError) {
@@ -129,6 +130,7 @@ export async function updateBusinessProfileAction(
       financialYearStartMonth: formData.get("financialYearStartMonth") || 4,
       timezone: formData.get("timezone") || "Asia/Kolkata",
       currency: formData.get("currency") || "INR",
+      defaultGstRateBps: formData.get("defaultGstRateBps") || 1800,
     });
   } catch (error) {
     if (error instanceof ZodError) {

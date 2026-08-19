@@ -100,7 +100,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Suppliers             | Not Started |
 | Purchases             | Not Started |
 | Accounting            | Not Started |
-| GST                   | Not Started |
+| GST                   | In Progress |
 | Dashboard             | Not Started |
 | Reports               | Not Started |
 | AI Assistant          | Not Started |
@@ -112,6 +112,14 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Tax engine (`08-tax-engine.md`):
+  * `modules/tax/domain/` — pure GST calculation (`calculateGst`), GSTIN/state-code helpers, and documented debit-style rounding (half away from zero in integer paisa; odd paisa on intra-state split goes to SGST). No Next.js, Clerk, or Prisma imports.
+  * Intra-state → CGST+SGST; inter-state → IGST. Explicit zero-tax treatments for `NOT_REGISTERED`, composition outward supplies, unregistered purchase counterparties, and 0% exempt rates.
+  * `modules/tax/application/calculate-tax.ts` — resolves rate from explicit bps, effective-dated HSN/SAC, tenant tax-rate catalog, then business `defaultGstRateBps`.
+  * Prisma `TaxRate` + `HsnSacCode` (effectiveFrom/effectiveTo); `Business.defaultGstRateBps` (default 1800). Migration `20260819160000_add_tax_engine`.
+  * Settings: default GST rate (0/5/12/18/28%) on the existing business profile form.
+  * Unit tests cover intra-state, inter-state, non-GST/unregistered/composition, remainder split, HSN effective dates, and bigint tax totals.
 
 * Shared kernel primitives (`07-shared-kernel.md`):
   * `modules/shared-kernel/money.ts` — `Money` type using `bigint` minor units (paisa), arithmetic ops (`addMoney`, `subtractMoney`, `multiplyMoney`), comparison, conversion to/from Prisma `Decimal` strings. No IEEE float for authoritative amounts.
@@ -204,7 +212,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Next implementable spec:** `context/feature-specs/08-tax-engine.md`
+**Next implementable spec:** `context/feature-specs/09-accounting-foundation.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 

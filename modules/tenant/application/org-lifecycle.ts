@@ -130,6 +130,7 @@ async function applyOrganizationEvent(
       financialYearStartMonth: business.financialYearStartMonth,
       timezone: business.timezone,
       currency: business.currency,
+      defaultGstRateBps: business.defaultGstRateBps,
     });
   }
 }

@@ -55,6 +55,13 @@ export const businessProfileInputSchema = z
     financialYearStartMonth: financialYearStartMonthSchema.default(4),
     timezone: z.string().trim().min(1).default("Asia/Kolkata"),
     currency: z.string().trim().length(3).default("INR"),
+    defaultGstRateBps: z.coerce
+      .number()
+      .int()
+      .min(0, "Default GST rate must be between 0% and 100%")
+      .max(10000, "Default GST rate must be between 0% and 100%")
+      .optional()
+      .default(1800),
   })
   .superRefine((value, ctx) => {
     if (value.gstRegistrationStatus === "NOT_REGISTERED" && value.gstin) {
