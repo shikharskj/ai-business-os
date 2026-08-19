@@ -14,13 +14,18 @@ function createPrismaClient() {
   return new PrismaClient({ adapter });
 }
 
-function hasDocumentDelegate(client: PrismaClient | undefined): boolean {
-  return typeof (client as { document?: { findMany?: unknown } } | undefined)
-    ?.document?.findMany === "function";
+function hasCurrentDelegates(client: PrismaClient | undefined): boolean {
+  const candidate = client as
+    | { document?: { findMany?: unknown }; party?: { findMany?: unknown } }
+    | undefined;
+  return (
+    typeof candidate?.document?.findMany === "function" &&
+    typeof candidate?.party?.findMany === "function"
+  );
 }
 
 const existingGlobalClient = globalForPrisma.prisma;
-if (existingGlobalClient && !hasDocumentDelegate(existingGlobalClient)) {
+if (existingGlobalClient && !hasCurrentDelegates(existingGlobalClient)) {
   void existingGlobalClient.$disconnect();
   globalForPrisma.prisma = undefined;
 }

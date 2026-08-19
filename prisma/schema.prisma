@@ -79,6 +79,7 @@ model Business {
   accounts     Account[]
   journals     Journal[]
   documents    Document[]
+  parties      Party[]
 
   @@map("businesses")
 }
@@ -264,4 +265,41 @@ model Document {
   @@index([tenantId, ownerRecordType, ownerRecordId])
   @@index([tenantId, createdAt])
   @@map("documents")
+}
+
+enum PartyKind {
+  CUSTOMER
+  SUPPLIER
+}
+
+enum PartyStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Party {
+  id                    String                @id @default(uuid())
+  tenantId              String
+  kind                  PartyKind
+  name                  String
+  phone                 String?
+  email                 String?
+  billingAddressLine1   String?
+  billingAddressLine2   String?
+  city                  String?
+  state                 String?
+  postalCode            String?
+  country               String                @default("IN")
+  gstRegistrationStatus GstRegistrationStatus @default(NOT_REGISTERED)
+  gstin                 String?
+  status                PartyStatus           @default(ACTIVE)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, kind, status])
+  @@index([tenantId, name])
+  @@map("parties")
 }
