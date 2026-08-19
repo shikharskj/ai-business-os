@@ -10,7 +10,7 @@ This file is the **single source of truth for implementation progress**. The AI 
 
 * **Phase:** MVP Development
 * **Status:** In Progress
-* **MVP Stage:** Foundation / Design System
+* **MVP Stage:** Foundation / Authentication
 
 ---
 
@@ -84,7 +84,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 | Area                  | Status      |
 | --------------------- | ----------- |
-| Project setup         | In Progress |
+| Project setup         | Complete    |
 | Design system         | Complete    |
 | Authentication        | Not Started |
 | Business setup        | Not Started |
@@ -113,6 +113,19 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 # Completed
 
+* Project foundation (`02-project-foundation.md`):
+  * Typed env config with Zod (`lib/env.ts`).
+  * Architecture folders: `modules/`, `lib/{db,auth,security,observability,storage,queue,ai}/`, `prisma/`, `tests/`, `workers/`, `components/business/`.
+  * Prisma 7 + local PostgreSQL (no business models yet).
+  * Prisma client helper in `lib/db/`.
+  * Scripts: `db:generate`, `db:migrate`, `lint`, `lint:fix`, `typecheck`.
+  * GitHub Actions CI: lint, typecheck, production build.
+  * Production Postgres host left as an open question.
+* Feature spec catalog created (`context/feature-specs/`):
+  * `README.md` defines execution order and the spec template.
+  * Specs `02`–`30` written for remaining MVP units.
+  * `01-design-system.md` remains complete; **next implementable spec is `02-project-foundation.md`**.
+  * Product areas are **not** marked Complete merely because specs exist.
 * Design system and UI primitives (`01-design-system.md`):
   * Installed and configured shadcn/ui (Base UI, `base-nova` style).
   * Installed `lucide-react`.
@@ -143,9 +156,13 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 # Next Up
 
-## 1. Project Foundation
+Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-Build the initial application foundation:
+**Next implementable spec:** `context/feature-specs/03-authentication-clerk.md`
+
+## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
+
+Build the remaining application foundation (see the spec for exact scope):
 
 * Initialize Next.js + TypeScript. *(app scaffold exists)*
 * Configure Tailwind CSS. *(Tailwind v4 is present)*
@@ -169,7 +186,7 @@ Build the initial application foundation:
 
 ---
 
-## 2. Authentication — Clerk
+## 2. Authentication — Clerk (`03-authentication-clerk.md`)
 
 Implement authentication using **Clerk**.
 
@@ -921,6 +938,72 @@ The first objective is to deliver a complete, reliable business workflow for sma
 ---
 
 # Implementation Unit Log
+
+### 2026-08-19 — Project Foundation
+
+Status: Complete
+
+Implemented:
+- Added Zod-validated environment config (`DATABASE_URL`, `NODE_ENV`).
+- Created architecture folder boundaries with `.gitkeep` barrels.
+- Installed Prisma 7 with `@prisma/adapter-pg` against local PostgreSQL.
+- Added a minimal schema (generator + datasource only) and `lib/db` Prisma client helper.
+- Added `db:generate`, `db:migrate`, `typecheck`, and `lint:fix` scripts.
+- Added GitHub Actions workflow for lint, typecheck, and production build.
+- Did not choose a production PostgreSQL host.
+
+Files / Areas:
+- `lib/env.ts`
+- `lib/db/`
+- `prisma/schema.prisma`
+- `prisma.config.ts`
+- `.github/workflows/ci.yml`
+- `.env.example`
+- `package.json`
+- architecture folders (`modules/`, `lib/*`, `tests/`, `workers/`, `components/business/`)
+
+Tests:
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+- `npx prisma generate`
+- `npx prisma migrate status` (connected to local `ai_business_os`)
+
+Verification:
+- Lint, typecheck, and production build succeed.
+- Prisma generated the client and connected to local PostgreSQL at `localhost:5432`.
+- Folder structure matches architecture boundaries.
+
+Notes:
+- Empty schema produced no SQL migration; connection and generate both succeed.
+- Next implementation unit is `03-authentication-clerk.md`.
+
+---
+
+### 2026-08-19 — Feature Spec Catalog
+
+Status: Complete *(documentation only — no product features implemented)*
+
+Implemented:
+- Added `context/feature-specs/README.md` with execution order and spec template.
+- Created implementable specs `02` through `30` matching `01-design-system.md` style.
+- Left architecture open questions unresolved (Postgres hosting, object storage, AI provider, multi-user, payment methods, GST depth, Indian accounting conventions, Clerk Organizations).
+
+Files / Areas:
+- `context/feature-specs/`
+- `context/progress-tracker.md`
+
+Tests:
+- None (docs only).
+
+Verification:
+- Catalog contains `01`–`30` plus README (31 files).
+
+Notes:
+- Next implementation unit is `02-project-foundation.md`.
+- Do not skip numbered dependencies.
+
+---
 
 ### 2026-08-19 — Design System and UI Primitives
 
