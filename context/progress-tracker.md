@@ -120,7 +120,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
   * `components/shell/empty-state.tsx`, `error-state.tsx`, `loading-state.tsx`, `coming-soon.tsx` — reusable page states.
   * `app/app/(workspace)/layout.tsx` — workspace layout with `SidebarProvider`, resolves tenant and redirects to `/app/setup` if missing.
   * `app/app/(workspace)/loading.tsx` + `error.tsx` — workspace-level loading/error boundaries.
-  * Placeholder routes for all nav items render "Coming soon" empty states.
+  * Placeholder routes for unimplemented module pages (Sales, Purchases, Inventory, Expenses, Accounting, Reports, AI Assistant) render "Coming soon" empty states. Dashboard and Settings are functional.
   * Settings pages moved into `(workspace)` group, use `PageHeader` and `authorize()`.
   * `/app/setup` remains outside workspace layout (no sidebar before business creation).
 

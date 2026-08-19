@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { requireCurrentTenant } from "@/lib/tenant/current-tenant";
+import { TenantRequiredError } from "@/modules/tenant/domain/errors";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/shell/app-sidebar";
 import { AppTopBar } from "@/components/shell/app-top-bar";
@@ -14,8 +15,11 @@ export default async function WorkspaceLayout({
 
   try {
     tenant = await requireCurrentTenant();
-  } catch {
-    redirect("/app/setup");
+  } catch (error) {
+    if (error instanceof TenantRequiredError) {
+      redirect("/app/setup");
+    }
+    throw error;
   }
 
   return (
