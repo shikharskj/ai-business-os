@@ -46,7 +46,11 @@ We're adding business expenses: categories, date, amount, tax, payment method, o
 
 ### Open questions
 
-Payment method labels follow spec `17` open question — do not add a gateway.
+None remaining.
+
+**Decided:** payment method labels match spec `17`: **Cash, UPI, Bank Transfer, Card, Cheque**. Do not add a gateway.
+
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

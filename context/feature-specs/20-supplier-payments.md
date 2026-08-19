@@ -26,7 +26,7 @@ We're adding supplier payments: allocate to purchase bills, update payables, pos
 - Update purchase payment status and supplier outstanding from allocations.
 - UI under Purchases → Payments.
 - Permissions `payment:*` (or dedicated supplier-payment permissions if clearer — still server-enforced).
-- Payment methods as data, same open-question constraint as spec `17`.
+- Payment methods as data: **Cash, UPI, Bank Transfer, Card, Cheque** (same set as spec `17`).
 
 ### Do not
 
@@ -43,9 +43,11 @@ We're adding supplier payments: allocate to purchase bills, update payables, pos
 
 ### Open questions
 
-- Which payment methods should be supported initially? Confirm before expanding beyond recordable labels.
+None remaining.
 
-See `context/progress-tracker.md` → Open Questions.
+**Decided:** payment methods are **Cash, UPI, Bank Transfer, Card, Cheque**. No gateway.
+
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

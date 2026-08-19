@@ -86,7 +86,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | --------------------- | ----------- |
 | Project setup         | Complete    |
 | Design system         | Complete    |
-| Authentication        | Not Started |
+| Authentication        | Complete    |
 | Business setup        | Not Started |
 | Multi-tenancy         | Not Started |
 | Database              | Not Started |
@@ -113,6 +113,13 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 # Completed
 
+* Authentication — Clerk (`03-authentication-clerk.md`):
+  * Installed `@clerk/nextjs` and wrapped the App Router with `ClerkProvider`.
+  * Added Next.js 16 `proxy.ts` with `clerkMiddleware()`, protecting application routes and keeping sign-in, sign-up, `/`, and the Clerk webhook public.
+  * Sign-up, sign-in, and sign-out use Clerk-provided UI (`SignIn`, `SignUp`, `UserButton`).
+  * Server-side current-user resolution lives in `lib/auth/` and maps the trusted Clerk user id to an application `User`.
+  * Verified, Zod-validated, idempotent webhook handler for `user.created` / `user.updated` / `user.deleted`.
+  * Clerk secrets stay server-only; domain modules cannot import `@clerk/nextjs`.
 * Project foundation (`02-project-foundation.md`):
   * Typed env config with Zod (`lib/env.ts`).
   * Architecture folders: `modules/`, `lib/{db,auth,security,observability,storage,queue,ai}/`, `prisma/`, `tests/`, `workers/`, `components/business/`.
@@ -120,7 +127,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
   * Prisma client helper in `lib/db/`.
   * Scripts: `db:generate`, `db:migrate`, `lint`, `lint:fix`, `typecheck`.
   * GitHub Actions CI: lint, typecheck, production build.
-  * Production Postgres host left as an open question.
+  * Production Postgres host is **Neon** (wired in spec `30`; this spec used local Postgres).
 * Feature spec catalog created (`context/feature-specs/`):
   * `README.md` defines execution order and the spec template.
   * Specs `02`–`30` written for remaining MVP units.
@@ -158,7 +165,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Next implementable spec:** `context/feature-specs/03-authentication-clerk.md`
+**Next implementable spec:** `context/feature-specs/04-tenant-business-setup.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -186,7 +193,7 @@ Build the remaining application foundation (see the spec for exact scope):
 
 ---
 
-## 2. Authentication — Clerk (`03-authentication-clerk.md`)
+## 2. Authentication — Clerk (`03-authentication-clerk.md`) *(complete)*
 
 Implement authentication using **Clerk**.
 
@@ -207,8 +214,8 @@ Clerk is the authoritative authentication provider for the MVP.
 * Keep Clerk integration isolated from business-domain logic.
 * Resolve the authenticated Clerk user from trusted server-side authentication context.
 * Do not accept an arbitrary `userId` from the client when the authenticated Clerk identity is already available server-side.
-* Do not use Clerk Organization/Workspace functionality as a substitute for the application's business ownership model unless explicitly approved by `Architecture.md`.
-* If Clerk Organizations are later used for multi-user business access, the mapping between Clerk Organizations and application Businesses must be explicitly documented.
+* Do not use Clerk Organization/Workspace functionality as a substitute for the application's business ownership model. Clerk Organizations are the **workspace identity** boundary; each application Business maps 1:1 via `clerkOrganizationId`.
+* The mapping between Clerk Organizations and application Businesses must stay explicit and documented.
 
 ### Required Authentication Capabilities
 
@@ -303,7 +310,7 @@ Minimum information:
 
 ### Completion Criteria
 
-A new user can create or configure their business and access its dashboard.
+A new user can create or configure their business (Clerk Organization + application Business) and access its dashboard. Additional members can be invited to the same business.
 
 ---
 
@@ -318,6 +325,8 @@ Example:
 ```text
 Clerk User
  ↓
+Clerk Organization
+ ↓
 Application Business
  ↓
 Customers
@@ -330,7 +339,7 @@ Purchases
 Accounting
 ```
 
-The Clerk identity is the authenticated identity source.
+The Clerk identity is the authenticated identity source. Clerk Organizations are the workspace/tenant identity boundary.
 
 The application's Business entity remains the authoritative owner of business data.
 
@@ -661,6 +670,8 @@ Do not introduce multiple communication providers until the core notification ab
 
 ## Unit Tests
 
+* Clerk-to-application-user mapping (idempotent upsert/delete)
+* Authentication fail-closed when Clerk session is missing
 * Tax calculations
 * GST calculations
 * Invoice totals
@@ -697,20 +708,20 @@ Do not introduce multiple communication providers until the core notification ab
 
 # Security Progress
 
-* Clerk authentication
+* Clerk authentication *(spec 03 complete)*
 * Authorization
 * Tenant isolation
 * Input validation
-* API protection
+* API protection *(unauthenticated `/api/me` fails closed)*
 * Rate limiting where required
 * Secure file handling
-* Secret management
+* Secret management *(Clerk secrets server-only; webhook signing verified)*
 * Audit logging
 * Dependency security checks
 * AI prompt-injection protections
 * AI tool authorization
 * Clerk configuration security
-* Server-side authentication checks
+* Server-side authentication checks *(spec 03 complete)*
 
 ---
 
@@ -718,7 +729,7 @@ Do not introduce multiple communication providers until the core notification ab
 
 Before MVP release:
 
-* Production database configured
+* Production database configured *(Neon)*
 * Environment variables configured
 * Database migrations verified
 * Clerk production instance/configuration verified
@@ -764,18 +775,37 @@ Impact:
 [What parts of the system are affected?]
 ```
 
+# Open Questions
+
+Record unresolved decisions here.
+
+Format:
+
+```text
+### [Question]
+
+Status: Open
+
+Question:
+[What needs to be decided?]
+
+Options:
+- Option A
+- Option B
+- Option C
+
+Decision required before:
+[Feature / implementation unit]
+
+Impact:
+[What parts of the system are affected?]
+```
+
 Current questions:
 
-* Which PostgreSQL hosting provider should be used?
-* Which object storage provider should be used?
-* Which AI provider/model should power the initial assistant?
-* Should the MVP support multiple users per business immediately or begin with owner-only access?
-* Which payment methods should be supported initially?
-* How much GST functionality belongs in the MVP versus a later release?
-* Which Indian accounting conventions should be implemented in the first release?
-* Should Clerk Organizations be used for multi-user business/workspace membership, or should the MVP use an application-level Business membership model backed by Clerk user identity?
+* None. The previous vendor, multi-user, payment-method, GST-depth, accounting, and Clerk Organizations questions are **Accepted** — see Architecture Decisions below.
 
-Do not silently resolve these decisions if they materially affect architecture.
+Do not silently reverse Accepted decisions if they materially affect architecture.
 
 Authentication provider selection is already resolved: **Clerk**.
 
@@ -823,6 +853,70 @@ Financial Authorization
 ```
 
 Clerk authentication must not replace application-level authorization.
+
+---
+
+### Decision: Neon PostgreSQL
+
+**Status:** Accepted
+
+Production PostgreSQL hosting is **Neon**. Development may continue to use local PostgreSQL. Neon is chosen for serverless Postgres, autoscaling, connection pooling, and usage-based pricing.
+
+---
+
+### Decision: Cloudflare R2 for Object Storage
+
+**Status:** Accepted
+
+Production object storage is **Cloudflare R2** (S3-compatible). Chosen for no egress fees and inexpensive storage. Access stays behind `lib/storage/`; binaries are never stored in PostgreSQL.
+
+---
+
+### Decision: OpenAI Initially, Behind a Provider Abstraction
+
+**Status:** Accepted
+
+The initial AI provider is **OpenAI**. All model calls go through `lib/ai/` so the provider can be replaced later. Tools must not import the OpenAI SDK.
+
+---
+
+### Decision: Multi-User From Foundation
+
+**Status:** Accepted
+
+The MVP supports multiple users per business from tenant setup onward. Do not ship an owner-only tenancy model. Roles (`OWNER`, `ADMIN`, `STAFF`, `ACCOUNTANT`) are productized in authorization (spec `05`).
+
+---
+
+### Decision: MVP Payment Methods
+
+**Status:** Accepted
+
+Recordable payment methods: **Cash, UPI, Bank Transfer, Card, Cheque**. No payment gateway in the MVP.
+
+---
+
+### Decision: GST-Ready, Not a Filing Platform
+
+**Status:** Accepted
+
+MVP GST is CGST/SGST/IGST, HSN/SAC, rates, stored breakdowns, and summaries/export. Out of scope: GSTR filing, e-invoicing, e-way-bill.
+
+---
+
+### Decision: Simple Indian Double-Entry Accounting
+
+**Status:** Accepted
+
+MVP accounting is a small per-tenant chart of accounts, balanced immutable journals, ledger, and trial balance. Not Tally/ERP-level statutory packing.
+
+---
+
+### Decision: Clerk Organizations as Workspace Boundary
+
+**Status:** Accepted
+
+Clerk Organizations are the tenant/workspace identity boundary. Each application Business maps 1:1 via unique `clerkOrganizationId`. Clerk owns organization membership at the identity layer; the application Business owns GSTIN, financial year, and all business data. Application authorization remains in the policy layer.
 
 ---
 
@@ -939,6 +1033,80 @@ The first objective is to deliver a complete, reliable business workflow for sma
 
 # Implementation Unit Log
 
+### 2026-08-19 — Owner product decisions
+
+Status: Complete *(documentation only)*
+
+Implemented:
+- Recorded accepted decisions: Neon PostgreSQL, Cloudflare R2, OpenAI + adapter, multi-user from foundation, payment methods (Cash/UPI/Bank Transfer/Card/Cheque), GST-ready not filing, simple Indian double-entry, Clerk Organizations as workspace boundary.
+- Updated feature specs `02`–`05`, `08`–`10`, `16`–`24`, `27`–`30` and architecture/progress tracker so implementers do not re-open these questions.
+- Reviewed completed implementations for specs `01`–`03`: **no code rewrite required**. Spec `02` still correctly uses local Postgres (Neon is spec `30`). Spec `03` still correctly maps Clerk **users** only; Organization → Business is spec `04`. Verified Clerk Organizations feature on the linked instance (`clerk enable orgs` → no changes; already enabled). Updated `.env.example` comments for accepted vendors.
+
+Files / Areas:
+- `context/feature-specs/`
+- `context/progress-tracker.md`
+- `context/architecture-context.md`
+- `.env.example`
+
+Tests:
+- None (docs only).
+
+Verification:
+- Open Questions list is empty; decisions live under Architecture Decisions.
+- Previous auth/foundation checklists still pass under the revised specs.
+
+Notes:
+- Next implementation unit remains `04-tenant-business-setup.md`, now with Clerk Organizations + multi-user in scope.
+
+---
+
+### 2026-08-19 — Authentication — Clerk
+
+Status: Complete
+
+Implemented:
+- Installed `@clerk/nextjs` v7 and `@clerk/ui` (shadcn theme) for App Router authentication.
+- Added `ClerkProvider` in the root layout with Clerk-provided sign-in, sign-up, and `UserButton` sign-out controls.
+- Added Next.js 16 `proxy.ts` using `clerkMiddleware()`; public routes are `/`, `/sign-in`, `/sign-up`, and `/api/webhooks/clerk`. All other routes fail closed via `auth.protect()`.
+- Added `lib/auth/` for trusted server-side current-user resolution. Application identity is mapped from the Clerk user id, never from a client-supplied `userId`.
+- Added Prisma `User` (`clerkUserId` unique) and an idempotent webhook handler for `user.created` / `user.updated` / `user.deleted` using `verifyWebhook`.
+- Typed Clerk env vars in `lib/env.ts`. Secret keys remain server-only.
+- Added Vitest authentication tests and ESLint import restrictions so `modules/` cannot import Clerk.
+- Aligned the Prisma CLI with Prisma 7 so the production build can import the generated client.
+
+Files / Areas:
+- `lib/auth/`
+- `lib/env.ts`
+- `proxy.ts`
+- `app/layout.tsx`
+- `app/sign-in/`, `app/sign-up/`, `app/app/`
+- `app/api/webhooks/clerk/route.ts`
+- `app/api/me/route.ts`
+- `prisma/schema.prisma`
+- `tests/auth/`
+- `.github/workflows/ci.yml`
+- `.env.example`
+
+Tests:
+- `npm test` (11 auth tests)
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+
+Verification:
+- Unauthenticated access to `/app` and `/api/me` is blocked by middleware (`auth.protect()`).
+- `/api/me` returns 401 if `requireCurrentUser()` runs without a Clerk session.
+- Webhook verification failures return 400; user lifecycle upserts/deletes are idempotent.
+- Production build succeeds. Domain modules do not import `@clerk/nextjs`.
+
+Notes:
+- Clerk Organizations are accepted as the workspace boundary; Organization → Business mapping is spec `04`.
+- Current-user mapping upserts on first authenticated request so sign-up does not wait on webhook delivery. Webhooks still keep the mapping in sync for lifecycle events.
+- Replace the Clerk placeholder keys in `.env` / `.env.local` with a real Clerk application (`npx clerk@latest init` or Dashboard keys) before testing the hosted sign-in UI.
+- Next implementation unit is `04-tenant-business-setup.md`.
+
+---
+
 ### 2026-08-19 — Project Foundation
 
 Status: Complete
@@ -950,7 +1118,7 @@ Implemented:
 - Added a minimal schema (generator + datasource only) and `lib/db` Prisma client helper.
 - Added `db:generate`, `db:migrate`, `typecheck`, and `lint:fix` scripts.
 - Added GitHub Actions workflow for lint, typecheck, and production build.
-- Did not choose a production PostgreSQL host.
+- Did not wire a production PostgreSQL host in this unit (later accepted: Neon).
 
 Files / Areas:
 - `lib/env.ts`
@@ -987,7 +1155,6 @@ Status: Complete *(documentation only — no product features implemented)*
 Implemented:
 - Added `context/feature-specs/README.md` with execution order and spec template.
 - Created implementable specs `02` through `30` matching `01-design-system.md` style.
-- Left architecture open questions unresolved (Postgres hosting, object storage, AI provider, multi-user, payment methods, GST depth, Indian accounting conventions, Clerk Organizations).
 
 Files / Areas:
 - `context/feature-specs/`

@@ -43,7 +43,7 @@ We're completing the remaining project foundation so the app has typed config, a
 ### Do not
 
 - Model customers, invoices, or other business tables.
-- Choose a production PostgreSQL host.
+- Wire production Neon in this spec. Local PostgreSQL is enough here; Neon is the accepted production host (spec `30`).
 - Add Redis, Kafka, Elasticsearch, or a vector database.
 - Implement Clerk, tenant logic, or the authenticated app shell (those are later specs).
 - Put Prisma calls in React components.
@@ -56,11 +56,11 @@ We're completing the remaining project foundation so the app has typed config, a
 
 ### Open questions
 
-Do **not** silently resolve these. Confirm with the project owner before locking a production choice:
+None remaining.
 
-- Which PostgreSQL hosting provider should be used? *(local Postgres only for this spec)*
+**Decided:** production PostgreSQL is **Neon**. This spec still uses **local** PostgreSQL only. Do not wire Neon here.
 
-See `context/progress-tracker.md` → Open Questions.
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

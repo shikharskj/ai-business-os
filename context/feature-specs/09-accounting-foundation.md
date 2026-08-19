@@ -45,11 +45,11 @@ We're adding the accounting posting foundation: chart of accounts, journals, and
 
 ### Open questions
 
-Do **not** silently resolve these. Confirm with the project owner before expanding the chart or Indian conventions:
+None remaining.
 
-- Which Indian accounting conventions should be implemented in the first release? *(this spec: simple double-entry + small CoA; no statutory packing)*
+**Decided:** accounting is **simple Indian double-entry**. This spec ships a small per-tenant chart of accounts, balanced journals, and immutable posted entries — not Tally/ERP-level statutory packing.
 
-See `context/progress-tracker.md` → Open Questions.
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

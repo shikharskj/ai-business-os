@@ -11,7 +11,7 @@ Read:
 
 Mark this spec **In Progress** in `context/progress-tracker.md` before coding.
 
-We're adding document metadata and a storage adapter so later expenses, invoices, and receipts can attach files. Production object storage vendor is not chosen here.
+We're adding document metadata and a storage adapter so later expenses, invoices, and receipts can attach files. Production object storage is **Cloudflare R2**; this spec still ships a local/dev adapter behind the same interface.
 
 ### Depends on
 
@@ -20,7 +20,7 @@ We're adding document metadata and a storage adapter so later expenses, invoices
 ### Scope
 
 - `lib/storage/` adapter interface: upload, download, delete, content-type, size limits.
-- Local/dev implementation (filesystem or equivalent). Production S3-compatible adapter stays behind the interface.
+- Local/dev implementation (filesystem or equivalent). Production adapter is **Cloudflare R2** (S3-compatible) behind the same interface. This spec may document R2 env vars and implement the R2 adapter, or leave R2 wiring to spec `30` if only the interface + local adapter land here — prefer implementing the R2 adapter behind feature flags/env so production is not a rewrite.
 - `modules/documents/`: tenant-scoped metadata (owner record type/id, filename, content type, size, storage key, uploaded by, timestamps).
 - Authorization on upload/view/download. Documents are untrusted input — validate type/size; never execute uploaded content.
 - Use existing Attachment UI primitive for display where needed; do not modify `components/ui/*`.
@@ -28,7 +28,8 @@ We're adding document metadata and a storage adapter so later expenses, invoices
 
 ### Do not
 
-- Pick AWS/GCS/Cloudflare R2 or any production vendor in code as “the” provider.
+- Pick AWS, GCS, or another production vendor instead of Cloudflare R2.
+- Skip the storage adapter and call R2 from domain modules.
 - Store binaries in PostgreSQL.
 - Trust client-supplied content-type or path.
 - Allow cross-tenant document access.
@@ -42,11 +43,11 @@ We're adding document metadata and a storage adapter so later expenses, invoices
 
 ### Open questions
 
-Do **not** silently resolve these. Confirm with the project owner before production wiring:
+None remaining.
 
-- Which object storage provider should be used? *(this spec: adapter + local/dev only)*
+**Decided:** object storage is **Cloudflare R2**. This spec keeps an adapter: local/dev implementation required; R2 is the production target (S3-compatible, no egress fees).
 
-See `context/progress-tracker.md` → Open Questions.
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

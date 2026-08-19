@@ -2,6 +2,19 @@ import "server-only";
 
 import { z } from "zod";
 
+const emptyToUndefined = (value: unknown) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed === "" || trimmed.includes("replace_me")) {
+    return undefined;
+  }
+
+  return trimmed;
+};
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -14,9 +27,46 @@ const envSchema = z.object({
         value.startsWith("postgresql://") || value.startsWith("postgres://"),
       "DATABASE_URL must be a PostgreSQL connection string"
     ),
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .refine(
+        (value) => value.startsWith("pk_test_") || value.startsWith("pk_live_"),
+        "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY must be a Clerk publishable key"
+      )
+      .optional()
+  ),
+  CLERK_SECRET_KEY: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .refine(
+        (value) => value.startsWith("sk_test_") || value.startsWith("sk_live_"),
+        "CLERK_SECRET_KEY must be a Clerk secret key"
+      )
+      .optional()
+  ),
+  CLERK_WEBHOOK_SIGNING_SECRET: z.preprocess(
+    emptyToUndefined,
+    z.string().min(1).optional()
+  ),
 });
 
 export const env = envSchema.parse({
   NODE_ENV: process.env.NODE_ENV,
   DATABASE_URL: process.env.DATABASE_URL,
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+  CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
+  CLERK_WEBHOOK_SIGNING_SECRET: process.env.CLERK_WEBHOOK_SIGNING_SECRET,
 });
+
+if (
+  env.NODE_ENV === "production" &&
+  (!env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || !env.CLERK_SECRET_KEY)
+) {
+  throw new Error(
+    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY are required in production"
+  );
+}

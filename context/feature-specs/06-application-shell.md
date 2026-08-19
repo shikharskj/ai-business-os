@@ -65,7 +65,7 @@ Placeholder nav items that are not yet implemented must not pretend the feature 
 
 ### Check when done
 
-- Authenticated owner with a business sees the workspace shell.
+- Authenticated member with a business sees the workspace shell.
 - Current section is highlighted.
 - Unauthenticated users never see the shell.
 - Mobile navigation works via drawer/sheet.

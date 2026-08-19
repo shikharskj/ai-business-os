@@ -42,7 +42,11 @@ We're adding the business overview dashboard from authoritative data: sales, exp
 
 ### Open questions
 
-None that block the dashboard. AI provider remains open and unused here.
+None remaining.
+
+**Decided:** AI provider is **OpenAI initially + provider abstraction**. Unused on the dashboard; do not call an LLM for KPIs.
+
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

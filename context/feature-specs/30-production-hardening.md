@@ -11,7 +11,7 @@ Read:
 
 Mark this spec **In Progress** in `context/progress-tracker.md` before coding.
 
-We're adding production-readiness foundations: logging, error monitoring hooks, secret management, Docker, CI/CD, backups/runbooks, and Clerk production configuration. Do not silently pick Postgres, object storage, or AI hosts.
+We're adding production-readiness foundations: logging, error monitoring hooks, secret management, Docker, CI/CD, backups/runbooks, and Clerk production configuration. Production vendors are decided: **Neon** (Postgres), **Cloudflare R2** (object storage), **OpenAI** (AI, via adapter).
 
 ### Depends on
 
@@ -24,15 +24,16 @@ We're adding production-readiness foundations: logging, error monitoring hooks, 
 - Docker image for the Next.js app. Document how to run with env files.
 - CI/CD pipeline: lint, typecheck, tests, build, migrate (documented).
 - Secret management: env-only, never commit `.env`. Clerk production keys documented as env vars.
-- Backup strategy checklist for PostgreSQL (document; hosting still an open question).
+- Backup strategy checklist for **Neon** PostgreSQL (document branching/point-in-time as applicable).
 - HTTPS/domain/deployment checklist in `docs/` runbook.
-- Clerk production instance checklist (follow Clerk Skill/docs).
+- Clerk production instance checklist (follow Clerk Skill/docs). Document Clerk Organizations in production (same app as development).
+- Production env documentation for Neon, R2, and OpenAI (adapter). Secrets remain env-only.
 - E2E smoke subset for release.
 - Confirm core transactions still work if AI/search/notifications are disabled.
 
 ### Do not
 
-- Silently choose AWS vs Neon vs RDS, or an object-storage vendor, or an AI vendor.
+- Re-open vendor choice (Neon, R2, OpenAI) or swap them without updating architecture and the tracker.
 - Commit secrets.
 - Introduce microservices, Kafka, or Elasticsearch “for production.”
 - Weaken tenant isolation or authz for convenience.
@@ -46,19 +47,23 @@ We're adding production-readiness foundations: logging, error monitoring hooks, 
 
 ### Open questions
 
-Confirm with the project owner before locking vendors:
+None remaining.
 
-- Which PostgreSQL hosting provider should be used?
-- Which object storage provider should be used?
-- Which AI provider/model should power the initial assistant?
+**Decided:**
 
-See `context/progress-tracker.md` → Open Questions.
+- PostgreSQL hosting: **Neon**
+- Object storage: **Cloudflare R2**
+- AI provider: **OpenAI** behind the existing adapter
+
+Wire these in production config and runbooks. Do not commit secrets.
+
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 
 - Production build succeeds in CI.
-- Runbook exists for deploy, backups, Clerk prod env, and secret rotation.
-- Adapters for DB/storage/AI remain swappable.
+- Runbook exists for deploy, backups (Neon), Clerk prod env (including Organizations), R2, OpenAI, and secret rotation.
+- Adapters for DB/storage/AI remain swappable; production defaults are Neon, R2, and OpenAI.
 - No secrets in git.
 - MVP release checklist in docs is filled against the tracker’s Production Readiness items (unchecked items stay explicit).
 - `context/progress-tracker.md` is updated (this spec Complete; catalog finished).

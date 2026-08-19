@@ -11,7 +11,7 @@ Read:
 
 Mark this spec **In Progress** in `context/progress-tracker.md` before coding.
 
-We're adding the provider-agnostic AI gateway and typed tools that call existing use cases. No UI chat yet. The model vendor is not chosen here.
+We're adding the provider-agnostic AI gateway and typed tools that call existing use cases. No UI chat yet. The initial provider is **OpenAI**, behind an adapter so it can be replaced.
 
 ### Depends on
 
@@ -19,7 +19,7 @@ We're adding the provider-agnostic AI gateway and typed tools that call existing
 
 ### Scope
 
-- `lib/ai/` provider adapter interface (send messages / tool calls). One stub or one clearly-swappable adapter for local/dev.
+- `lib/ai/` provider adapter interface (send messages / tool calls). First production adapter: **OpenAI**. Keep a stub or clearly-swappable path for local/dev without calling OpenAI.
 - `modules/ai/` tool registry. Every tool:
   - runs as the authenticated user
   - resolves tenant from trusted context (never from the model)
@@ -36,7 +36,7 @@ We're adding the provider-agnostic AI gateway and typed tools that call existing
 - Give the model a database connection or Prisma client.
 - Call Clerk Admin APIs unrestricted from the model.
 - Let the model supply `userId`, `tenantId`, role, or permission.
-- Pick a production model vendor as a hardcoded singleton without an adapter.
+- Hard-code OpenAI types or SDK calls into domain modules or individual tools. Tools talk to the gateway only.
 - Add a proprietary vector database.
 
 ### Follow
@@ -48,11 +48,11 @@ We're adding the provider-agnostic AI gateway and typed tools that call existing
 
 ### Open questions
 
-Do **not** silently resolve:
+None remaining.
 
-- Which AI provider/model should power the initial assistant? *(this spec: adapter interface + documented stub/dev wiring only)*
+**Decided:** initial AI provider is **OpenAI**, behind a provider abstraction. This spec ships the adapter interface plus an OpenAI adapter (and a stub/dev path). Do not couple tools to OpenAI APIs.
 
-See `context/progress-tracker.md` → Open Questions.
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

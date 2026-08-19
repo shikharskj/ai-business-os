@@ -43,9 +43,11 @@ We're adding the AI assistant UI: ask questions, show facts vs recommendations, 
 
 ### Open questions
 
-- Which AI provider/model should power the initial assistant? Confirm before production credentials. Keep the adapter.
+None remaining.
 
-See `context/progress-tracker.md` → Open Questions.
+**Decided:** initial AI provider is **OpenAI**, behind the spec `27` adapter. Confirm production credentials at deploy time; keep the adapter. Core pages must still work if OpenAI is down.
+
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

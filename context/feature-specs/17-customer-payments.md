@@ -24,7 +24,7 @@ We're adding customer receipts: allocate to invoices (partial/full), update outs
 - Partial and full payment. Allocation cannot exceed invoice outstanding or payment amount.
 - Update invoice payment status and customer outstanding **from allocations**, not from a handwritten balance.
 - Atomic transaction: payment + allocations + accounting post + audit + outbox (`PaymentReceived`).
-- Payment method stored as data. For MVP record at least cash, bank, UPI as **examples** — do not integrate Razorpay/Stripe/etc.
+- Payment method stored as data. MVP methods: **Cash, UPI, Bank Transfer, Card, Cheque**. Do not integrate Razorpay/Stripe/etc.
 - UI under Sales → Payments plus invoice detail “Record payment”.
 - Permissions `payment:*`.
 
@@ -33,7 +33,7 @@ We're adding customer receipts: allocate to invoices (partial/full), update outs
 - Build a payment-gateway platform or payout engine.
 - Allow over-allocation.
 - Mutate posted invoice line amounts to “fix” payment.
-- Silently resolve which payment methods are officially supported beyond recordable labels — confirm if expanding.
+- Silently add payment methods beyond Cash, UPI, Bank Transfer, Card, and Cheque, or add a gateway.
 
 ### Follow
 
@@ -44,11 +44,11 @@ We're adding customer receipts: allocate to invoices (partial/full), update outs
 
 ### Open questions
 
-Do **not** silently resolve these. Confirm with the project owner before adding gateways or extra methods:
+None remaining.
 
-- Which payment methods should be supported initially? *(this spec: recordable methods as data — cash/bank/UPI examples only)*
+**Decided:** payment methods are **Cash, UPI, Bank Transfer, Card, Cheque** as recordable labels. No payment gateway in the MVP.
 
-See `context/progress-tracker.md` → Open Questions.
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

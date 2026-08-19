@@ -29,16 +29,17 @@ We're adding the server-side authorization/policy layer so every business operat
   - `accounting:post`
   - plus matching customer, supplier, product, and settings permissions needed by later specs
 - Roles as a convenience layer: define `OWNER`, `ADMIN`, `STAFF`, `ACCOUNTANT`.
-- Implement **OWNER** fully (all MVP permissions). Do not productize other roles until the multi-user question is resolved.
+- Implement **OWNER**, **ADMIN**, **STAFF**, and **ACCOUNTANT** with explicit permission sets. Multi-user is in scope from foundation (spec `04`). OWNER has all MVP permissions.
 - Server-side `authorize(user, tenant, permission)` that fails closed.
 - UI may hide actions the user cannot perform, but that is not the security boundary.
+- Basic member role assignment for users already in the Clerk Organization / application Membership (full invite UX may live in spec `04`; this spec owns the policy).
 
 ### Do not
 
 - Authorize only in React components or by hiding buttons.
 - Let AI, webhooks, or client payloads supply `role` or `permission`.
-- Treat Clerk session as sufficient authorization for business mutations.
-- Build a full admin user-management UI for STAFF/ACCOUNTANT in this spec.
+- Treat Clerk session or Clerk Organization membership as sufficient authorization for business mutations. Application policy still decides what a member may do.
+- Skip STAFF/ACCOUNTANT/ADMIN permission sets. Multi-user is accepted from foundation.
 
 ### Follow
 
@@ -48,17 +49,17 @@ We're adding the server-side authorization/policy layer so every business operat
 
 ### Open questions
 
-Do **not** silently resolve these. Confirm with the project owner before implementing non-owner product roles:
+None remaining.
 
-- Should the MVP support multiple users per business immediately or begin with owner-only access?
+**Decided:** multi-user is **yes, from foundation**. Productize `OWNER`, `ADMIN`, `STAFF`, and `ACCOUNTANT` in this spec. Clerk Organizations supply workspace membership; this spec still owns application authorization.
 
-See `context/progress-tracker.md` → Open Questions.
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 
-- OWNER can pass policy checks for defined permissions.
+- OWNER can pass policy checks for defined permissions; ADMIN/STAFF/ACCOUNTANT match their defined subsets.
 - Missing membership or unknown permission fails closed.
 - Use cases that exist today (business profile) go through the policy helper, not UI-only checks.
-- Unit tests cover allow/deny for OWNER and unauthenticated/no-membership cases.
+- Unit tests cover allow/deny for OWNER, a non-owner role, and unauthenticated/no-membership cases.
 - Production build succeeds.
 - `context/progress-tracker.md` is updated (this spec Complete; next is `06-application-shell.md`).

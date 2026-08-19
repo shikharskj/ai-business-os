@@ -56,12 +56,14 @@ We're adding sales invoices as an atomic business transaction: numbering, lines,
 
 ### Open questions
 
-Do **not** silently resolve:
+None remaining.
 
-- How much GST functionality belongs in the MVP versus a later release? *(use tax engine from spec `08` only)*
-- Which Indian accounting conventions should be implemented in the first release? *(post through spec `09` CoA)*
+**Decided:**
 
-See `context/progress-tracker.md` → Open Questions.
+- GST: **GST-ready, not filing** — use the tax engine from spec `08` only; no e-invoicing/NIC.
+- Accounting: **simple Indian double-entry** — post through spec `09` CoA; no statutory auditor pack.
+
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 

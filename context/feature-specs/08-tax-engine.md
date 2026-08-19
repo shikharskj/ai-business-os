@@ -41,11 +41,11 @@ We're adding the deterministic GST/tax engine that later invoices, purchases, an
 
 ### Open questions
 
-Do **not** silently resolve these. Confirm with the project owner before expanding tax scope:
+None remaining.
 
-- How much GST functionality belongs in the MVP versus a later release? *(this spec: CGST/SGST/IGST split, HSN/SAC, rates, stored breakdowns — not filing)*
+**Decided:** GST depth is **GST-ready, not a GST-filing platform**. This spec implements CGST/SGST/IGST split, HSN/SAC, rates, and stored breakdowns — not filing, e-invoicing, or e-way-bill.
 
-See `context/progress-tracker.md` → Open Questions.
+See `context/progress-tracker.md` → Architecture Decisions.
 
 ### Check when done
 
