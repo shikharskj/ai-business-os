@@ -65,6 +65,7 @@ model Business {
   timezone              String                @default("Asia/Kolkata")
   currency              String                @default("INR")
   defaultGstRateBps     Int                   @default(1800)
+  closedThroughPeriodKey String?
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
@@ -74,6 +75,8 @@ model Business {
   outboxEvents OutboxEvent[]
   taxRates     TaxRate[]
   hsnSacCodes  HsnSacCode[]
+  accounts     Account[]
+  journals     Journal[]
 
   @@map("businesses")
 }
@@ -167,4 +170,71 @@ model HsnSacCode {
   @@index([tenantId, code])
   @@index([tenantId, effectiveFrom])
   @@map("hsn_sac_codes")
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+enum NormalBalance {
+  DEBIT
+  CREDIT
+}
+
+model Account {
+  id            String        @id @default(uuid())
+  tenantId      String
+  code          String
+  name          String
+  type          AccountType
+  normalBalance NormalBalance
+  createdAt     DateTime      @default(now())
+
+  business Business     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lines    JournalLine[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("accounts")
+}
+
+model Journal {
+  id                   String   @id @default(uuid())
+  tenantId             String
+  accountingDate       String
+  periodKey            String
+  financialYearKey     String
+  sourceType           String
+  sourceId             String
+  memo                 String?
+  reversalOfJournalId  String?
+  postedAt             DateTime @default(now())
+
+  business Business     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lines    JournalLine[]
+
+  @@index([tenantId, periodKey])
+  @@index([tenantId, sourceType, sourceId])
+  @@map("journals")
+}
+
+model JournalLine {
+  id          String  @id @default(uuid())
+  tenantId    String
+  journalId   String
+  accountId   String
+  description String?
+  debit       Decimal @db.Decimal(18, 2)
+  credit      Decimal @db.Decimal(18, 2)
+
+  journal Journal @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, accountId])
+  @@index([journalId])
+  @@map("journal_lines")
 }

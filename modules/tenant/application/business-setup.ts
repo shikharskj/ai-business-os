@@ -41,6 +41,7 @@ export async function createBusinessWithOrganization(input: {
   businessRepository: BusinessRepository;
   membershipRepository: MembershipRepository;
   clerkOrganizationGateway: ClerkOrganizationGateway;
+  chartOfAccountsSeeder?: { ensureForTenant(tenantId: string): Promise<void> };
 }): Promise<CreateBusinessResult> {
   const profile = businessProfileInputSchema.parse(input.profile);
 
@@ -51,6 +52,7 @@ export async function createBusinessWithOrganization(input: {
   for (const membership of existingMemberships) {
     const business = await input.businessRepository.findById(membership.tenantId);
     if (business && business.name === profile.name) {
+      await input.chartOfAccountsSeeder?.ensureForTenant(business.id);
       return {
         business,
         membership,
@@ -82,6 +84,8 @@ export async function createBusinessWithOrganization(input: {
       role: "OWNER",
     });
 
+    await input.chartOfAccountsSeeder?.ensureForTenant(business.id);
+
     return {
       business,
       membership,
@@ -110,6 +114,8 @@ export async function createBusinessWithOrganization(input: {
       role: "OWNER",
     });
 
+    await input.chartOfAccountsSeeder?.ensureForTenant(business.id);
+
     return {
       business,
       membership,
@@ -133,6 +139,7 @@ export async function attachExistingOrganizationToBusiness(input: {
   businessRepository: BusinessRepository;
   membershipRepository: MembershipRepository;
   clerkOrganizationGateway: ClerkOrganizationGateway;
+  chartOfAccountsSeeder?: { ensureForTenant(tenantId: string): Promise<void> };
 }): Promise<CreateBusinessResult> {
   const profile = businessProfileInputSchema.parse(input.profile);
   const clerkMembership =
@@ -169,6 +176,8 @@ export async function attachExistingOrganizationToBusiness(input: {
     tenantId: business.id,
     role,
   });
+
+  await input.chartOfAccountsSeeder?.ensureForTenant(business.id);
 
   return {
     business,

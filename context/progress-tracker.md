@@ -99,7 +99,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Expenses              | Not Started |
 | Suppliers             | Not Started |
 | Purchases             | Not Started |
-| Accounting            | Not Started |
+| Accounting            | In Progress |
 | GST                   | In Progress |
 | Dashboard             | Not Started |
 | Reports               | Not Started |
@@ -112,6 +112,14 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Accounting foundation (`09-accounting-foundation.md`):
+  * `modules/accounting/domain/` — balanced-journal invariant, period keys (`YYYY-MM` + `FY2026-27`), small Indian SMB chart template. No Prisma/Next/Clerk.
+  * Posting service `postJournal` / `reverseJournal` — other modules must call these; journal tables are not written directly. Unbalanced journals rejected. Closed periods rejected via `Business.closedThroughPeriodKey`.
+  * Posted journals are insert-only (no update/delete on `JournalRepository`). Corrections are reversal journals that swap debit/credit.
+  * Prisma `Account`, `Journal`, `JournalLine` (money as `DECIMAL(18,2)`); per-tenant unique account codes. Migration `20260819163000_add_accounting_foundation`.
+  * Chart of accounts seeded per business on create (11 accounts: cash/bank, AR/AP, inventory, input/output GST, capital, sales, COGS, operating expenses).
+  * No ledger UI in this spec.
 
 * Tax engine (`08-tax-engine.md`):
   * `modules/tax/domain/` — pure GST calculation (`calculateGst`), GSTIN/state-code helpers, and documented debit-style rounding (half away from zero in integer paisa; odd paisa on intra-state split goes to SGST). No Next.js, Clerk, or Prisma imports.
@@ -212,7 +220,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Next implementable spec:** `context/feature-specs/09-accounting-foundation.md`
+**Next implementable spec:** `context/feature-specs/10-documents-storage.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
