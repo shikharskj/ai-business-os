@@ -26,7 +26,7 @@ export function EditCustomerForm({ customer }: { customer: Customer }) {
         fieldErrors={state.fieldErrors}
       />
       {state.error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-base text-destructive" role="alert">
           {state.error}
         </p>
       ) : null}

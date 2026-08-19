@@ -80,6 +80,7 @@ model Business {
   journals     Journal[]
   documents    Document[]
   parties      Party[]
+  products     Product[]
 
   @@map("businesses")
 }
@@ -302,4 +303,34 @@ model Party {
   @@index([tenantId, kind, status])
   @@index([tenantId, name])
   @@map("parties")
+}
+
+enum ProductKind {
+  PRODUCT
+  SERVICE
+}
+
+model Product {
+  id               String      @id @default(uuid())
+  tenantId         String
+  kind             ProductKind
+  name             String
+  sku              String
+  unitOfMeasurement String
+  sellingPrice     Decimal     @db.Decimal(18, 2)
+  purchasePrice    Decimal     @db.Decimal(18, 2)
+  hsnSac           String?
+  taxRateBps       Int
+  category         String?
+  tracksInventory  Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, sku])
+  @@index([tenantId, kind])
+  @@index([tenantId, name])
+  @@map("products")
 }

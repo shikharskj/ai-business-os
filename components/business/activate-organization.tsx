@@ -47,11 +47,11 @@ export function ActivateOrganization({
   }, [loaded, user, activate]);
 
   if (error) {
-    return <p className="text-sm text-destructive">{error}</p>;
+    return <p className="text-base text-destructive">{error}</p>;
   }
 
   return (
-    <p className="text-sm text-muted-foreground">
+    <p className="text-base text-muted-foreground">
       Activating your business workspace…
     </p>
   );

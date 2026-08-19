@@ -27,7 +27,7 @@ export default async function WorkspaceLayout({
       <AppSidebar businessName={tenant.business.name} />
       <SidebarInset>
         <AppTopBar />
-        <main className="flex flex-1 flex-col">{children}</main>
+        <main className="flex flex-1 flex-col bg-background p-4 md:p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );

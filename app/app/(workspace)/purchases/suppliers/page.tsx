@@ -1,4 +1,4 @@
-import { Truck } from "lucide-react";
+import { Plus, Search, Truck } from "lucide-react";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/shell/empty-state";
@@ -40,7 +40,10 @@ export default async function SuppliersPage({
   const filters = parseResult.success
     ? parseResult.data
     : { q: "", status: "ACTIVE" as const };
-  const canCreate = roleHasPermission(tenant.membership.role, "supplier:create");
+  const canCreate = roleHasPermission(
+    tenant.membership.role,
+    "supplier:create",
+  );
   const suppliers = await listSuppliers({
     tenantId: tenant.tenantId,
     query: filters.q,
@@ -49,7 +52,7 @@ export default async function SuppliersPage({
   });
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
       <PageHeader
         title="Suppliers"
         description="People and businesses you buy from."
@@ -59,7 +62,8 @@ export default async function SuppliersPage({
               nativeButton={false}
               render={<Link href="/app/purchases/suppliers/new" />}
             >
-              New supplier
+              <Plus className="size-5" />
+              <span>New supplier</span>
             </Button>
           ) : null
         }
@@ -67,21 +71,27 @@ export default async function SuppliersPage({
 
       <form className="flex flex-wrap items-end gap-3" method="get">
         <div className="flex min-w-56 flex-1 flex-col gap-2">
-          <label htmlFor="q" className="text-sm font-medium">
+          <label htmlFor="q" className="text-base font-medium">
             Search
           </label>
           <Input
             id="q"
             name="q"
             defaultValue={filters.q}
-            placeholder="Name, phone, email, or GSTIN"
+            placeholder="Name, phone, email, or GSTIN..."
+            className="max-w-xl"
+            leftIcon={<Search className="size-5" />}
           />
         </div>
         <div className="flex w-40 flex-col gap-2">
-          <label htmlFor="status" className="text-sm font-medium">
+          <label htmlFor="status" className="text-base font-medium">
             Status
           </label>
-          <Select name="status" defaultValue={filters.status}>
+          <Select
+            name="status"
+            defaultValue={filters.status}
+            items={{ ACTIVE: "Active", INACTIVE: "Inactive", ALL: "All" }}
+          >
             <SelectTrigger id="status" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -116,13 +126,14 @@ export default async function SuppliersPage({
                 nativeButton={false}
                 render={<Link href="/app/purchases/suppliers/new" />}
               >
-                New supplier
+                <Plus className="size-5" />
+                <span>New supplier</span>{" "}
               </Button>
             ) : null
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-lg border">
+        <div className="overflow-hidden rounded-md border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>

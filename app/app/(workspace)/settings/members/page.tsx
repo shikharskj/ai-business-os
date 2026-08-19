@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { InviteMemberForm } from "@/components/business/invite-member-form";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/shell/page-header";
 import { authorize } from "@/lib/security";
 
@@ -14,7 +15,7 @@ export default async function BusinessMembersPage({
   const params = await searchParams;
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6">
       <PageHeader
         title="Team members"
         description={`Invite colleagues to ${tenant.business.name}. Invitations are sent through Clerk Organizations.`}
@@ -30,10 +31,14 @@ export default async function BusinessMembersPage({
       />
 
       {params.invited ? (
-        <p className="text-sm text-muted-foreground">Invitation sent.</p>
+        <p className="text-base text-muted-foreground">Invitation sent.</p>
       ) : null}
 
-      <InviteMemberForm />
+      <Card>
+        <CardContent>
+          <InviteMemberForm />
+        </CardContent>
+      </Card>
     </div>
   );
 }

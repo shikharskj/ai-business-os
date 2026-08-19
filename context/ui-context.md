@@ -42,22 +42,17 @@ The application should make a small business owner feel:
 
 # Theme
 
-Use a **light-first professional business interface** with optional dark mode support only if implementation is straightforward and does not compromise the MVP.
+Use a **shadcn blocks-style SaaS workspace**: zinc/neutral surfaces, generous whitespace, thin borders, and a high-contrast primary (near-black in light mode, near-white in dark mode).
 
-The primary experience should use:
-
-- Warm/neutral page backgrounds.
-- White or near-white surfaces.
-- Dark readable typography.
-- One strong primary accent.
-- Green for positive financial/business states.
-- Red for errors/negative states.
-- Amber for warnings.
-- Blue for informational states.
+Light and dark are **first-class**. Both must be readable for lists, forms, financial badges, and the AI assistant. Do not ship a light-only product or skip dark mode to save time.
 
 The visual language should communicate **financial trust and operational clarity**, not an experimental AI product.
 
+Do not invent fake dashboard chrome (Quick Create, decorative revenue charts, Customize Columns). Restyle real screens.
+
 AI functionality should feel integrated into the business application rather than visually dominating it.
+
+Indian business meaning stays semantic: green/amber/red for paid/pending/overdue — not the primary brand color.
 
 ---
 
@@ -69,33 +64,58 @@ All colors must be defined through CSS custom properties.
 
 **Never hardcode hex colors inside components.**
 
-Use semantic tokens rather than component-specific colors.
+Canonical tokens are **shadcn CSS variables**. AI Business OS aliases map onto them so older docs and leftover usage stay valid.
+
+Components should prefer Tailwind semantic classes (`bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`) over aliases.
+
+## Canonical (shadcn)
 
 
-| Role                  | CSS Variable              | Value     |
-| --------------------- | ------------------------- | --------- |
-| Page background       | `--bg-base`               | `#F8FAFC` |
-| Surface               | `--bg-surface`            | `#FFFFFF` |
-| Elevated surface      | `--bg-elevated`           | `#FFFFFF` |
-| Subtle surface        | `--bg-subtle`             | `#F1F5F9` |
-| Primary text          | `--text-primary`          | `#0F172A` |
-| Secondary text        | `--text-secondary`        | `#475569` |
-| Muted text            | `--text-muted`            | `#64748B` |
-| Disabled text         | `--text-disabled`         | `#94A3B8` |
-| Primary accent        | `--accent-primary`        | `#2563EB` |
-| Primary accent hover  | `--accent-primary-hover`  | `#1D4ED8` |
-| Primary accent subtle | `--accent-primary-subtle` | `#EFF6FF` |
-| Border default        | `--border-default`        | `#E2E8F0` |
-| Border strong         | `--border-strong`         | `#CBD5E1` |
-| State success         | `--state-success`         | `#16A34A` |
-| State success subtle  | `--state-success-subtle`  | `#F0FDF4` |
-| State warning         | `--state-warning`         | `#D97706` |
-| State warning subtle  | `--state-warning-subtle`  | `#FFFBEB` |
-| State error           | `--state-error`           | `#DC2626` |
-| State error subtle    | `--state-error-subtle`    | `#FEF2F2` |
-| State info            | `--state-info`            | `#2563EB` |
-| State info subtle     | `--state-info-subtle`     | `#EFF6FF` |
+| Role                 | CSS Variable             | Light (oklch)           | Dark (oklch)              |
+| -------------------- | ------------------------ | ----------------------- | ------------------------- |
+| Page background      | `--background`           | `1 0 0` (near white)    | `0.145 0 0` (zinc-950)    |
+| Page / body text     | `--foreground`           | `0.145 0 0`             | `0.985 0 0`               |
+| Card / surface       | `--card`                 | `1 0 0`                 | `0.205 0 0`               |
+| Card text            | `--card-foreground`      | `0.145 0 0`             | `0.985 0 0`               |
+| Primary (buttons)    | `--primary`              | `0.205 0 0` (near black)| `0.922 0 0` (near white)  |
+| On primary           | `--primary-foreground`   | `0.985 0 0`             | `0.205 0 0`               |
+| Muted surface        | `--muted`                | `0.97 0 0`              | `0.269 0 0`               |
+| Muted text           | `--muted-foreground`     | `0.556 0 0`             | `0.708 0 0`               |
+| Border               | `--border`               | `0.922 0 0`             | `1 0 0 / 10%`             |
+| Sidebar              | `--sidebar`              | `0.985 0 0`             | `0.205 0 0`               |
+| Chart series 1–4     | `--chart-1` … `--chart-4`| grayscale zinc          | grayscale zinc            |
+| Chart accent series  | `--chart-5`              | one muted green accent  | one muted green accent    |
 
+
+## Compatibility aliases (map to canonical)
+
+
+| Role                  | CSS Variable              | Maps to                         |
+| --------------------- | ------------------------- | ------------------------------- |
+| Page background       | `--bg-base`               | `--background`                  |
+| Surface               | `--bg-surface`            | `--card`                        |
+| Elevated surface      | `--bg-elevated`           | `--card`                        |
+| Subtle surface        | `--bg-subtle`             | `--muted`                       |
+| Primary text          | `--text-primary`          | `--foreground`                  |
+| Secondary text        | `--text-secondary`        | `--muted-foreground`            |
+| Muted text            | `--text-muted`            | `--muted-foreground`            |
+| Disabled text         | `--text-disabled`         | muted zinc (theme pair)         |
+| Primary accent        | `--accent-primary`        | `--primary`                     |
+| Primary accent hover  | `--accent-primary-hover`  | `--primary` at ~80%             |
+| Primary accent subtle | `--accent-primary-subtle` | `--secondary` / `--muted`       |
+| Border default        | `--border-default`        | `--border`                      |
+| Border strong         | `--border-strong`         | stronger zinc (theme pair)      |
+| State success         | `--state-success`         | financial green (theme pair)    |
+| State success subtle  | `--state-success-subtle`  | financial green wash            |
+| State warning         | `--state-warning`         | financial amber (theme pair)    |
+| State warning subtle  | `--state-warning-subtle`  | financial amber wash            |
+| State error           | `--state-error`           | `--destructive` family          |
+| State error subtle    | `--state-error-subtle`    | destructive wash                |
+| State info            | `--state-info`            | `--foreground` (neutral, not blue brand) |
+| State info subtle     | `--state-info-subtle`     | `--muted`                       |
+
+
+Do not use a blue brand primary. High-contrast black/white primary is the product look.
 
 ---
 
@@ -134,32 +154,33 @@ Draft      → Neutral
 
 # Dark Mode
 
-Dark mode may be supported through the same semantic tokens.
+Dark mode is required and uses the same semantic tokens.
 
-Do not create separate component-specific dark-mode values.
+Apply a `.dark` class on `html` via `next-themes` (`attribute="class"`, `defaultTheme="system"`, `enableSystem`). Persist the choice (`localStorage`). Put `suppressHydrationWarning` on `<html>`.
 
-Components should consume:
+Do not create per-component color forks or hardcoded light/dark hex.
+
+Components should consume shadcn tokens (or aliases), not raw light/dark colors:
 
 ```text
---bg-base
---bg-surface
---text-primary
---text-muted
---border-default
+--background
+--foreground
+--card
+--muted-foreground
+--border
+--primary
 ```
-
-rather than directly referencing light/dark colors.
 
 Dark mode must preserve:
 
 - Contrast.
 - Accessibility.
-- Financial state visibility.
+- Financial state visibility (success / warning / error remain distinguishable).
 - Form readability.
 - Table readability.
 - AI conversation readability.
 
-If dark mode significantly increases MVP complexity, prioritize the light theme first.
+The workspace top bar includes a theme toggle (Light / Dark / System) at the top right, immediately left of the Clerk `UserButton`. The menu uses dropdown **items** that call `setTheme` (not a radio group). Setup and public/auth headers should expose the same toggle when they have chrome.
 
 ---
 
@@ -188,17 +209,17 @@ Use **Geist Mono** or an equivalent monospace font for technical/structured data
 ## Typography Hierarchy
 
 
-| Context         | Recommended Style            |
-| --------------- | ---------------------------- |
-| Page title      | `text-2xl font-semibold`     |
-| Section heading | `text-lg font-semibold`      |
-| Card heading    | `text-sm/medium font-medium` |
-| Body            | `text-sm`                    |
-| Secondary text  | `text-sm text-muted`         |
-| Caption         | `text-xs`                    |
-| Financial KPI   | `text-2xl/3xl font-semibold` |
-| Table text      | `text-sm`                    |
-| Metadata        | `text-xs`                    |
+| Context         | Recommended Style                              |
+| --------------- | ---------------------------------------------- |
+| Page title      | `text-2xl font-semibold tracking-tight`        |
+| Section heading | `text-lg font-semibold`                        |
+| Card heading    | `text-base font-medium`                        |
+| Body            | `text-base`                                    |
+| Secondary text  | `text-base text-muted-foreground`              |
+| Caption         | `text-xs text-muted-foreground`                |
+| Financial KPI   | `text-2xl font-semibold tracking-tight`        |
+| Table text      | `text-base`                                    |
+| Metadata        | `text-xs`                                      |
 
 
 Avoid excessive use of very large headings.
@@ -257,9 +278,9 @@ Use a consistent radius scale.
 | ----------------- | -------------- |
 | Inline / small UI | `rounded-md`   |
 | Inputs / buttons  | `rounded-md`   |
-| Cards / panels    | `rounded-lg`   |
-| Large sections    | `rounded-lg`   |
-| Modals / overlays | `rounded-xl`   |
+| Cards / panels    | `rounded-md`   |
+| Large sections    | `rounded-md`   |
+| Modals / overlays | `rounded-md`   |
 | Pills / statuses  | `rounded-full` |
 
 
@@ -384,20 +405,16 @@ Do not create extremely generic components that understand every business domain
 
 # Layout
 
-The application uses a **business workspace layout**.
+The application uses a **business workspace layout**: shadcn `Sidebar` + `SidebarInset`, inset main `bg-background` with comfortable padding (`p-4 md:p-6`).
 
 Typical structure:
 
 ```text
-┌────────────────────────────────────────────────────────────┐
-│ Top Bar                                                    │
-├───────────────┬────────────────────────────────────────────┤
-│               │                                            │
-│ Sidebar       │ Main Content                               │
-│               │                                            │
-│ Navigation    │ Dashboard / Module / Workflow             │
-│               │                                            │
-│               │                                            │
+┌───────────────┬────────────────────────────────────────────┐
+│ Sidebar       │ Top Bar  [trigger] …… [theme] [user]       │
+│               ├────────────────────────────────────────────┤
+│ Navigation    │ Main Content                               │
+│               │ Dashboard / Module / Workflow              │
 └───────────────┴────────────────────────────────────────────┘
 ```
 
@@ -446,8 +463,11 @@ The exact navigation must follow `Project overview.md`.
 
 Sidebar rules:
 
-- Fixed or sticky on desktop.
-- Collapsible where practical.
+- Use shadcn `Sidebar` primitives (`collapsible="icon"`).
+- Header: compact brand tile (icon on `--primary`) plus business name and “Workspace”.
+- Menu rows use comfortable height (`h-10` default, `h-9` nested items) at `text-base` with `size-5` icons. Sidebar width is `18rem`. Group labels use `text-sm`.
+- Group modules with labels/separators; keep Settings and AI Assistant in the footer.
+- Do not add fake Quick Create or unused dashboard shortcuts.
 - Clearly highlight the current section.
 - Avoid more than two levels of nesting.
 - Use icons + labels.
@@ -465,18 +485,22 @@ The top bar should provide global context and actions.
 Typical contents:
 
 ```text
-[Page / Breadcrumb]          [Search] [AI] [Notifications] [User]
+[Sidebar trigger]                    [Theme toggle] [User]
 ```
 
-Potential global actions:
+Required now:
+
+- Sidebar trigger.
+- Theme toggle (top-right, immediately left of Clerk `UserButton`).
+- User menu (`UserButton`).
+
+Optional later (do not invent chrome before the feature exists):
 
 - Global search.
-- AI assistant.
 - Notifications.
 - Help.
-- User/workspace menu.
 
-The top bar should remain visually lightweight.
+The top bar should remain visually lightweight (`h-16`, `border-b`, `bg-background`).
 
 ---
 
@@ -518,7 +542,9 @@ There should normally be **one obvious primary action**.
 
 The dashboard is the business owner's operational overview.
 
-Prioritize:
+When KPIs exist, use the **metric card pattern**: muted title, large value (`text-2xl font-semibold tracking-tight`), muted caption. Until then, use the same card chrome for **real tenant facts** (business type, GSTIN, financial year start, role) — never fake revenue or decorative charts.
+
+Prioritize (as data becomes real):
 
 ```text
 Today's Business
@@ -573,7 +599,8 @@ Random percentage
 
 Cards should have:
 
-- Clear title.
+- `bg-card`, thin `border-border` / ring, `rounded-md`.
+- Clear title (`text-base font-medium` or muted caption).
 - Clear primary value.
 - Optional supporting information.
 - Optional action.
@@ -585,6 +612,8 @@ Cards should have:
 # Tables
 
 Tables are a core UI pattern because business applications are data-heavy.
+
+Wrap list tables in a shell: `overflow-hidden rounded-md border border-border bg-card`. Keep a toolbar row for filters; do not migrate every list to the heavy data-table unless the screen already uses it.
 
 Tables should:
 
@@ -1349,6 +1378,8 @@ Decorative chart with no actionable meaning
 
 Charts should provide accessible textual summaries where appropriate.
 
+Use `--chart-1` … `--chart-5` from the theme: grayscale series plus one accent. Do not invent a rainbow palette that fights the neutral workspace.
+
 ---
 
 
@@ -1431,11 +1462,11 @@ Recommended sizes:
 
 | Context          | Size                  |
 | ---------------- | --------------------- |
-| Inline           | `h-4 w-4`             |
-| Button           | `h-4 w-4`             |
-| Navigation       | `h-4 w-4` / `h-5 w-5` |
-| Important action | `h-5 w-5`             |
-| Empty state      | `h-8 w-8` or larger   |
+| Inline           | `size-5`              |
+| Button           | `size-5`              |
+| Navigation       | `size-5`              |
+| Important action | `size-5`              |
+| Empty state      | `size-10` or larger   |
 
 
 Avoid mixing multiple icon libraries.
@@ -1480,7 +1511,11 @@ Actions such as:
 [Cancel Invoice]
 ```
 
-should use the destructive semantic style.
+should use the destructive semantic style (`variant="destructive"`).
+
+Primary buttons use high-contrast `--primary` fill (black in light, white in dark). Secondary actions use `variant="outline"`.
+
+Default control size is comfortable: `h-10` with `px-3.5` and `text-base` (icon buttons `size-10`, default icons `size-5`). Keep `sm` / `xs` for dense toolbars only.
 
 Avoid multiple primary buttons competing for attention.
 
@@ -1497,6 +1532,8 @@ Inputs should have:
 - Helper text when necessary.
 - Validation states.
 - Accessible descriptions.
+- Theme tokens (`border-input`, `bg-transparent` / `dark:bg-input/30`) — no hardcoded hex.
+- Default height `h-10` with `px-3`, matching buttons and selects (`text-base`, `rounded-md`).
 
 Do not use placeholders as substitutes for labels.
 
@@ -1506,13 +1543,14 @@ Do not use placeholders as substitutes for labels.
 
 # Data Density
 
-The application is business-oriented, so information density should be **moderately high**.
+The application is business-oriented, so information density should be **moderately high and comfortable** — not compact nova `h-8` chrome.
 
 Prefer:
 
 ```text
-Compact but readable tables
-Compact cards
+Readable tables (h-12 heads, px-3 py-3 cells, text-base)
+h-10 controls (buttons, inputs, selects)
+rounded-md surfaces
 Consistent spacing
 Clear hierarchy
 ```
@@ -1808,6 +1846,7 @@ A UI feature is complete when:
 10. AI actions clearly communicate their status and consequences.
 11. Keyboard accessibility is preserved.
 12. No unnecessary visual patterns or dependencies were introduced.
+13. Light and dark both remain readable; theme choice persists across reload.
 
 ---
 

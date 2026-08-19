@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { EditSupplierForm } from "@/components/business/edit-supplier-form";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { authorize } from "@/lib/security";
 import { getSupplier, PartyNotFoundError } from "@/modules/party";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
@@ -35,7 +36,7 @@ export default async function EditSupplierPage({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6">
       <PageHeader
         title={`Edit ${supplier.name}`}
         description="Update supplier contact, address, and GST details."
@@ -49,7 +50,11 @@ export default async function EditSupplierPage({
           </Button>
         }
       />
-      <EditSupplierForm supplier={supplier} />
+      <Card>
+        <CardContent>
+          <EditSupplierForm supplier={supplier} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

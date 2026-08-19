@@ -42,7 +42,7 @@ export function DeactivateCustomerButton({
         {isPending ? "Deactivating…" : "Deactivate"}
       </Button>
       {error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-base text-destructive" role="alert">
           {error}
         </p>
       ) : null}

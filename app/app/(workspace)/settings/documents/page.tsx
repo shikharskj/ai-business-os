@@ -22,7 +22,7 @@ export default async function BusinessDocumentsPage() {
   });
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6">
       <PageHeader
         title="Documents"
         description="Upload supporting files for this business. Later invoices, expenses, and receipts can attach files the same way."
@@ -47,7 +47,7 @@ export default async function BusinessDocumentsPage() {
           </CardContent>
         </Card>
       ) : (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           You can view and download documents, but you cannot upload new files.
         </p>
       )}
