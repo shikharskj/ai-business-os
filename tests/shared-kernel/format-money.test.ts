@@ -22,10 +22,29 @@ describe("formatINR", () => {
     const result = formatINR(m);
     expect(result).toContain("12,50,000");
   });
+
+  it("formats large bigint amounts without Number conversion", () => {
+    const m = money(10_000_000_000_000_000n); // ₹1,00,00,00,00,00,000.00
+    const result = formatINR(m);
+    expect(result).toContain("10,00,00,00,00,00,000.00");
+  });
 });
 
 describe("formatIndianNumber", () => {
   it("formats with Indian grouping", () => {
     expect(formatIndianNumber(125000)).toContain("1,25,000");
+  });
+
+  it("formats string inputs without Number conversion", () => {
+    expect(formatIndianNumber("12500000.50")).toBe("1,25,00,000.50");
+  });
+
+  it("rejects unsafe number inputs", () => {
+    expect(() => formatIndianNumber(Number.MAX_SAFE_INTEGER + 1)).toThrow(
+      "Value cannot be represented safely as a number"
+    );
+    expect(() => formatIndianNumber(1.25)).toThrow(
+      "Value cannot be represented safely as a number"
+    );
   });
 });

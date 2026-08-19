@@ -74,11 +74,24 @@ describe("Money", () => {
   });
 
   it("never uses IEEE float for stored result", () => {
-    const values = Array.from({ length: 100 }, (_, i) =>
-      moneyFromMajor("0.10")
-    );
+    const values = Array.from({ length: 100 }, () => moneyFromMajor("0.10"));
     const sum = values.reduce(addMoney);
     expect(sum.amountMinor).toBe(1000n);
     expect(toMajorString(sum)).toBe("10.00");
+  });
+
+  it("rejects scale mismatch on add, subtract, and compare", () => {
+    const twoDecimal = money(100n, "INR", 2);
+    const threeDecimal = money(1000n, "INR", 3);
+    expect(() => addMoney(twoDecimal, threeDecimal)).toThrow("Scale mismatch");
+    expect(() => subtractMoney(twoDecimal, threeDecimal)).toThrow("Scale mismatch");
+    expect(() => compareMoney(twoDecimal, threeDecimal)).toThrow("Scale mismatch");
+  });
+
+  it("rounds negative values away from zero", () => {
+    expect(moneyFromMajor("-0.005").amountMinor).toBe(-1n);
+    expect(toMajorString(moneyFromMajor("-0.005"))).toBe("-0.01");
+    expect(moneyFromMajor("-1.995").amountMinor).toBe(-200n);
+    expect(toMajorString(moneyFromMajor("-1.995"))).toBe("-2.00");
   });
 });

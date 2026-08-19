@@ -23,4 +23,18 @@ describe("AuditRepository (memory)", () => {
     expect(repo).not.toHaveProperty("update");
     expect(repo).not.toHaveProperty("delete");
   });
+
+  it("rejects unsupported metadata values", async () => {
+    const repo = createMemoryAuditRepository();
+    await expect(
+      repo.append({
+        tenantId: "t1",
+        actorUserId: "u1",
+        action: "create",
+        resource: "Invoice",
+        resourceId: "inv-1",
+        metadata: { total: 1n },
+      })
+    ).rejects.toThrow("unsupported JSON");
+  });
 });

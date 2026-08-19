@@ -19,6 +19,7 @@ export {
 export {
   type BusinessDate,
   businessDate,
+  isCalendarDate,
   todayInTimezone,
   utcNow,
   financialYearForDate,

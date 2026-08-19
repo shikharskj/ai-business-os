@@ -20,23 +20,25 @@ export function moneyFromMajor(major: string, currency = "INR", scale = 2): Mone
   const parts = major.replace(/,/g, "").split(".");
   const intPart = parts[0] ?? "0";
   let fracPart = parts[1] ?? "";
+  const negative = intPart.startsWith("-");
+  const absInt = negative ? intPart.slice(1) : intPart;
 
+  let roundAwayFromZero = false;
   if (fracPart.length > scale) {
     const roundDigit = Number(fracPart[scale]);
     fracPart = fracPart.slice(0, scale);
-    if (roundDigit >= 5) {
-      const rounded = BigInt(intPart + fracPart) + 1n;
-      return Object.freeze({ amountMinor: rounded, currency, scale });
-    }
+    roundAwayFromZero = roundDigit >= 5;
   } else {
     fracPart = fracPart.padEnd(scale, "0");
   }
 
-  const negative = intPart.startsWith("-");
-  const absInt = negative ? intPart.slice(1) : intPart;
-  const combined = BigInt(absInt + fracPart);
+  let absMinor = BigInt(absInt + fracPart);
+  if (roundAwayFromZero) {
+    absMinor += 1n;
+  }
+
   return Object.freeze({
-    amountMinor: negative ? -combined : combined,
+    amountMinor: negative ? -absMinor : absMinor,
     currency,
     scale,
   });
@@ -49,6 +51,9 @@ export function moneyFromDecimalString(value: string, currency = "INR", scale = 
 function assertSameCurrency(a: Money, b: Money): void {
   if (a.currency !== b.currency) {
     throw new Error(`Currency mismatch: ${a.currency} vs ${b.currency}`);
+  }
+  if (a.scale !== b.scale) {
+    throw new Error(`Scale mismatch: ${a.scale} vs ${b.scale}`);
   }
 }
 

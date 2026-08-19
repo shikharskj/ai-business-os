@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   businessDate,
   financialYearForDate,
+  todayInTimezone,
 } from "@/modules/shared-kernel/dates";
 
 describe("businessDate", () => {
@@ -12,6 +13,10 @@ describe("businessDate", () => {
 
   it("rejects invalid format", () => {
     expect(() => businessDate("04/01/2026")).toThrow("Invalid business date");
+  });
+
+  it("rejects impossible calendar dates", () => {
+    expect(() => businessDate("2026-02-30")).toThrow("Invalid business date");
   });
 });
 
@@ -32,5 +37,31 @@ describe("financialYearForDate", () => {
     const fy = financialYearForDate(businessDate("2026-06-15"), 1);
     expect(fy.start).toBe("2026-01-01");
     expect(fy.end).toBe("2026-12-31");
+  });
+
+  it("accepts start month boundaries 1 and 12", () => {
+    expect(financialYearForDate(businessDate("2026-12-15"), 12).start).toBe(
+      "2026-12-01"
+    );
+    expect(financialYearForDate(businessDate("2026-01-15"), 1).end).toBe(
+      "2026-12-31"
+    );
+  });
+
+  it("rejects invalid start months", () => {
+    const date = businessDate("2026-08-19");
+    expect(() => financialYearForDate(date, 0)).toThrow("Invalid start month");
+    expect(() => financialYearForDate(date, 13)).toThrow("Invalid start month");
+    expect(() => financialYearForDate(date, 4.5)).toThrow("Invalid start month");
+    expect(() => financialYearForDate(date, Number.NaN)).toThrow(
+      "Invalid start month"
+    );
+  });
+});
+
+describe("todayInTimezone", () => {
+  it("returns a branded calendar date for Asia/Kolkata", () => {
+    const today = todayInTimezone("Asia/Kolkata");
+    expect(today).toBe(businessDate(today));
   });
 });

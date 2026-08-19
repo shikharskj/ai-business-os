@@ -28,6 +28,12 @@ CREATE TABLE "outbox_events" (
     CONSTRAINT "outbox_events_pkey" PRIMARY KEY ("id")
 );
 
+-- AddForeignKey
+ALTER TABLE "audit_records" ADD CONSTRAINT "audit_records_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "businesses"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "outbox_events" ADD CONSTRAINT "outbox_events_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "businesses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
 -- CreateIndex
 CREATE INDEX "audit_records_tenantId_resource_resourceId_idx" ON "audit_records"("tenantId", "resource", "resourceId");
 

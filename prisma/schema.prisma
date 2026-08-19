@@ -69,6 +69,8 @@ model Business {
 
   owner       User         @relation("BusinessOwner", fields: [ownerUserId], references: [id])
   memberships Membership[]
+  auditRecords AuditRecord[]
+  outboxEvents OutboxEvent[]
 
   @@map("businesses")
 }
@@ -102,6 +104,8 @@ model AuditRecord {
   correlationId String?
   createdAt     DateTime @default(now())
 
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
   @@index([tenantId, resource, resourceId])
   @@index([tenantId, createdAt])
   @@map("audit_records")
@@ -117,6 +121,8 @@ model OutboxEvent {
   correlationId String?
   processedAt   DateTime?
   createdAt     DateTime @default(now())
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([processedAt, createdAt])
   @@index([tenantId, eventType])

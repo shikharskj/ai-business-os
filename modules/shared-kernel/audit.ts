@@ -1,5 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 
+import { toPrismaJson } from "@/modules/shared-kernel/json";
+
 export type AuditInput = {
   tenantId: string;
   actorUserId: string;
@@ -15,7 +17,7 @@ export type AuditRepository = {
 };
 
 export function createPrismaAuditRepository(
-  prisma: PrismaClient
+  prisma: Pick<PrismaClient, "auditRecord">
 ): AuditRepository {
   return {
     async append(input) {
@@ -26,7 +28,7 @@ export function createPrismaAuditRepository(
           action: input.action,
           resource: input.resource,
           resourceId: input.resourceId,
-          metadata: (input.metadata ?? {}) as object,
+          metadata: toPrismaJson(input.metadata ?? {}, "metadata"),
           correlationId: input.correlationId ?? null,
         },
       });
@@ -42,6 +44,7 @@ export function createMemoryAuditRepository(): AuditRepository & {
   return {
     records,
     async append(input) {
+      toPrismaJson(input.metadata ?? {}, "metadata");
       records.push(input);
       return { id: crypto.randomUUID() };
     },

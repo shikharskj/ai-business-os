@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 process.env.DATABASE_URL ??=
   "postgresql://postgres:postgres@localhost:5432/ai_business_os";
 process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ??= "pk_test_vitest_placeholder";

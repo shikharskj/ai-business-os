@@ -1,5 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 
+import { toPrismaJson } from "@/modules/shared-kernel/json";
+
 export type OutboxEventInput = {
   tenantId: string;
   eventType: string;
@@ -20,7 +22,7 @@ export type OutboxRepository = {
  * domain mutation.
  */
 export function createPrismaOutboxRepository(
-  prisma: PrismaClient
+  prisma: Pick<PrismaClient, "outboxEvent">
 ): OutboxRepository {
   return {
     async persist(input) {
@@ -30,7 +32,7 @@ export function createPrismaOutboxRepository(
           eventType: input.eventType,
           aggregateType: input.aggregateType,
           aggregateId: input.aggregateId,
-          payload: input.payload as object,
+          payload: toPrismaJson(input.payload, "payload"),
           correlationId: input.correlationId ?? null,
         },
       });
@@ -46,6 +48,7 @@ export function createMemoryOutboxRepository(): OutboxRepository & {
   return {
     events,
     async persist(input) {
+      toPrismaJson(input.payload, "payload");
       events.push(input);
       return { id: crypto.randomUUID() };
     },
