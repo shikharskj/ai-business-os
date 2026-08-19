@@ -7,7 +7,7 @@ import {
   SignUpButton,
   UserButton,
 } from "@clerk/nextjs";
-import { shadcn } from "@clerk/ui/themes";
+import { shadcn } from "@/lib/clerk/shadcn-theme";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
