@@ -11,16 +11,17 @@ const globalForPrisma = globalThis as unknown as {
 
 function createPrismaClient() {
   const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
-  return new PrismaClient({ adapter });
+  return new PrismaClient({ adapter, errorFormat: "pretty" });
 }
 
 function hasCurrentDelegates(client: PrismaClient | undefined): boolean {
   const candidate = client as
-    | { document?: { findMany?: unknown }; party?: { findMany?: unknown } }
+    | { document?: { findMany?: unknown }; party?: { findMany?: unknown }; product?: { findMany?: unknown } }
     | undefined;
   return (
     typeof candidate?.document?.findMany === "function" &&
-    typeof candidate?.party?.findMany === "function"
+    typeof candidate?.party?.findMany === "function" &&
+    typeof candidate?.product?.findMany === "function"
   );
 }
 

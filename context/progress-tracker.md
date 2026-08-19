@@ -91,7 +91,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Multi-tenancy         | Complete    |
 | Database              | In Progress |
 | Customers             | Complete    |
-| Products              | Not Started |
+| Products              | Complete    |
 | Inventory             | Not Started |
 | Sales                 | Not Started |
 | Invoices              | Not Started |
@@ -112,6 +112,12 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Products catalog (`13-products-catalog.md`):
+  * `modules/catalog/` create/edit/view/list/search for products and services. Prices as `DECIMAL(18,2)` / money primitives (not float). SKU unique per tenant.
+  * Fields: name, SKU, unit, selling/purchase price, HSN/SAC, GST rate reference (bps), simple category, inventory-tracking flag. Services never track stock.
+  * Tenant + `product:*` permissions. Audit + outbox (`ProductCreated` / `ProductUpdated`).
+  * Inventory → Products UI with “New product”. Stock shows `0` / “No stock movements yet” when tracking is on; no fake quantity when tracking is off. Cross-tenant ID access rejected.
 
 * Suppliers (`12-suppliers.md`):
   * Same `modules/party/` as customers (no second party module). Supplier create/update/get/list/search/deactivate with GSTIN validation reused from customers.
@@ -238,7 +244,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Current implementable spec:** `context/feature-specs/13-products-catalog.md`
+**Current implementable spec:** `context/feature-specs/14-inventory.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -442,17 +448,17 @@ Tenant resolution must happen from trusted authenticated context and application
 
 ## Products
 
-* Product database model
-* Create product
-* Edit product
-* Product list
-* Product details
-* SKU
-* HSN/SAC
-* Selling price
-* Purchase price
-* Tax configuration
-* Unit of measurement
+* Product database model — Complete
+* Create product — Complete
+* Edit product — Complete
+* Product list — Complete
+* Product details — Complete
+* SKU — Complete (unique per tenant)
+* HSN/SAC — Complete (stored reference)
+* Selling price — Complete (`DECIMAL(18,2)` / money)
+* Purchase price — Complete (`DECIMAL(18,2)` / money)
+* Tax configuration — Complete (GST rate bps reference; no GST calc in catalog UI)
+* Unit of measurement — Complete
 
 ---
 
@@ -1079,6 +1085,43 @@ The first objective is to deliver a complete, reliable business workflow for sma
 ---
 
 # Implementation Unit Log
+
+## 2026-08-20 — Products catalog
+
+Status: Complete
+
+Implemented:
+- Added `modules/catalog/` for products and services: domain types, GSTIN-style HSN/SAC validation, money prices, Zod boundary schema, memory + Prisma repositories, and use cases (create, update, get, list/search).
+- Prisma `Product` with `DECIMAL(18,2)` selling/purchase prices, SKU unique per tenant (`@@unique([tenantId, sku])`), tax rate stored as bps (no GST calculation in the catalog UI).
+- Inventory → Products UI: list with “New product”, kind/search filters, create/edit forms, detail page. Tracked items show stock `0` / “No stock movements yet”; untracked items show no fake quantity. Services never track inventory.
+- Audit + outbox `ProductCreated` / `ProductUpdated`. Cross-tenant get-by-id is rejected.
+
+Files / Areas:
+- `modules/catalog/`
+- `prisma/schema.prisma`
+- `prisma/migrations/20260820020000_add_catalog_products/`
+- `app/app/(workspace)/inventory/products/`
+- `components/business/product-form-fields.tsx`
+- `components/business/create-product-form.tsx`
+- `components/business/edit-product-form.tsx`
+- `lib/db/client.ts`
+- `tests/catalog/products.test.ts`
+
+Tests:
+- `npm test` (136 tests)
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+
+Verification:
+- Owner can create a product with SKU, unit, prices, HSN/SAC, tax rate, and inventory flag in-tenant.
+- Same SKU is allowed in another tenant; duplicate SKU in the same tenant is rejected.
+- Production build succeeds.
+
+Notes:
+- Stock movements are spec `14`. Next implementation unit is `14-inventory.md`.
+
+---
 
 ## 2026-08-20 — Suppliers
 
