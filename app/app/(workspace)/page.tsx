@@ -10,10 +10,18 @@ import {
 export default async function DashboardPage() {
   const tenant = await requireCurrentTenant();
 
+  const businessTypeLabels: Record<string, string> = {
+    PROPRIETORSHIP: "Proprietorship",
+    PARTNERSHIP: "Partnership",
+    PRIVATE_LIMITED: "Private Limited",
+    LLP: "LLP",
+    OTHER: "Other",
+  };
+
   const facts = [
     {
       title: "Business type",
-      value: tenant.business.type.replaceAll("_", " "),
+      value: businessTypeLabels[tenant.business.type] || tenant.business.type,
       caption: tenant.business.name,
     },
     {

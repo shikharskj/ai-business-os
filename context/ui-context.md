@@ -68,7 +68,7 @@ Canonical tokens are **shadcn CSS variables**. AI Business OS aliases map onto t
 
 Components should prefer Tailwind semantic classes (`bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`) over aliases.
 
-### Canonical (shadcn)
+## Canonical (shadcn)
 
 
 | Role                 | CSS Variable             | Light (oklch)           | Dark (oklch)              |
@@ -87,7 +87,7 @@ Components should prefer Tailwind semantic classes (`bg-background`, `bg-card`, 
 | Chart accent series  | `--chart-5`              | one muted green accent  | one muted green accent    |
 
 
-### Compatibility aliases (map to canonical)
+## Compatibility aliases (map to canonical)
 
 
 | Role                  | CSS Variable              | Maps to                         |

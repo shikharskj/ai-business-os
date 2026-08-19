@@ -64,13 +64,31 @@ function wrapStream(
     encoding?: BufferEncoding | (() => void),
     callback?: () => void
   ) => {
-    const pending = getPending();
+    let pending = getPending();
+
+    // If chunk is a string, process it through the buffering flow
+    if (typeof chunk === "string") {
+      const { output, pending: newPending } = formatDevLogChunk(chunk, pending);
+      pending = newPending;
+      if (output.length > 0) {
+        originalWrite(output);
+      }
+    }
+
+    // Flush any remaining pending content
     if (pending.length > 0) {
       const flushed = flushPending(pending);
       setPending("");
       if (flushed.length > 0) {
         originalWrite(flushed);
       }
+    } else {
+      setPending("");
+    }
+
+    // Forward end call without passing raw chunk for strings
+    if (typeof chunk === "string") {
+      return forwardEnd(originalEnd, undefined, encoding, callback);
     }
     return forwardEnd(originalEnd, chunk, encoding, callback);
   }) as typeof stream.end;
