@@ -50,10 +50,19 @@ CREATE TABLE "journal_lines" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "accounts_id_tenantId_key" ON "accounts"("id", "tenantId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "accounts_tenantId_code_key" ON "accounts"("tenantId", "code");
 
 -- CreateIndex
 CREATE INDEX "accounts_tenantId_idx" ON "accounts"("tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "journals_id_tenantId_key" ON "journals"("id", "tenantId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "journals_tenantId_reversalOfJournalId_key" ON "journals"("tenantId", "reversalOfJournalId");
 
 -- CreateIndex
 CREATE INDEX "journals_tenantId_periodKey_idx" ON "journals"("tenantId", "periodKey");
@@ -74,7 +83,7 @@ ALTER TABLE "accounts" ADD CONSTRAINT "accounts_tenantId_fkey" FOREIGN KEY ("ten
 ALTER TABLE "journals" ADD CONSTRAINT "journals_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "businesses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "journal_lines" ADD CONSTRAINT "journal_lines_journalId_fkey" FOREIGN KEY ("journalId") REFERENCES "journals"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "journal_lines" ADD CONSTRAINT "journal_lines_journalId_tenantId_fkey" FOREIGN KEY ("journalId", "tenantId") REFERENCES "journals"("id", "tenantId") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "journal_lines" ADD CONSTRAINT "journal_lines_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "accounts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "journal_lines" ADD CONSTRAINT "journal_lines_accountId_tenantId_fkey" FOREIGN KEY ("accountId", "tenantId") REFERENCES "accounts"("id", "tenantId") ON DELETE RESTRICT ON UPDATE CASCADE;

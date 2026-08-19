@@ -57,4 +57,90 @@ describe("createBusinessWithOrganization", () => {
     expect(result.membership.role).toBe("OWNER");
     expect(clerkCalls).toEqual(["create"]);
   });
+
+  it("keeps the Clerk organization when chart seeding fails so retry can complete", async () => {
+    const businessRepository = createMemoryBusinessRepository();
+    const membershipRepository = createMemoryMembershipRepository();
+    const clerkCalls: string[] = [];
+    const createdOrgs: { id: string; name: string }[] = [];
+    let seedAttempts = 0;
+    const profile = {
+      name: "Alpha Traders",
+      type: "PROPRIETORSHIP" as const,
+      addressLine1: "1 Market Road",
+      city: "Pune",
+      state: "Maharashtra",
+      postalCode: "411001",
+      country: "IN",
+      phone: "9876543210",
+      email: "alpha@example.com",
+      gstRegistrationStatus: "REGISTERED" as const,
+      gstin: "27AABCU9603R1ZM",
+      financialYearStartMonth: 4,
+      timezone: "Asia/Kolkata",
+      currency: "INR",
+      defaultGstRateBps: 1800,
+    };
+    const gateway = {
+      async createOrganization() {
+        clerkCalls.push("create");
+        const org = { id: "org_alpha", name: profile.name };
+        createdOrgs.push(org);
+        return org;
+      },
+      async deleteOrganization() {
+        clerkCalls.push("delete");
+      },
+      async getOrganizationMembership() {
+        return { role: "org:admin" };
+      },
+      async listUserOrganizations() {
+        clerkCalls.push("list");
+        return [...createdOrgs];
+      },
+    };
+
+    await expect(
+      createBusinessWithOrganization({
+        owner: { id: "app-user-1", clerkUserId: "user_owner" },
+        profile,
+        idempotencyKey: "alpha-key",
+        businessRepository,
+        membershipRepository,
+        clerkOrganizationGateway: gateway,
+        chartOfAccountsSeeder: {
+          async ensureForTenant() {
+            seedAttempts += 1;
+            if (seedAttempts === 1) {
+              throw new Error("seed failed");
+            }
+          },
+        },
+      })
+    ).rejects.toThrow("seed failed");
+
+    expect(clerkCalls).toEqual(["list", "create"]);
+    expect(
+      await businessRepository.findByClerkOrganizationId("org_alpha")
+    ).not.toBeNull();
+
+    const result = await createBusinessWithOrganization({
+      owner: { id: "app-user-1", clerkUserId: "user_owner" },
+      profile,
+      idempotencyKey: "alpha-key",
+      businessRepository,
+      membershipRepository,
+      clerkOrganizationGateway: gateway,
+      chartOfAccountsSeeder: {
+        async ensureForTenant() {
+          seedAttempts += 1;
+        },
+      },
+    });
+
+    expect(seedAttempts).toBe(2);
+    expect(clerkCalls).toEqual(["list", "create"]);
+    expect(result.clerkOrganizationId).toBe("org_alpha");
+    expect(result.membership.role).toBe("OWNER");
+  });
 });

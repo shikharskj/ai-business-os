@@ -84,21 +84,26 @@ export const prismaAccountRepository: AccountRepository = {
     });
     return row ? mapAccount(row) : null;
   },
-  async insertMany(accounts) {
-    const created = await prisma.$transaction(
-      accounts.map((account) =>
-        prisma.account.create({
-          data: {
-            tenantId: account.tenantId,
-            code: account.code,
-            name: account.name,
-            type: account.type,
-            normalBalance: account.normalBalance,
-          },
-        })
-      )
-    );
-    return created.map(mapAccount);
+  async ensureChartAccounts(accounts) {
+    if (accounts.length === 0) {
+      return [];
+    }
+    await prisma.account.createMany({
+      data: accounts.map((account) => ({
+        tenantId: account.tenantId,
+        code: account.code,
+        name: account.name,
+        type: account.type,
+        normalBalance: account.normalBalance,
+      })),
+      skipDuplicates: true,
+    });
+    const tenantId = accounts[0]!.tenantId;
+    const codes = accounts.map((account) => account.code);
+    const rows = await prisma.account.findMany({
+      where: { tenantId, code: { in: codes } },
+    });
+    return rows.map(mapAccount);
   },
 };
 

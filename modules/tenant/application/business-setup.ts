@@ -94,6 +94,7 @@ export async function createBusinessWithOrganization(input: {
   }
 
   let clerkOrganizationId: string | null = null;
+  let localRecordsCreated = false;
 
   try {
     const organization = await input.clerkOrganizationGateway.createOrganization({
@@ -113,6 +114,7 @@ export async function createBusinessWithOrganization(input: {
       tenantId: business.id,
       role: "OWNER",
     });
+    localRecordsCreated = true;
 
     await input.chartOfAccountsSeeder?.ensureForTenant(business.id);
 
@@ -122,7 +124,7 @@ export async function createBusinessWithOrganization(input: {
       clerkOrganizationId,
     };
   } catch (error) {
-    if (clerkOrganizationId) {
+    if (clerkOrganizationId && !localRecordsCreated) {
       await input.clerkOrganizationGateway
         .deleteOrganization(clerkOrganizationId)
         .catch(() => undefined);

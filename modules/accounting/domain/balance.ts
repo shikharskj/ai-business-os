@@ -17,7 +17,20 @@ export function assertBalancedJournalLines(lines: JournalLineDraft[]): {
   let totalDebit = money(0n, lines[0]!.debit.currency, lines[0]!.debit.scale);
   let totalCredit = money(0n, lines[0]!.credit.currency, lines[0]!.credit.scale);
 
+  const currency = lines[0]!.debit.currency;
+  const scale = lines[0]!.debit.scale;
+
   for (const line of lines) {
+    if (
+      line.debit.currency !== currency ||
+      line.credit.currency !== currency ||
+      line.debit.scale !== scale ||
+      line.credit.scale !== scale
+    ) {
+      throw new InvalidJournalLineError(
+        "Journal line currency and scale must match the journal."
+      );
+    }
     if (isNegative(line.debit) || isNegative(line.credit)) {
       throw new InvalidJournalLineError("Journal line amounts cannot be negative.");
     }

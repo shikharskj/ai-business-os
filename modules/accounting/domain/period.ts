@@ -29,7 +29,7 @@ export function assertPeriodOpen(
   if (!closedThroughPeriodKey) {
     return;
   }
-  if (!/^\d{4}-\d{2}$/.test(closedThroughPeriodKey)) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(closedThroughPeriodKey)) {
     throw new ClosedPeriodError(closedThroughPeriodKey);
   }
   const periodKey = periodKeyFromDate(accountingDate);

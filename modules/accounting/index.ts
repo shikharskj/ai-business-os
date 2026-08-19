@@ -5,6 +5,7 @@ export {
   AccountingError,
   UnbalancedJournalError,
   ClosedPeriodError,
+  DuplicateReversalError,
   PostedJournalImmutableError,
 } from "@/modules/accounting/domain/errors";
 export { postJournal, type PostJournalInput } from "@/modules/accounting/application/post-journal";

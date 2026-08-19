@@ -197,6 +197,7 @@ model Account {
   business Business     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   lines    JournalLine[]
 
+  @@unique([id, tenantId])
   @@unique([tenantId, code])
   @@index([tenantId])
   @@map("accounts")
@@ -217,6 +218,8 @@ model Journal {
   business Business     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   lines    JournalLine[]
 
+  @@unique([id, tenantId])
+  @@unique([tenantId, reversalOfJournalId])
   @@index([tenantId, periodKey])
   @@index([tenantId, sourceType, sourceId])
   @@map("journals")
@@ -231,8 +234,8 @@ model JournalLine {
   debit       Decimal @db.Decimal(18, 2)
   credit      Decimal @db.Decimal(18, 2)
 
-  journal Journal @relation(fields: [journalId], references: [id], onDelete: Cascade)
-  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  journal Journal @relation(fields: [journalId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  account Account @relation(fields: [accountId, tenantId], references: [id, tenantId], onDelete: Restrict)
 
   @@index([tenantId, accountId])
   @@index([journalId])

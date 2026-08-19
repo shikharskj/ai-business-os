@@ -40,6 +40,13 @@ export class JournalNotFoundError extends AccountingError {
   }
 }
 
+export class DuplicateReversalError extends AccountingError {
+  constructor() {
+    super("This journal has already been reversed.");
+    this.name = "DuplicateReversalError";
+  }
+}
+
 export class PostedJournalImmutableError extends AccountingError {
   constructor() {
     super("Posted journals cannot be updated or deleted. Use a reversal or adjustment.");
