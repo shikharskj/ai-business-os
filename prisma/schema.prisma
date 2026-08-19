@@ -69,6 +69,8 @@ model Business {
 
   owner       User         @relation("BusinessOwner", fields: [ownerUserId], references: [id])
   memberships Membership[]
+  auditRecords AuditRecord[]
+  outboxEvents OutboxEvent[]
 
   @@map("businesses")
 }
@@ -89,4 +91,40 @@ model Membership {
   @@unique([userId, tenantId])
   @@index([tenantId, status])
   @@map("memberships")
+}
+
+model AuditRecord {
+  id            String   @id @default(uuid())
+  tenantId      String
+  actorUserId   String
+  action        String
+  resource      String
+  resourceId    String
+  metadata      Json     @default("{}")
+  correlationId String?
+  createdAt     DateTime @default(now())
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, resource, resourceId])
+  @@index([tenantId, createdAt])
+  @@map("audit_records")
+}
+
+model OutboxEvent {
+  id            String   @id @default(uuid())
+  tenantId      String
+  eventType     String
+  aggregateType String
+  aggregateId   String
+  payload       Json
+  correlationId String?
+  processedAt   DateTime?
+  createdAt     DateTime @default(now())
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([processedAt, createdAt])
+  @@index([tenantId, eventType])
+  @@map("outbox_events")
 }
