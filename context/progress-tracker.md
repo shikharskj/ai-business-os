@@ -113,6 +113,18 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 # Completed
 
+* Shared kernel primitives (`07-shared-kernel.md`):
+  * `modules/shared-kernel/money.ts` — `Money` type using `bigint` minor units (paisa), arithmetic ops (`addMoney`, `subtractMoney`, `multiplyMoney`), comparison, conversion to/from Prisma `Decimal` strings. No IEEE float for authoritative amounts.
+  * `modules/shared-kernel/dates.ts` — `BusinessDate` branded type (YYYY-MM-DD), `todayInTimezone`, `financialYearForDate` helper for configurable FY start month.
+  * `modules/shared-kernel/schemas.ts` — Zod schemas `moneyInputSchema`, `positiveMoneyInputSchema`, `businessDateSchema` for API/form boundaries.
+  * `modules/shared-kernel/format-money.ts` — `formatINR` using `Intl.NumberFormat("en-IN")` for Indian grouping (₹1,25,000), `formatIndianNumber`.
+  * `components/business/money-display.tsx` — `<MoneyDisplay>` component with semantic color for negative amounts.
+  * `modules/shared-kernel/audit.ts` — append-only `AuditRepository` (Prisma + memory implementations). No update/delete API.
+  * `modules/shared-kernel/outbox.ts` — `OutboxRepository` for transactional event persistence (Prisma + memory implementations).
+  * Prisma models `AuditRecord` + `OutboxEvent`; migration `20260819092149_add_audit_and_outbox`.
+  * `tsconfig.json` target updated to ES2020 for BigInt support.
+  * 24 unit tests: money arithmetic without float errors, Indian grouping formatting, business date validation, FY calculation, audit append-only, outbox persistence.
+
 * Application shell (`06-application-shell.md`):
   * `components/shell/app-sidebar.tsx` — full sidebar nav with Dashboard, Sales (Invoices/Customers/Payments), Purchases (Suppliers/Bills/Payments), Inventory (Products/Stock), Expenses, Accounting, Reports, AI Assistant, Settings. Uses shadcn `Sidebar` primitives with `render` prop pattern. Current section highlighted, collapsible to icon mode.
   * `components/shell/app-top-bar.tsx` — top bar with sidebar trigger, separator, content slot, and `UserButton`.
@@ -192,7 +204,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Next implementable spec:** `context/feature-specs/07-shared-kernel.md`
+**Next implementable spec:** `context/feature-specs/08-tax-engine.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 

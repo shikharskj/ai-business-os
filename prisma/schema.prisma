@@ -90,3 +90,35 @@ model Membership {
   @@index([tenantId, status])
   @@map("memberships")
 }
+
+model AuditRecord {
+  id            String   @id @default(uuid())
+  tenantId      String
+  actorUserId   String
+  action        String
+  resource      String
+  resourceId    String
+  metadata      Json     @default("{}")
+  correlationId String?
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, resource, resourceId])
+  @@index([tenantId, createdAt])
+  @@map("audit_records")
+}
+
+model OutboxEvent {
+  id            String   @id @default(uuid())
+  tenantId      String
+  eventType     String
+  aggregateType String
+  aggregateId   String
+  payload       Json
+  correlationId String?
+  processedAt   DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([processedAt, createdAt])
+  @@index([tenantId, eventType])
+  @@map("outbox_events")
+}
