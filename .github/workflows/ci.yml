@@ -40,13 +40,13 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v5
         with:
-          # Pin Node to a stable major so CI matches local developer environments.
-          node-version: "20"
+          # Pin Node to 22 so package engine requirements (e.g. @prisma/streams-local) are satisfied.
+          node-version: "22"
           cache: npm
           package-manager-cache: false
       - name: Enable Corepack and pin npm
         run: |
-          # Ensure Corepack is enabled and activate the exact npm version declared in packageManager
+          # Ensure Corepack is enabled and activate the exact npm version declared in package.json
           corepack enable
           corepack prepare npm@11.17.0 --activate
           node --version
