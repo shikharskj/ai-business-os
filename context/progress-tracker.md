@@ -90,7 +90,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Business setup        | Complete    |
 | Multi-tenancy         | Complete    |
 | Database              | In Progress |
-| Customers             | Not Started |
+| Customers             | Complete    |
 | Products              | Not Started |
 | Inventory             | Not Started |
 | Sales                 | Not Started |
@@ -112,6 +112,12 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Customers (`11-customers.md`):
+  * `modules/party/` customer vertical slice (shared party module; suppliers not shipped in this spec).
+  * Prisma `Party` (`CUSTOMER` | `SUPPLIER`) with contacts, billing address, GSTIN, GST registration status, and `ACTIVE` | `INACTIVE`. No stored outstanding field.
+  * Use cases: create, update, get, list/search/filter, deactivate. Tenant + `customer:*` permissions. Audit + outbox (`CustomerCreated` / `CustomerUpdated` / `CustomerDeactivated`).
+  * Sales → Customers list (primary action “New customer”), create/edit forms, detail page with outstanding placeholder (`₹0` / “No invoices yet”). Cross-tenant ID access rejected.
 
 * Documents and object storage (`10-documents-storage.md`):
   * `lib/storage/` adapter interface (`upload` / `download` / `delete`) with size limits and safe keys. Local/filesystem adapter for development/test; Cloudflare R2 (S3-compatible) adapter for production.
@@ -220,15 +226,13 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 # In Progress
 
-* None yet.
-
 ---
 
 # Next Up
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Next implementable spec:** `context/feature-specs/11-customers.md`
+**Current implementable spec:** `context/feature-specs/12-suppliers.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -418,15 +422,15 @@ Tenant resolution must happen from trusted authenticated context and application
 
 ## Customers
 
-* Customer database model
-* Create customer
-* Edit customer
-* View customer
-* Customer list
-* Search customers
-* Customer detail
-* Customer transaction history
-* Outstanding balance
+* Customer database model — Complete (`Party` kind `CUSTOMER`)
+* Create customer — Complete
+* Edit customer — Complete
+* View customer — Complete
+* Customer list — Complete
+* Search customers — Complete
+* Customer detail — Complete
+* Customer transaction history — Not started (after invoices)
+* Outstanding balance — Placeholder until spec `17` (`₹0` / “No invoices yet”; not stored)
 
 ---
 
@@ -1069,6 +1073,44 @@ The first objective is to deliver a complete, reliable business workflow for sma
 ---
 
 # Implementation Unit Log
+
+## 2026-08-19 — Customers
+
+Status: Complete
+
+Implemented:
+- Added `modules/party/` for the customer vertical slice: domain types/errors, GSTIN-aware normalization, Zod boundary schemas, memory + Prisma repositories, and use cases (create, update, get, list/search, deactivate).
+- Prisma `Party` model with `PartyKind` and `PartyStatus`; queries always include `tenantId` and `kind: CUSTOMER`. Outstanding is not stored.
+- Sales → Customers UI: list with “New customer”, search/status filters, create/edit forms, detail page with GST/contact/address and outstanding placeholder (`₹0` and “No invoices yet”).
+- Audit + outbox events `CustomerCreated`, `CustomerUpdated`, `CustomerDeactivated`. Cross-tenant get-by-id is rejected.
+
+Files / Areas:
+- `modules/party/`
+- `prisma/schema.prisma`
+- `prisma/migrations/20260819233000_add_customers/`
+- `app/app/(workspace)/sales/customers/`
+- `components/business/customer-form-fields.tsx`
+- `components/business/deactivate-customer-button.tsx`
+- `lib/db/client.ts`
+- `tests/party/customers.test.ts`
+
+Tests:
+- `npm test` (114 tests)
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+
+Verification:
+- Owner can create, edit, view, list, search, and deactivate a customer in-tenant.
+- Another tenant cannot load a customer by ID (`PartyNotFoundError`).
+- Invalid GSTIN is rejected. Outstanding is a UI placeholder, not a ledger field.
+- Production build succeeds.
+
+Notes:
+- Suppliers share `modules/party/` later (`12-suppliers.md`); this spec ships customers only.
+- Next implementation unit is `12-suppliers.md`.
+
+---
 
 ## 2026-08-19 — Documents and object storage
 

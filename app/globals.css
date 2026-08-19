@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "tw-animate-css";
+@import "../styles/tw-animate.css";
 @import "shadcn/tailwind.css";
 @source "../lib/clerk/shadcn-theme.ts";
 
