@@ -13,7 +13,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "test": "vitest run",
-    "check:lockfile": "node scripts/check-lockfile-sync.cjs",
+    "check:lockfile": "node scripts/check-lockfile-sync.mjs",
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {

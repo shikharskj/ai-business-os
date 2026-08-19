@@ -59,7 +59,8 @@ export function DocumentAttachmentList({
         setDeleteError((prev) => ({ ...prev, [documentId]: result.error! }));
       } else {
         setDeleteError((prev) => {
-          const { [documentId]: _, ...rest } = prev;
+          const rest = { ...prev };
+          delete rest[documentId];
           return rest;
         });
       }

@@ -1,2 +1,2 @@
 #!/bin/sh
-node scripts/check-lockfile-sync.cjs
+node scripts/check-lockfile-sync.mjs
