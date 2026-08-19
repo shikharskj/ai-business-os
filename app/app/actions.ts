@@ -26,6 +26,8 @@ import {
   prismaBusinessRepository,
   prismaMembershipRepository,
 } from "@/modules/tenant/infrastructure/prisma-repositories";
+import { ensureChartOfAccounts } from "@/modules/accounting/application/seed-chart";
+import { prismaAccountRepository } from "@/modules/accounting/infrastructure/prisma-accounting-repositories";
 
 export type ActionState = {
   error?: string;
@@ -89,6 +91,13 @@ export async function createBusinessAction(
       businessRepository: prismaBusinessRepository,
       membershipRepository: prismaMembershipRepository,
       clerkOrganizationGateway,
+      chartOfAccountsSeeder: {
+        ensureForTenant: (tenantId) =>
+          ensureChartOfAccounts({
+            tenantId,
+            accountRepository: prismaAccountRepository,
+          }),
+      },
     });
 
     revalidatePath("/app");
