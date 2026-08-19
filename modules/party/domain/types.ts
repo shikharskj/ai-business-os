@@ -26,8 +26,9 @@ export type Party = {
 };
 
 export type Customer = Party & { kind: "CUSTOMER" };
+export type Supplier = Party & { kind: "SUPPLIER" };
 
-export type CustomerInput = {
+export type PartyInput = {
   name: string;
   phone?: string | null;
   email?: string | null;
@@ -40,3 +41,6 @@ export type CustomerInput = {
   gstRegistrationStatus: PartyGstRegistrationStatus;
   gstin?: string | null;
 };
+
+export type CustomerInput = PartyInput;
+export type SupplierInput = PartyInput;

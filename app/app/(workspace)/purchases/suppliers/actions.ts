@@ -7,18 +7,18 @@ import { ZodError } from "zod";
 import { prisma } from "@/lib/db";
 import { authorize, AuthorizationError } from "@/lib/security";
 import {
-  createCustomer,
-  updateCustomer,
-  deactivateCustomer,
-  customerInputSchema,
+  createSupplier,
+  updateSupplier,
+  deactivateSupplier,
+  supplierInputSchema,
   PartyError,
 } from "@/modules/party";
-import type { Customer, PartyGstRegistrationStatus } from "@/modules/party/domain/types";
+import type { PartyGstRegistrationStatus, Supplier } from "@/modules/party/domain/types";
 
-export type CustomerActionState = {
+export type SupplierActionState = {
   error?: string;
   fieldErrors?: Record<string, string>;
-  values?: Partial<Customer>;
+  values?: Partial<Supplier>;
 };
 
 function gstRegistrationStatusFromForm(
@@ -34,7 +34,7 @@ function gstRegistrationStatusFromForm(
   return "NOT_REGISTERED";
 }
 
-function submittedCustomerValues(formData: FormData): Partial<Customer> {
+function submittedSupplierValues(formData: FormData): Partial<Supplier> {
   return {
     name: String(formData.get("name") || ""),
     phone: String(formData.get("phone") || ""),
@@ -62,8 +62,8 @@ function formatZodErrors(error: ZodError): Record<string, string> {
   );
 }
 
-function readCustomerFields(formData: FormData) {
-  return customerInputSchema.parse({
+function readSupplierFields(formData: FormData) {
+  return supplierInputSchema.parse({
     name: formData.get("name"),
     phone: formData.get("phone") || undefined,
     email: formData.get("email") || undefined,
@@ -73,35 +73,35 @@ function readCustomerFields(formData: FormData) {
     state: formData.get("state") || undefined,
     postalCode: formData.get("postalCode") || undefined,
     country: formData.get("country") || "IN",
-    gstRegistrationStatus: formData.get("gstRegistrationStatus") || "NOT_REGISTERED",
+    gstRegistrationStatus:
+      formData.get("gstRegistrationStatus") || "NOT_REGISTERED",
     gstin: formData.get("gstin") || undefined,
   });
 }
 
-export async function createCustomerAction(
-  _prevState: CustomerActionState,
+export async function createSupplierAction(
+  _prevState: SupplierActionState,
   formData: FormData
-): Promise<CustomerActionState> {
-  let customerId: string;
-
-  const submittedValues = submittedCustomerValues(formData);
+): Promise<SupplierActionState> {
+  let supplierId: string;
+  const submittedValues = submittedSupplierValues(formData);
 
   try {
-    const tenant = await authorize("customer:create");
-    const fields = readCustomerFields(formData);
-    const customer = await createCustomer({
+    const tenant = await authorize("supplier:create");
+    const fields = readSupplierFields(formData);
+    const supplier = await createSupplier({
       tenantId: tenant.tenantId,
       actorUserId: tenant.membership.userId,
       fields,
       prisma,
     });
-    customerId = customer.id;
+    supplierId = supplier.id;
   } catch (error) {
     if (error instanceof ZodError) {
       return { fieldErrors: formatZodErrors(error), values: submittedValues };
     }
     if (error instanceof AuthorizationError) {
-      return { error: "You don't have permission to create customers." };
+      return { error: "You don't have permission to create suppliers." };
     }
     if (error instanceof PartyError) {
       return { error: error.message, values: submittedValues };
@@ -109,25 +109,24 @@ export async function createCustomerAction(
     throw error;
   }
 
-  revalidatePath("/app/sales/customers");
-  redirect(`/app/sales/customers/${customerId}`);
+  revalidatePath("/app/purchases/suppliers");
+  redirect(`/app/purchases/suppliers/${supplierId}`);
 }
 
-export async function updateCustomerAction(
-  _prevState: CustomerActionState,
+export async function updateSupplierAction(
+  _prevState: SupplierActionState,
   formData: FormData
-): Promise<CustomerActionState> {
-  const customerId = String(formData.get("customerId") ?? "");
-
-  const submittedValues = submittedCustomerValues(formData);
+): Promise<SupplierActionState> {
+  const supplierId = String(formData.get("supplierId") ?? "");
+  const submittedValues = submittedSupplierValues(formData);
 
   try {
-    const tenant = await authorize("customer:update");
-    const fields = readCustomerFields(formData);
-    await updateCustomer({
+    const tenant = await authorize("supplier:update");
+    const fields = readSupplierFields(formData);
+    await updateSupplier({
       tenantId: tenant.tenantId,
       actorUserId: tenant.membership.userId,
-      customerId,
+      supplierId,
       fields,
       prisma,
     });
@@ -136,7 +135,7 @@ export async function updateCustomerAction(
       return { fieldErrors: formatZodErrors(error), values: submittedValues };
     }
     if (error instanceof AuthorizationError) {
-      return { error: "You don't have permission to update this customer." };
+      return { error: "You don't have permission to update this supplier." };
     }
     if (error instanceof PartyError) {
       return { error: error.message, values: submittedValues };
@@ -144,34 +143,33 @@ export async function updateCustomerAction(
     throw error;
   }
 
-  revalidatePath("/app/sales/customers");
-  revalidatePath(`/app/sales/customers/${customerId}`);
-  redirect(`/app/sales/customers/${customerId}?saved=1`);
+  revalidatePath("/app/purchases/suppliers");
+  revalidatePath(`/app/purchases/suppliers/${supplierId}`);
+  redirect(`/app/purchases/suppliers/${supplierId}?saved=1`);
 }
 
-export async function deactivateCustomerAction(
-  customerId: string
-): Promise<CustomerActionState> {
+export async function deactivateSupplierAction(
+  supplierId: string
+): Promise<SupplierActionState> {
   try {
-    const tenant = await authorize("customer:update");
-    await deactivateCustomer({
+    const tenant = await authorize("supplier:update");
+    await deactivateSupplier({
       tenantId: tenant.tenantId,
       actorUserId: tenant.membership.userId,
-      customerId,
+      supplierId,
       prisma,
     });
 
-    revalidatePath("/app/sales/customers");
-    revalidatePath(`/app/sales/customers/${customerId}`);
+    revalidatePath("/app/purchases/suppliers");
+    revalidatePath(`/app/purchases/suppliers/${supplierId}`);
     return {};
   } catch (error) {
     if (error instanceof AuthorizationError) {
-      return { error: "You don't have permission to deactivate this customer." };
+      return { error: "You don't have permission to deactivate this supplier." };
     }
     if (error instanceof PartyError) {
       return { error: error.message };
     }
-    console.error("Unexpected error deactivating customer:", error);
     throw error;
   }
 }

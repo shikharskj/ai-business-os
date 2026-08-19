@@ -7,21 +7,25 @@ import {
   PartyInactiveError,
   PartyNotFoundError,
 } from "@/modules/party/domain/errors";
-import { normalizeCustomerInput } from "@/modules/party/domain/normalize-customer";
-import type { Customer, CustomerInput, PartyStatus } from "@/modules/party/domain/types";
+import { normalizeSupplierInput } from "@/modules/party/domain/normalize-customer";
+import type { PartyStatus, Supplier, SupplierInput } from "@/modules/party/domain/types";
 import { createPrismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 import type { PartyRepository } from "@/modules/party/infrastructure/repositories";
 
-export async function createCustomer(input: {
+const notFound = () => new PartyNotFoundError("Supplier was not found.");
+const alreadyInactive = () =>
+  new PartyInactiveError("This supplier is already inactive.");
+
+export async function createSupplier(input: {
   tenantId: string;
   actorUserId: string;
-  fields: CustomerInput;
+  fields: SupplierInput;
   parties?: PartyRepository;
   audit?: AuditRepository;
   outbox?: OutboxRepository;
   prisma?: PrismaClient;
-}): Promise<Customer> {
-  const fields = normalizeCustomerInput(input.fields);
+}): Promise<Supplier> {
+  const fields = normalizeSupplierInput(input.fields);
 
   // If prisma client is provided, use transaction
   if (input.prisma) {
@@ -30,7 +34,7 @@ export async function createCustomer(input: {
       const audit = createPrismaAuditRepository(tx);
       const outbox = createPrismaOutboxRepository(tx);
 
-      const customer = await parties.createCustomer({
+      const supplier = await parties.createSupplier({
         tenantId: input.tenantId,
         fields,
       });
@@ -38,21 +42,21 @@ export async function createCustomer(input: {
       await audit.append({
         tenantId: input.tenantId,
         actorUserId: input.actorUserId,
-        action: "customer.created",
-        resource: "customer",
-        resourceId: customer.id,
-        metadata: { name: customer.name },
+        action: "supplier.created",
+        resource: "supplier",
+        resourceId: supplier.id,
+        metadata: { name: supplier.name },
       });
 
       await outbox.persist({
         tenantId: input.tenantId,
-        eventType: "CustomerCreated",
-        aggregateType: "customer",
-        aggregateId: customer.id,
-        payload: { name: customer.name, status: customer.status },
+        eventType: "SupplierCreated",
+        aggregateType: "supplier",
+        aggregateId: supplier.id,
+        payload: { name: supplier.name, status: supplier.status },
       });
 
-      return customer;
+      return supplier;
     });
   }
 
@@ -61,7 +65,7 @@ export async function createCustomer(input: {
     throw new Error("Either prisma or all repositories (parties, audit, outbox) must be provided");
   }
 
-  const customer = await input.parties.createCustomer({
+  const supplier = await input.parties.createSupplier({
     tenantId: input.tenantId,
     fields,
   });
@@ -69,34 +73,34 @@ export async function createCustomer(input: {
   await input.audit.append({
     tenantId: input.tenantId,
     actorUserId: input.actorUserId,
-    action: "customer.created",
-    resource: "customer",
-    resourceId: customer.id,
-    metadata: { name: customer.name },
+    action: "supplier.created",
+    resource: "supplier",
+    resourceId: supplier.id,
+    metadata: { name: supplier.name },
   });
 
   await input.outbox.persist({
     tenantId: input.tenantId,
-    eventType: "CustomerCreated",
-    aggregateType: "customer",
-    aggregateId: customer.id,
-    payload: { name: customer.name, status: customer.status },
+    eventType: "SupplierCreated",
+    aggregateType: "supplier",
+    aggregateId: supplier.id,
+    payload: { name: supplier.name, status: supplier.status },
   });
 
-  return customer;
+  return supplier;
 }
 
-export async function updateCustomer(input: {
+export async function updateSupplier(input: {
   tenantId: string;
   actorUserId: string;
-  customerId: string;
-  fields: CustomerInput;
+  supplierId: string;
+  fields: SupplierInput;
   parties?: PartyRepository;
   audit?: AuditRepository;
   outbox?: OutboxRepository;
   prisma?: PrismaClient;
-}): Promise<Customer> {
-  const fields = normalizeCustomerInput(input.fields);
+}): Promise<Supplier> {
+  const fields = normalizeSupplierInput(input.fields);
 
   // If prisma client is provided, use transaction
   if (input.prisma) {
@@ -105,44 +109,44 @@ export async function updateCustomer(input: {
       const audit = createPrismaAuditRepository(tx);
       const outbox = createPrismaOutboxRepository(tx);
 
-      const existing = await parties.findCustomerById(
+      const existing = await parties.findSupplierById(
         input.tenantId,
-        input.customerId
+        input.supplierId
       );
       if (!existing) {
-        throw new PartyNotFoundError();
+        throw notFound();
       }
       if (existing.status === "INACTIVE") {
-        throw new PartyInactiveError();
+        throw alreadyInactive();
       }
 
-      const customer = await parties.updateCustomer({
+      const supplier = await parties.updateSupplier({
         tenantId: input.tenantId,
-        customerId: input.customerId,
+        supplierId: input.supplierId,
         fields,
       });
-      if (!customer) {
-        throw new PartyNotFoundError();
+      if (!supplier) {
+        throw notFound();
       }
 
       await audit.append({
         tenantId: input.tenantId,
         actorUserId: input.actorUserId,
-        action: "customer.updated",
-        resource: "customer",
-        resourceId: customer.id,
-        metadata: { name: customer.name },
+        action: "supplier.updated",
+        resource: "supplier",
+        resourceId: supplier.id,
+        metadata: { name: supplier.name },
       });
 
       await outbox.persist({
         tenantId: input.tenantId,
-        eventType: "CustomerUpdated",
-        aggregateType: "customer",
-        aggregateId: customer.id,
-        payload: { name: customer.name, status: customer.status },
+        eventType: "SupplierUpdated",
+        aggregateType: "supplier",
+        aggregateId: supplier.id,
+        payload: { name: supplier.name, status: supplier.status },
       });
 
-      return customer;
+      return supplier;
     });
   }
 
@@ -151,83 +155,83 @@ export async function updateCustomer(input: {
     throw new Error("Either prisma or all repositories (parties, audit, outbox) must be provided");
   }
 
-  const existing = await input.parties.findCustomerById(
+  const existing = await input.parties.findSupplierById(
     input.tenantId,
-    input.customerId
+    input.supplierId
   );
   if (!existing) {
-    throw new PartyNotFoundError();
+    throw notFound();
   }
   if (existing.status === "INACTIVE") {
-    throw new PartyInactiveError();
+    throw alreadyInactive();
   }
 
-  const customer = await input.parties.updateCustomer({
+  const supplier = await input.parties.updateSupplier({
     tenantId: input.tenantId,
-    customerId: input.customerId,
+    supplierId: input.supplierId,
     fields,
   });
-  if (!customer) {
-    throw new PartyNotFoundError();
+  if (!supplier) {
+    throw notFound();
   }
 
   await input.audit.append({
     tenantId: input.tenantId,
     actorUserId: input.actorUserId,
-    action: "customer.updated",
-    resource: "customer",
-    resourceId: customer.id,
-    metadata: { name: customer.name },
+    action: "supplier.updated",
+    resource: "supplier",
+    resourceId: supplier.id,
+    metadata: { name: supplier.name },
   });
 
   await input.outbox.persist({
     tenantId: input.tenantId,
-    eventType: "CustomerUpdated",
-    aggregateType: "customer",
-    aggregateId: customer.id,
-    payload: { name: customer.name, status: customer.status },
+    eventType: "SupplierUpdated",
+    aggregateType: "supplier",
+    aggregateId: supplier.id,
+    payload: { name: supplier.name, status: supplier.status },
   });
 
-  return customer;
+  return supplier;
 }
 
-export async function getCustomer(input: {
+export async function getSupplier(input: {
   tenantId: string;
-  customerId: string;
+  supplierId: string;
   parties: PartyRepository;
-}): Promise<Customer> {
-  const customer = await input.parties.findCustomerById(
+}): Promise<Supplier> {
+  const supplier = await input.parties.findSupplierById(
     input.tenantId,
-    input.customerId
+    input.supplierId
   );
-  if (!customer) {
-    throw new PartyNotFoundError();
+  if (!supplier) {
+    throw notFound();
   }
-  return customer;
+  return supplier;
 }
 
-export async function listCustomers(input: {
+export async function listSuppliers(input: {
   tenantId: string;
   query?: string;
   status?: PartyStatus | "ALL";
   parties: PartyRepository;
-}): Promise<Customer[]> {
-  return input.parties.listCustomers({
+}): Promise<Supplier[]> {
+  return input.parties.listSuppliers({
     tenantId: input.tenantId,
     query: input.query,
     status: input.status,
   });
 }
 
-export async function deactivateCustomer(input: {
+export async function deactivateSupplier(input: {
   tenantId: string;
   actorUserId: string;
-  customerId: string;
+  supplierId: string;
   parties?: PartyRepository;
   audit?: AuditRepository;
   outbox?: OutboxRepository;
   prisma?: PrismaClient;
-}): Promise<Customer> {
+}): Promise<Supplier> {
   // If prisma client is provided, use transaction
   if (input.prisma) {
     return input.prisma.$transaction(async (tx) => {
@@ -235,43 +239,43 @@ export async function deactivateCustomer(input: {
       const audit = createPrismaAuditRepository(tx);
       const outbox = createPrismaOutboxRepository(tx);
 
-      const existing = await parties.findCustomerById(
+      const existing = await parties.findSupplierById(
         input.tenantId,
-        input.customerId
+        input.supplierId
       );
       if (!existing) {
-        throw new PartyNotFoundError();
+        throw notFound();
       }
       if (existing.status === "INACTIVE") {
-        throw new PartyInactiveError();
+        throw alreadyInactive();
       }
 
-      const customer = await parties.deactivateCustomer(
+      const supplier = await parties.deactivateSupplier(
         input.tenantId,
-        input.customerId
+        input.supplierId
       );
-      if (!customer) {
-        throw new PartyNotFoundError();
+      if (!supplier) {
+        throw notFound();
       }
 
       await audit.append({
         tenantId: input.tenantId,
         actorUserId: input.actorUserId,
-        action: "customer.deactivated",
-        resource: "customer",
-        resourceId: customer.id,
-        metadata: { name: customer.name },
+        action: "supplier.deactivated",
+        resource: "supplier",
+        resourceId: supplier.id,
+        metadata: { name: supplier.name },
       });
 
       await outbox.persist({
         tenantId: input.tenantId,
-        eventType: "CustomerDeactivated",
-        aggregateType: "customer",
-        aggregateId: customer.id,
-        payload: { name: customer.name, status: customer.status },
+        eventType: "SupplierDeactivated",
+        aggregateType: "supplier",
+        aggregateId: supplier.id,
+        payload: { name: supplier.name, status: supplier.status },
       });
 
-      return customer;
+      return supplier;
     });
   }
 
@@ -280,41 +284,41 @@ export async function deactivateCustomer(input: {
     throw new Error("Either prisma or all repositories (parties, audit, outbox) must be provided");
   }
 
-  const existing = await input.parties.findCustomerById(
+  const existing = await input.parties.findSupplierById(
     input.tenantId,
-    input.customerId
+    input.supplierId
   );
   if (!existing) {
-    throw new PartyNotFoundError();
+    throw notFound();
   }
   if (existing.status === "INACTIVE") {
-    throw new PartyInactiveError();
+    throw alreadyInactive();
   }
 
-  const customer = await input.parties.deactivateCustomer(
+  const supplier = await input.parties.deactivateSupplier(
     input.tenantId,
-    input.customerId
+    input.supplierId
   );
-  if (!customer) {
-    throw new PartyNotFoundError();
+  if (!supplier) {
+    throw notFound();
   }
 
   await input.audit.append({
     tenantId: input.tenantId,
     actorUserId: input.actorUserId,
-    action: "customer.deactivated",
-    resource: "customer",
-    resourceId: customer.id,
-    metadata: { name: customer.name },
+    action: "supplier.deactivated",
+    resource: "supplier",
+    resourceId: supplier.id,
+    metadata: { name: supplier.name },
   });
 
   await input.outbox.persist({
     tenantId: input.tenantId,
-    eventType: "CustomerDeactivated",
-    aggregateType: "customer",
-    aggregateId: customer.id,
-    payload: { name: customer.name, status: customer.status },
+    eventType: "SupplierDeactivated",
+    aggregateType: "supplier",
+    aggregateId: supplier.id,
+    payload: { name: supplier.name, status: supplier.status },
   });
 
-  return customer;
+  return supplier;
 }

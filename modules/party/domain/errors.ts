@@ -6,8 +6,8 @@ export class PartyError extends Error {
 }
 
 export class PartyNotFoundError extends PartyError {
-  constructor() {
-    super("Customer was not found.");
+  constructor(message = "Customer was not found.") {
+    super(message);
     this.name = "PartyNotFoundError";
   }
 }
@@ -20,8 +20,8 @@ export class PartyValidationError extends PartyError {
 }
 
 export class PartyInactiveError extends PartyError {
-  constructor() {
-    super("This customer is already inactive.");
+  constructor(message = "This customer is already inactive.") {
+    super(message);
     this.name = "PartyInactiveError";
   }
 }

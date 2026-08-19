@@ -97,7 +97,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Invoices              | Not Started |
 | Payments              | Not Started |
 | Expenses              | Not Started |
-| Suppliers             | Not Started |
+| Suppliers             | Complete    |
 | Purchases             | Not Started |
 | Accounting            | In Progress |
 | GST                   | In Progress |
@@ -112,6 +112,12 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Suppliers (`12-suppliers.md`):
+  * Same `modules/party/` as customers (no second party module). Supplier create/update/get/list/search/deactivate with GSTIN validation reused from customers.
+  * Queries always include `tenantId` and `kind: SUPPLIER`. No stored payable field.
+  * Tenant + `supplier:*` permissions. Audit + outbox (`SupplierCreated` / `SupplierUpdated` / `SupplierDeactivated`).
+  * Purchases → Suppliers list (primary action “New supplier”), create/edit forms, detail page with outstanding payable placeholder (`₹0` / “No bills yet”). Cross-tenant ID access rejected.
 
 * Customers (`11-customers.md`):
   * `modules/party/` customer vertical slice (shared party module; suppliers not shipped in this spec).
@@ -232,7 +238,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Current implementable spec:** `context/feature-specs/12-suppliers.md`
+**Current implementable spec:** `context/feature-specs/13-products-catalog.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -504,12 +510,12 @@ Tenant resolution must happen from trusted authenticated context and application
 
 ## Suppliers
 
-* Supplier model
-* Create supplier
-* Edit supplier
-* Supplier list
-* Supplier detail
-* Outstanding payable
+* Supplier model — Complete (`Party` kind `SUPPLIER`)
+* Create supplier — Complete
+* Edit supplier — Complete
+* Supplier list — Complete
+* Supplier detail — Complete
+* Outstanding payable — Placeholder until spec `20` (`₹0` / “No bills yet”; not stored)
 
 ---
 
@@ -1073,6 +1079,41 @@ The first objective is to deliver a complete, reliable business workflow for sma
 ---
 
 # Implementation Unit Log
+
+## 2026-08-20 — Suppliers
+
+Status: Complete
+
+Implemented:
+- Extended `modules/party/` with supplier use cases in the same module as customers. Shared GSTIN/address Zod schemas and normalization.
+- Prisma `Party` `SUPPLIER` kind; queries always include `tenantId` and `kind: SUPPLIER`. Payable outstanding is not stored.
+- Purchases → Suppliers UI: list with “New supplier”, search/status filters, create/edit forms, detail page with GST/contact/address and payable placeholder (`₹0` and “No bills yet”).
+- Audit + outbox events `SupplierCreated`, `SupplierUpdated`, `SupplierDeactivated`. Cross-tenant get-by-id is rejected; customer IDs are not treated as suppliers.
+
+Files / Areas:
+- `modules/party/`
+- `app/app/(workspace)/purchases/suppliers/`
+- `components/business/create-supplier-form.tsx`
+- `components/business/edit-supplier-form.tsx`
+- `components/business/deactivate-supplier-button.tsx`
+- `tests/party/suppliers.test.ts`
+
+Tests:
+- `npm test` (122 tests)
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+
+Verification:
+- Owner can create, edit, view, list, search, and deactivate a supplier in-tenant.
+- Another tenant cannot load a supplier by ID (`PartyNotFoundError`).
+- Payable is a UI placeholder, not a ledger field.
+- Production build succeeds.
+
+Notes:
+- Next implementation unit is `13-products-catalog.md`.
+
+---
 
 ## 2026-08-19 — Customers
 
