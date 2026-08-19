@@ -101,7 +101,6 @@ const STAFF_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "settings:read",
   "document:upload",
   "document:read",
-  "document:delete",
 ]);
 
 const ACCOUNTANT_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([

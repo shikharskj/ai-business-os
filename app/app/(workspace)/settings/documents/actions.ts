@@ -31,6 +31,11 @@ export async function uploadBusinessDocumentAction(
       return { error: "Choose a file to upload." };
     }
 
+    const maxBytes = 10 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      return { error: `File size exceeds the ${maxBytes / (1024 * 1024)} MB limit.` };
+    }
+
     const bytes = new Uint8Array(await file.arrayBuffer());
 
     await uploadDocument({
@@ -40,7 +45,7 @@ export async function uploadBusinessDocumentAction(
       ownerRecordId: tenant.tenantId,
       filename: file.name,
       bytes,
-      maxBytes: 10 * 1024 * 1024,
+      maxBytes,
       storage: getStorageAdapter(),
       documents: prismaDocumentRepository,
       audit,
@@ -57,10 +62,8 @@ export async function uploadBusinessDocumentAction(
       return { error: error.message };
     }
 
-    return {
-      error:
-        error instanceof Error ? error.message : "Unable to upload document.",
-    };
+    console.error("Upload document error:", error);
+    return { error: "Unable to upload document." };
   }
 }
 
@@ -90,9 +93,7 @@ export async function deleteBusinessDocumentAction(
       return { error: error.message };
     }
 
-    return {
-      error:
-        error instanceof Error ? error.message : "Unable to remove document.",
-    };
+    console.error("Delete document error:", error);
+    return { error: "Unable to remove document." };
   }
 }

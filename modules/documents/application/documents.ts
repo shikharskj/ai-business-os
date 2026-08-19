@@ -77,8 +77,9 @@ export async function uploadDocument(
     contentType: inspected.contentType,
   });
 
+  let record: DocumentRecord;
   try {
-    const record = await input.documents.create({
+    record = await input.documents.create({
       id,
       tenantId: input.tenantId,
       ownerRecordType,
@@ -89,27 +90,32 @@ export async function uploadDocument(
       storageKey,
       uploadedByUserId: input.actorUserId,
     });
-
-    await input.audit.append({
-      tenantId: input.tenantId,
-      actorUserId: input.actorUserId,
-      action: "document.uploaded",
-      resource: "document",
-      resourceId: record.id,
-      metadata: {
-        ownerRecordType,
-        ownerRecordId,
-        filename: inspected.filename,
-        contentType: inspected.contentType,
-        sizeBytes: inspected.sizeBytes,
-      },
-    });
-
-    return record;
   } catch (error) {
-    await input.storage.delete(storageKey);
+    try {
+      await input.storage.delete(storageKey);
+    } catch (deleteError) {
+      // Log but don't mask the original error
+      console.error("Failed to delete storage after document creation failure:", deleteError);
+    }
     throw error;
   }
+
+  await input.audit.append({
+    tenantId: input.tenantId,
+    actorUserId: input.actorUserId,
+    action: "document.uploaded",
+    resource: "document",
+    resourceId: record.id,
+    metadata: {
+      ownerRecordType,
+      ownerRecordId,
+      filename: inspected.filename,
+      contentType: inspected.contentType,
+      sizeBytes: inspected.sizeBytes,
+    },
+  });
+
+  return record;
 }
 
 export async function getDocumentForTenant(input: {

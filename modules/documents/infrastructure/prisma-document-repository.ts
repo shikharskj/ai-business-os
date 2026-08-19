@@ -54,6 +54,7 @@ export const prismaDocumentRepository: DocumentRepository = {
         sizeBytes: input.sizeBytes,
         storageKey: input.storageKey,
         uploadedByUserId: input.uploadedByUserId,
+        createdAt: input.createdAt,
       },
     });
     return mapDocument(record);
@@ -79,16 +80,26 @@ export const prismaDocumentRepository: DocumentRepository = {
   },
 
   async delete(tenantId, documentId) {
-    const existing = await prisma.document.findFirst({
-      where: { id: documentId, tenantId },
-    });
-    if (!existing) {
-      return null;
+    try {
+      const record = await prisma.document.delete({
+        where: {
+          id_tenantId: {
+            id: documentId,
+            tenantId,
+          },
+        },
+      });
+      return mapDocument(record);
+    } catch (error) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "P2025"
+      ) {
+        return null;
+      }
+      throw error;
     }
-
-    const record = await prisma.document.delete({
-      where: { id: existing.id },
-    });
-    return mapDocument(record);
   },
 };

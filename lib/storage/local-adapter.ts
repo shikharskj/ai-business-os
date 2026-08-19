@@ -35,19 +35,39 @@ export function createLocalStorageAdapter(options: {
       }
 
       const objectPath = resolveObjectPath(rootDir, input.key);
+      const metadataPath = `${objectPath}.meta`;
       await mkdir(path.dirname(objectPath), { recursive: true });
       await writeFile(objectPath, input.body, { mode: 0o644 });
       await chmod(objectPath, 0o644);
+      await writeFile(
+        metadataPath,
+        JSON.stringify({ contentType: input.contentType }),
+        { mode: 0o644 }
+      );
+      await chmod(metadataPath, 0o644);
     },
 
     async download(key) {
       const objectPath = resolveObjectPath(rootDir, key);
+      const metadataPath = `${objectPath}.meta`;
 
       try {
         const body = await readFile(objectPath);
+        let contentType = "application/octet-stream";
+
+        try {
+          const metadataRaw = await readFile(metadataPath, "utf-8");
+          const metadata = JSON.parse(metadataRaw);
+          if (metadata.contentType) {
+            contentType = metadata.contentType;
+          }
+        } catch {
+          // If metadata file doesn't exist or is invalid, use default
+        }
+
         return {
           key,
-          contentType: "application/octet-stream",
+          contentType,
           byteLength: body.byteLength,
           body: new Uint8Array(body),
         };
@@ -67,6 +87,7 @@ export function createLocalStorageAdapter(options: {
 
     async delete(key) {
       const objectPath = resolveObjectPath(rootDir, key);
+      const metadataPath = `${objectPath}.meta`;
 
       try {
         await unlink(objectPath);
@@ -81,6 +102,12 @@ export function createLocalStorageAdapter(options: {
         }
 
         throw error;
+      }
+
+      try {
+        await unlink(metadataPath);
+      } catch {
+        // Ignore errors when deleting metadata file
       }
     },
   };

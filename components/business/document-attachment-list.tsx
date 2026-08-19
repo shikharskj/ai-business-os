@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { FileText, Trash2 } from "lucide-react";
 
 import { deleteBusinessDocumentAction } from "@/app/app/(workspace)/settings/documents/actions";
@@ -35,6 +36,9 @@ export function DocumentAttachmentList({
   documents: DocumentRecord[];
   canDelete: boolean;
 }) {
+  const [isPending, startTransition] = useTransition();
+  const [deleteError, setDeleteError] = useState<Record<string, string>>({});
+
   if (documents.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -44,38 +48,66 @@ export function DocumentAttachmentList({
     );
   }
 
+  const handleDelete = (documentId: string, filename: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${filename}"?`)) {
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await deleteBusinessDocumentAction(documentId);
+      if (result.error) {
+        setDeleteError((prev) => ({ ...prev, [documentId]: result.error! }));
+      } else {
+        setDeleteError((prev) => {
+          const { [documentId]: _, ...rest } = prev;
+          return rest;
+        });
+      }
+    });
+  };
+
   return (
     <AttachmentGroup className="flex-col overflow-visible">
       {documents.map((document) => (
-        <Attachment key={document.id} state="done" className="w-full max-w-xl">
-          <AttachmentMedia>
-            <FileText />
-          </AttachmentMedia>
-          <AttachmentContent>
-            <AttachmentTitle>{document.filename}</AttachmentTitle>
-            <AttachmentDescription>
-              {document.contentType} · {formatSize(document.sizeBytes)}
-            </AttachmentDescription>
-          </AttachmentContent>
-          <AttachmentTrigger
-            render={
-              <a href={`/api/documents/${document.id}`} download={document.filename} />
-            }
-          />
-          {canDelete ? (
-            <AttachmentActions>
-              <AttachmentAction
-                variant="ghost"
-                aria-label={`Remove ${document.filename}`}
-                onClick={() => {
-                  void deleteBusinessDocumentAction(document.id);
-                }}
-              >
-                <Trash2 />
-              </AttachmentAction>
-            </AttachmentActions>
-          ) : null}
-        </Attachment>
+        <div key={document.id}>
+          <Attachment state="done" className="w-full max-w-xl">
+            <AttachmentMedia>
+              <FileText />
+            </AttachmentMedia>
+            <AttachmentContent>
+              <AttachmentTitle>{document.filename}</AttachmentTitle>
+              <AttachmentDescription>
+                {document.contentType} · {formatSize(document.sizeBytes)}
+              </AttachmentDescription>
+            </AttachmentContent>
+            <AttachmentTrigger
+              render={
+                <a
+                  href={`/api/documents/${document.id}`}
+                  download={document.filename}
+                  aria-label={`Download ${document.filename}`}
+                />
+              }
+            />
+            {canDelete ? (
+              <AttachmentActions>
+                <AttachmentAction
+                  variant="ghost"
+                  aria-label={`Remove ${document.filename}`}
+                  disabled={isPending}
+                  onClick={() => handleDelete(document.id, document.filename)}
+                >
+                  <Trash2 />
+                </AttachmentAction>
+              </AttachmentActions>
+            ) : null}
+          </Attachment>
+          {deleteError[document.id] && (
+            <div role="alert" className="mt-2 text-sm text-destructive">
+              {deleteError[document.id]}
+            </div>
+          )}
+        </div>
       ))}
     </AttachmentGroup>
   );
