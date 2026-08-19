@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { Button } from "@/components/ui/button";
 
 export function PublicHeader() {
   return (
     <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-      <Link href="/" className="text-sm font-medium">
+      <Link href="/" className="text-base font-medium">
         AI Business OS
       </Link>
       <div className="flex items-center gap-2">
+        <ThemeToggle />
         <Show when="signed-out">
           <SignInButton>
             <Button variant="ghost">Sign in</Button>

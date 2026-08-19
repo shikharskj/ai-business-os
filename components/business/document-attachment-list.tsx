@@ -41,7 +41,7 @@ export function DocumentAttachmentList({
 
   if (documents.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-base text-muted-foreground">
         No documents yet. Upload a receipt, invoice scan, or other supporting
         file to keep it with this business.
       </p>
@@ -104,7 +104,7 @@ export function DocumentAttachmentList({
             ) : null}
           </Attachment>
           {deleteError[document.id] && (
-            <div role="alert" className="mt-2 text-sm text-destructive">
+            <div role="alert" className="mt-2 text-base text-destructive">
               {deleteError[document.id]}
             </div>
           )}

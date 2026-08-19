@@ -56,7 +56,7 @@ export default async function CustomerDetailPage({
     .join("\n");
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6">
       <PageHeader
         title={customer.name}
         description="Customer profile"
@@ -89,7 +89,7 @@ export default async function CustomerDetailPage({
       />
 
       {query.saved ? (
-        <p className="text-sm text-muted-foreground">Customer saved.</p>
+        <p className="text-base text-muted-foreground">Customer saved.</p>
       ) : null}
 
       <div className="flex items-center gap-2">
@@ -104,7 +104,7 @@ export default async function CustomerDetailPage({
         </CardHeader>
         <CardContent className="flex flex-col gap-1">
           <MoneyDisplay value={money(0n)} className="text-2xl font-semibold" />
-          <p className="text-sm text-muted-foreground">No invoices yet</p>
+          <p className="text-base text-muted-foreground">No invoices yet</p>
         </CardContent>
       </Card>
 
@@ -112,7 +112,7 @@ export default async function CustomerDetailPage({
         <CardHeader>
           <CardTitle>Details</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 text-sm sm:grid-cols-2">
+        <CardContent className="grid gap-4 text-base sm:grid-cols-2">
           <div>
             <p className="text-muted-foreground">Phone</p>
             <p>{customer.phone ?? "—"}</p>

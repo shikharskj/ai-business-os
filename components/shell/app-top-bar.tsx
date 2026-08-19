@@ -1,4 +1,5 @@
 import { UserButton } from "@clerk/nextjs";
+import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
@@ -8,6 +9,7 @@ export function AppTopBar({ children }: { children?: React.ReactNode }) {
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="mr-2 h-4" />
       <div className="flex flex-1 items-center gap-2">{children}</div>
+      <ThemeToggle />
       <UserButton />
     </header>
   );

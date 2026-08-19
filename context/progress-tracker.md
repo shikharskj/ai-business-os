@@ -113,6 +113,11 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 # Completed
 
+* Design system — shadcn blocks + dark mode:
+  * Neutral zinc tokens (black primary in light, white primary in dark). First-class dark mode via `next-themes` (`.dark` on `html`, persisted).
+  * Theme toggle (Light / Dark / System) uses dropdown items + `setTheme`; top-right of the workspace bar, public header, auth, and setup chrome.
+  * Comfortable control density (`h-10` buttons/inputs/selects, `h-10` sidebar rows, `text-base` body, `rounded-md` surfaces, `18rem` sidebar). Workspace screens restyled to blocks chrome; no fake dashboard KPIs.
+
 * Products catalog (`13-products-catalog.md`):
   * `modules/catalog/` create/edit/view/list/search for products and services. Prices as `DECIMAL(18,2)` / money primitives (not float). SKU unique per tenant.
   * Fields: name, SKU, unit, selling/purchase price, HSN/SAC, GST rate reference (bps), simple category, inventory-tracking flag. Services never track stock.
@@ -220,7 +225,8 @@ Do not skip foundational dependencies merely to build visually impressive featur
   * Added `lib/utils.ts` with reusable `cn()` helper.
   * Added shadcn primitives: Button, Card, Dialog, Input, Tabs, Textarea, Scroll Area, Tooltip, Toast, Skeleton, Spinner, Table, Select, Dropdown Menu, Sidebar, Progress, Attachment, Avatar, Badge, Breadcrumb, Calendar, Checkbox, Chart, Context Menu, Navigation Menu, Resizable, Separator.
   * Added composed patterns: Data Table (`components/data-table/`), Date Picker (`components/date-picker.tsx`).
-  * Mapped AI Business OS design tokens in `app/globals.css` for shadcn semantic variables.
+  * Canonical tokens are shadcn nova-neutral CSS variables in `app/globals.css`; AI Business OS `--bg-*` / `--text-*` / `--accent-primary` aliases map onto them. Primary is high-contrast black/white, not blue.
+  * Dark mode is first-class (`next-themes`, theme toggle). See `context/ui-context.md`.
   * Added `components/design-system-verify.tsx` for import and `cn()` verification.
 * Project specification created.
 * `Project overview.md` defined.
@@ -1120,6 +1126,97 @@ Verification:
 
 Notes:
 - Stock movements are spec `14`. Next implementation unit is `14-inventory.md`.
+
+---
+
+## 2026-08-20 — Shadcn blocks theme and dark mode
+
+Status: Complete
+
+Implemented:
+- Rewrote `context/ui-context.md` Theme / Colors / Dark Mode / Typography / Layout / Sidebar / Top Bar / Cards / Tables / Charts / Buttons for shadcn blocks (zinc/neutral, black/white primary). Indian ₹ and financial state colors unchanged.
+- Replaced `app/globals.css` `:root` / `.dark` with nova-neutral oklch tokens; `--bg-*` / `--text-*` / `--accent-primary` alias onto shadcn variables. Chart series grayscale + one accent.
+- Added `next-themes` (`ThemeProvider`, `suppressHydrationWarning` on `<html>`). Theme toggle (Light / Dark / System) on the workspace top bar, public header, sign-in/sign-up, and setup.
+- Restyled shell and existing screens (dashboard tenant fact cards, list table shells, empty/error/coming-soon, settings/forms) without fake KPIs.
+
+Files / Areas:
+- `context/ui-context.md`
+- `app/globals.css`
+- `app/layout.tsx`
+- `components/shell/`
+- `app/app/(workspace)/`
+- `package.json` / `package-lock.json`
+
+Tests:
+- `npm run lint`
+- `npm run typecheck`
+
+Verification:
+- Light and dark use high-contrast primary (not blue).
+- Theme toggle persists via `next-themes` / `localStorage`.
+- Customers, suppliers, products, settings, dashboard, and coming-soon remain readable in both themes.
+
+Notes:
+- Next implementation unit remains `14-inventory.md`.
+
+---
+
+## 2026-08-20 — Comfortable density and theme toggle
+
+Status: Complete
+
+Implemented:
+- Theme menu uses `DropdownMenuItem` + `setTheme` (Light / Dark / System) with `w-auto min-w-40` so the popup is not clipped to the icon trigger. `ThemeProvider` lists explicit themes.
+- Default primitives stepped up one size: buttons/inputs/selects `h-9`, sidebar rows `h-9` / nested `h-8`, table `h-11` / `px-3 py-2.5`, dropdown items `px-2 py-1.5`. Top bar `h-16`.
+- `ui-context.md` documents comfortable density and the item-based theme menu.
+
+Files / Areas:
+- `components/shell/theme-toggle.tsx`
+- `components/shell/theme-provider.tsx`
+- `components/shell/app-top-bar.tsx`
+- `components/ui/button.tsx`, `input.tsx`, `select.tsx`, `table.tsx`, `sidebar.tsx`, `dropdown-menu.tsx`, `textarea.tsx`
+- `context/ui-context.md`
+- `context/progress-tracker.md`
+
+Tests:
+- `npm run lint`
+- `npm run typecheck`
+
+Verification:
+- Light, Dark, and System apply from the top-right menu and persist on reload.
+- Controls and sidebar rows are a step larger without navigation or page-structure changes.
+
+Notes:
+- Next implementation unit remains `14-inventory.md`.
+
+---
+
+## 2026-08-20 — h-10, text-base, rounded-md
+
+Status: Complete
+
+Implemented:
+- Default controls `h-10` / `text-base` / `rounded-md`; icons `size-5`; icon buttons `size-10`.
+- Sidebar `18rem` (mobile `20rem`), rows `h-10`, nested `h-9`. Body copy `text-base`; captions/GSTIN/SKU stay `text-xs`. Badges stay pills.
+- Cards, dialogs, menus, and list table shells use `rounded-md`.
+
+Files / Areas:
+- `components/ui/`
+- `components/shell/`
+- `components/business/`
+- `app/app/(workspace)/`
+- `context/ui-context.md`
+
+Tests:
+- `npm run lint`
+- `npm run typecheck`
+
+Verification:
+- Buttons, inputs, selects, and sidebar rows are `h-10` with 16px type.
+- Surfaces are `rounded-md`; metadata lines remain `text-xs`.
+
+Notes:
+- Next implementation unit remains `14-inventory.md`.
 
 ---
 

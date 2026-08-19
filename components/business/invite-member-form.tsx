@@ -28,7 +28,7 @@ function FieldError({
   }
 
   return (
-    <p className="text-sm text-destructive" role="alert">
+    <p className="text-base text-destructive" role="alert">
       {message}
     </p>
   );
@@ -43,7 +43,7 @@ export function InviteMemberForm() {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <label htmlFor="emailAddress" className="text-sm font-medium">
+        <label htmlFor="emailAddress" className="text-base font-medium">
           Email address
         </label>
         <Input
@@ -57,10 +57,10 @@ export function InviteMemberForm() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="role" className="text-sm font-medium">
+        <label htmlFor="role" className="text-base font-medium">
           Role
         </label>
-        <Select name="role" defaultValue="STAFF">
+        <Select name="role" defaultValue="STAFF" items={{ ADMIN: "Admin", STAFF: "Staff", ACCOUNTANT: "Accountant" }}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select a role" />
           </SelectTrigger>
@@ -74,7 +74,7 @@ export function InviteMemberForm() {
       </div>
 
       {state.error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-base text-destructive" role="alert">
           {state.error}
         </p>
       ) : null}

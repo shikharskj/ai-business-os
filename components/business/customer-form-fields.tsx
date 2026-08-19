@@ -24,7 +24,7 @@ function FieldError({
   }
 
   return (
-    <p className="text-sm text-destructive" role="alert">
+    <p className="text-base text-destructive" role="alert">
       {message}
     </p>
   );
@@ -43,7 +43,7 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={name} className="text-sm font-medium">
+      <label htmlFor={name} className="text-base font-medium">
         {label}
       </label>
       {children}
@@ -66,7 +66,7 @@ export function CustomerFormFields({
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium">{heading}</h2>
+        <h2 className="text-base font-medium">{heading}</h2>
         <Field label="Business name" name="name" fieldErrors={fieldErrors}>
           <Input
             id="name"
@@ -93,7 +93,7 @@ export function CustomerFormFields({
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium">Billing address</h2>
+        <h2 className="text-base font-medium">Billing address</h2>
         <Field
           label="Address line 1"
           name="billingAddressLine1"
@@ -152,7 +152,7 @@ export function CustomerFormFields({
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium">GST</h2>
+        <h2 className="text-base font-medium">GST</h2>
         <Field
           label="GST registration"
           name="gstRegistrationStatus"
@@ -161,6 +161,11 @@ export function CustomerFormFields({
           <Select
             name="gstRegistrationStatus"
             defaultValue={defaultValues?.gstRegistrationStatus ?? "NOT_REGISTERED"}
+            items={{
+              NOT_REGISTERED: "Not registered",
+              REGISTERED: "Registered",
+              COMPOSITION: "Composition",
+            }}
           >
             <SelectTrigger id="gstRegistrationStatus" className="w-full">
               <SelectValue />

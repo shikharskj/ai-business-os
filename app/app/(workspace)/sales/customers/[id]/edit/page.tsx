@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { EditCustomerForm } from "@/components/business/edit-customer-form";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { authorize } from "@/lib/security";
 import { getCustomer, PartyNotFoundError } from "@/modules/party";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
@@ -31,7 +32,7 @@ export default async function EditCustomerPage({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6">
       <PageHeader
         title={`Edit ${customer.name}`}
         description="Update customer contact, address, and GST details."
@@ -45,7 +46,11 @@ export default async function EditCustomerPage({
           </Button>
         }
       />
-      <EditCustomerForm customer={customer} />
+      <Card>
+        <CardContent>
+          <EditCustomerForm customer={customer} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

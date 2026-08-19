@@ -20,7 +20,7 @@ export function UploadDocumentForm() {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <label htmlFor="file" className="text-sm font-medium">
+        <label htmlFor="file" className="text-base font-medium">
           Supporting file
         </label>
         <Input
@@ -37,7 +37,7 @@ export function UploadDocumentForm() {
       </div>
 
       {state.error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-base text-destructive" role="alert">
           {state.error}
         </p>
       ) : null}

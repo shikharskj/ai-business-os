@@ -24,7 +24,7 @@ function FieldError({
   }
 
   return (
-    <p className="text-sm text-destructive" role="alert">
+    <p className="text-base text-destructive" role="alert">
       {message}
     </p>
   );
@@ -43,7 +43,7 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={name} className="text-sm font-medium">
+      <label htmlFor={name} className="text-base font-medium">
         {label}
       </label>
       {children}
@@ -79,9 +79,13 @@ export function ProductFormFields({
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium">Item details</h2>
+        <h2 className="text-base font-medium">Item details</h2>
         <Field label="Type" name="kind" fieldErrors={fieldErrors}>
-          <Select name="kind" defaultValue={defaultValues?.kind ?? "PRODUCT"}>
+          <Select
+            name="kind"
+            defaultValue={defaultValues?.kind ?? "PRODUCT"}
+            items={{ PRODUCT: "Product", SERVICE: "Service" }}
+          >
             <SelectTrigger id="kind" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -140,7 +144,7 @@ export function ProductFormFields({
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium">Prices</h2>
+        <h2 className="text-base font-medium">Prices</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Selling price (₹)"
@@ -172,7 +176,7 @@ export function ProductFormFields({
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium">Tax</h2>
+        <h2 className="text-base font-medium">Tax</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="HSN / SAC" name="hsnSac" fieldErrors={fieldErrors}>
             <Input
@@ -186,6 +190,9 @@ export function ProductFormFields({
             <Select
               name="taxRateBps"
               defaultValue={defaultValues?.taxRateBps ?? "1800"}
+              items={Object.fromEntries(
+                COMMON_GST_RATE_BPS.map((bps) => [String(bps), gstRateLabel(bps)]),
+              )}
             >
               <SelectTrigger id="taxRateBps" className="w-full">
                 <SelectValue />
@@ -203,13 +210,13 @@ export function ProductFormFields({
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium">Inventory</h2>
-        <label className="flex items-center gap-2 text-sm">
+        <h2 className="text-base font-medium">Inventory</h2>
+        <label className="flex items-center gap-2 text-base">
           <input
             type="checkbox"
             name="tracksInventory"
             defaultChecked={defaultValues?.tracksInventory ?? false}
-            className="size-4 accent-primary"
+            className="size-5 accent-primary"
           />
           Track inventory for this product
         </label>

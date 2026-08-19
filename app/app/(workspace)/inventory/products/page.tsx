@@ -1,4 +1,4 @@
-import { Package } from "lucide-react";
+import { Package, Plus, Search } from "lucide-react";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/shell/empty-state";
@@ -50,7 +50,7 @@ export default async function ProductsPage({
   });
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
       <PageHeader
         title="Products"
         description="Products and services you sell or buy."
@@ -60,7 +60,8 @@ export default async function ProductsPage({
               nativeButton={false}
               render={<Link href="/app/inventory/products/new" />}
             >
-              New product
+              <Plus className="size-5" />
+              <span>New product</span>
             </Button>
           ) : null
         }
@@ -68,21 +69,27 @@ export default async function ProductsPage({
 
       <form className="flex flex-wrap items-end gap-3" method="get">
         <div className="flex min-w-56 flex-1 flex-col gap-2">
-          <label htmlFor="q" className="text-sm font-medium">
+          <label htmlFor="q" className="text-base font-medium">
             Search
           </label>
           <Input
             id="q"
             name="q"
             defaultValue={filters.q}
-            placeholder="Name, SKU, HSN/SAC, or category"
+            placeholder="Name, SKU, HSN/SAC, or category..."
+            className="max-w-xl"
+            leftIcon={<Search className="size-5" />}
           />
         </div>
         <div className="flex w-40 flex-col gap-2">
-          <label htmlFor="kind" className="text-sm font-medium">
+          <label htmlFor="kind" className="text-base font-medium">
             Type
           </label>
-          <Select name="kind" defaultValue={filters.kind}>
+          <Select
+            name="kind"
+            defaultValue={filters.kind}
+            items={{ ALL: "All", PRODUCT: "Products", SERVICE: "Services" }}
+          >
             <SelectTrigger id="kind" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -117,13 +124,14 @@ export default async function ProductsPage({
                 nativeButton={false}
                 render={<Link href="/app/inventory/products/new" />}
               >
-                New product
+                <Plus className="size-5" />
+                <span>New product</span>{" "}
               </Button>
             ) : null
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-lg border">
+        <div className="overflow-hidden rounded-md border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow>

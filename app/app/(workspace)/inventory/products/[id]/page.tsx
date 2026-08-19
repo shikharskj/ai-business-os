@@ -42,7 +42,7 @@ export default async function ProductDetailPage({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6">
       <PageHeader
         title={product.name}
         description="Catalog item"
@@ -69,7 +69,7 @@ export default async function ProductDetailPage({
       />
 
       {query.saved ? (
-        <p className="text-sm text-muted-foreground">Product saved.</p>
+        <p className="text-base text-muted-foreground">Product saved.</p>
       ) : null}
 
       <div className="flex items-center gap-2">
@@ -91,12 +91,12 @@ export default async function ProductDetailPage({
           {product.tracksInventory ? (
             <>
               <p className="text-2xl font-semibold tabular-nums">0</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 No stock movements yet
               </p>
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-base text-muted-foreground">
               Stock is not tracked for this item.
             </p>
           )}
@@ -107,7 +107,7 @@ export default async function ProductDetailPage({
         <CardHeader>
           <CardTitle>Details</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 text-sm sm:grid-cols-2">
+        <CardContent className="grid gap-4 text-base sm:grid-cols-2">
           <div>
             <p className="text-muted-foreground">SKU</p>
             <p className="font-mono text-xs">{product.sku}</p>

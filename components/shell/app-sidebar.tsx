@@ -30,6 +30,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 type NavItem = {
@@ -92,14 +93,38 @@ const footerNav: NavItem[] = [
   { label: "Settings", href: "/app/settings", icon: Settings },
 ];
 
-function isActive(pathname: string, href: string): boolean {
+function pathMatches(pathname: string, href: string): boolean {
   if (href === "/app") return pathname === "/app";
-  return pathname === href || pathname.startsWith(href + "/");
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function isSectionActive(pathname: string, item: NavItem): boolean {
-  if (isActive(pathname, item.href)) return true;
-  return item.children?.some((c) => isActive(pathname, c.href)) ?? false;
+function hasMatchingChild(pathname: string, item: NavItem): boolean {
+  return item.children?.some((child) => pathMatches(pathname, child.href)) ?? false;
+}
+
+function isParentActive(
+  pathname: string,
+  item: NavItem,
+  collapsed: boolean,
+): boolean {
+  if (!item.children?.length) {
+    return pathMatches(pathname, item.href);
+  }
+
+  const childActive = hasMatchingChild(pathname, item);
+  if (collapsed) {
+    return childActive || pathMatches(pathname, item.href);
+  }
+
+  return pathMatches(pathname, item.href) && !childActive;
+}
+
+function isCurrentPage(pathname: string, item: NavItem): boolean {
+  if (!item.children?.length) {
+    return pathMatches(pathname, item.href);
+  }
+
+  return pathMatches(pathname, item.href) && !hasMatchingChild(pathname, item);
 }
 
 function NavGroup({
@@ -111,37 +136,50 @@ function NavGroup({
   pathname: string;
   label?: string;
 }) {
+  const { state, isMobile } = useSidebar();
+  const collapsed = !isMobile && state === "collapsed";
+
   return (
     <SidebarGroup>
       {label ? <SidebarGroupLabel>{label}</SidebarGroupLabel> : null}
       <SidebarGroupContent>
         <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                render={<Link href={item.href} />}
-                isActive={isSectionActive(pathname, item)}
-                tooltip={item.label}
-              >
-                <item.icon className="size-4" />
-                <span>{item.label}</span>
-              </SidebarMenuButton>
-              {item.children ? (
-                <SidebarMenuSub>
-                  {item.children.map((child) => (
-                    <SidebarMenuSubItem key={child.href}>
-                      <SidebarMenuSubButton
-                        render={<Link href={child.href} />}
-                        isActive={isActive(pathname, child.href)}
-                      >
-                        {child.label}
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  ))}
-                </SidebarMenuSub>
-              ) : null}
-            </SidebarMenuItem>
-          ))}
+          {items.map((item) => {
+            const parentIsCurrentPage = isCurrentPage(pathname, item);
+
+            return (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                  render={<Link href={item.href} />}
+                  isActive={isParentActive(pathname, item, collapsed)}
+                  aria-current={parentIsCurrentPage ? "page" : undefined}
+                  tooltip={item.label}
+                >
+                  <item.icon className="size-5" />
+                  <span>{item.label}</span>
+                </SidebarMenuButton>
+                {item.children ? (
+                  <SidebarMenuSub>
+                    {item.children.map((child) => {
+                      const childIsActive = pathMatches(pathname, child.href);
+
+                      return (
+                        <SidebarMenuSubItem key={child.href}>
+                          <SidebarMenuSubButton
+                            render={<Link href={child.href} />}
+                            isActive={childIsActive}
+                            aria-current={childIsActive ? "page" : undefined}
+                          >
+                            {child.label}
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      );
+                    })}
+                  </SidebarMenuSub>
+                ) : null}
+              </SidebarMenuItem>
+            );
+          })}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
@@ -161,10 +199,10 @@ export function AppSidebar({ businessName }: { businessName: string }) {
               render={<Link href="/app" />}
               tooltip={businessName}
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Building2 className="size-4" />
+              <div className="flex aspect-square size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <Building2 className="size-5" />
               </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
+              <div className="grid flex-1 text-left text-base leading-tight">
                 <span className="truncate font-medium">{businessName}</span>
                 <span className="truncate text-xs text-muted-foreground">
                   Workspace
@@ -176,18 +214,18 @@ export function AppSidebar({ businessName }: { businessName: string }) {
       </SidebarHeader>
 
       <SidebarContent>
-        <NavGroup items={mainNav} pathname={pathname} />
+        <NavGroup items={mainNav} pathname={pathname} label="Overview" />
         <SidebarSeparator />
         <NavGroup items={salesNav} pathname={pathname} />
         <NavGroup items={purchasesNav} pathname={pathname} />
         <NavGroup items={inventoryNav} pathname={pathname} />
         <SidebarSeparator />
-        <NavGroup items={operationsNav} pathname={pathname} />
+        <NavGroup items={operationsNav} pathname={pathname} label="Operations" />
       </SidebarContent>
 
       <SidebarFooter>
         <SidebarSeparator />
-        <NavGroup items={footerNav} pathname={pathname} />
+        <NavGroup items={footerNav} pathname={pathname} label="Account" />
       </SidebarFooter>
     </Sidebar>
   );

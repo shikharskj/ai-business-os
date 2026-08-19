@@ -23,7 +23,7 @@ function FieldError({
   }
 
   return (
-    <p className="text-sm text-destructive" role="alert">
+    <p className="text-base text-destructive" role="alert">
       {message}
     </p>
   );
@@ -42,7 +42,7 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={name} className="text-sm font-medium">
+      <label htmlFor={name} className="text-base font-medium">
         {label}
       </label>
       {children}
@@ -134,7 +134,7 @@ export function BusinessProfileFields({
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium">Business details</h2>
+        <h2 className="text-base font-medium">Business details</h2>
         <Field label="Business name" name="name" fieldErrors={fieldErrors}>
           <Input
             id="name"
@@ -144,7 +144,17 @@ export function BusinessProfileFields({
           />
         </Field>
         <Field label="Business type" name="type" fieldErrors={fieldErrors}>
-          <Select name="type" defaultValue={defaultValues?.type ?? "PROPRIETORSHIP"}>
+          <Select
+            name="type"
+            defaultValue={defaultValues?.type ?? "PROPRIETORSHIP"}
+            items={{
+              PROPRIETORSHIP: "Proprietorship",
+              PARTNERSHIP: "Partnership",
+              PRIVATE_LIMITED: "Private limited",
+              LLP: "LLP",
+              OTHER: "Other",
+            }}
+          >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select business type" />
             </SelectTrigger>
@@ -160,7 +170,7 @@ export function BusinessProfileFields({
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium">Contact</h2>
+        <h2 className="text-base font-medium">Contact</h2>
         <Field label="Phone" name="phone" fieldErrors={fieldErrors}>
           <Input
             id="phone"
@@ -181,7 +191,7 @@ export function BusinessProfileFields({
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium">Address</h2>
+        <h2 className="text-base font-medium">Address</h2>
         <Field label="Address line 1" name="addressLine1" fieldErrors={fieldErrors}>
           <Input
             id="addressLine1"
@@ -226,7 +236,17 @@ export function BusinessProfileFields({
             />
           </Field>
           <Field label="Country" name="country" fieldErrors={fieldErrors}>
-            <Select name="country" defaultValue={defaultValues?.country ?? "IN"}>
+            <Select
+              name="country"
+              defaultValue={defaultValues?.country ?? "IN"}
+              items={{
+                IN: "India",
+                US: "United States",
+                GB: "United Kingdom",
+                AE: "United Arab Emirates",
+                SG: "Singapore",
+              }}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select country" />
               </SelectTrigger>
@@ -243,7 +263,7 @@ export function BusinessProfileFields({
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium">Tax and finance</h2>
+        <h2 className="text-base font-medium">Tax and finance</h2>
         <Field
           label="GST registration status"
           name="gstRegistrationStatus"
@@ -252,6 +272,11 @@ export function BusinessProfileFields({
           <Select
             name="gstRegistrationStatus"
             defaultValue={defaultValues?.gstRegistrationStatus ?? "NOT_REGISTERED"}
+            items={{
+              NOT_REGISTERED: "Not registered",
+              REGISTERED: "Registered",
+              COMPOSITION: "Composition scheme",
+            }}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="GST registration status" />
@@ -279,6 +304,13 @@ export function BusinessProfileFields({
           <Select
             name="defaultGstRateBps"
             defaultValue={String(defaultValues?.defaultGstRateBps ?? 1800)}
+            items={{
+              "0": "0%",
+              "500": "5%",
+              "1200": "12%",
+              "1800": "18%",
+              "2800": "28%",
+            }}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select GST rate" />
@@ -300,6 +332,7 @@ export function BusinessProfileFields({
           <Select
             name="financialYearStartMonth"
             defaultValue={String(defaultValues?.financialYearStartMonth ?? 4)}
+            items={MONTHS.map((m) => ({ value: m.value, label: m.label }))}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select month" />
@@ -315,7 +348,11 @@ export function BusinessProfileFields({
         </Field>
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Timezone" name="timezone" fieldErrors={fieldErrors}>
-            <Select name="timezone" defaultValue={defaultValues?.timezone ?? "Asia/Kolkata"}>
+            <Select
+              name="timezone"
+              defaultValue={defaultValues?.timezone ?? "Asia/Kolkata"}
+              items={TIMEZONES.map((tz) => ({ value: tz.value, label: tz.label }))}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select timezone" />
               </SelectTrigger>
@@ -329,7 +366,11 @@ export function BusinessProfileFields({
             </Select>
           </Field>
           <Field label="Currency" name="currency" fieldErrors={fieldErrors}>
-            <Select name="currency" defaultValue={defaultValues?.currency ?? "INR"}>
+            <Select
+              name="currency"
+              defaultValue={defaultValues?.currency ?? "INR"}
+              items={CURRENCIES.map((c) => ({ value: c.value, label: c.label }))}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select currency" />
               </SelectTrigger>

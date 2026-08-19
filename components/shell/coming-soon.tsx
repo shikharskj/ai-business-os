@@ -10,7 +10,7 @@ export function ComingSoon({
   module: string;
 }) {
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6">
+    <div className="flex flex-1 flex-col gap-6">
       <PageHeader title={title} />
       <EmptyState
         icon={Construction}
