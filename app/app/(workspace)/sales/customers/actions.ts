@@ -15,25 +15,45 @@ import {
   customerInputSchema,
   PartyError,
 } from "@/modules/party";
+import type { Customer, PartyGstRegistrationStatus } from "@/modules/party/domain/types";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 
 export type CustomerActionState = {
   error?: string;
   fieldErrors?: Record<string, string>;
-  values?: {
-    name?: string;
-    phone?: string;
-    email?: string;
-    billingAddressLine1?: string;
-    billingAddressLine2?: string;
-    city?: string;
-    state?: string;
-    postalCode?: string;
-    country?: string;
-    gstRegistrationStatus?: string;
-    gstin?: string;
-  };
+  values?: Partial<Customer>;
 };
+
+function gstRegistrationStatusFromForm(
+  value: FormDataEntryValue | null
+): PartyGstRegistrationStatus {
+  if (
+    value === "REGISTERED" ||
+    value === "COMPOSITION" ||
+    value === "NOT_REGISTERED"
+  ) {
+    return value;
+  }
+  return "NOT_REGISTERED";
+}
+
+function submittedCustomerValues(formData: FormData): Partial<Customer> {
+  return {
+    name: String(formData.get("name") || ""),
+    phone: String(formData.get("phone") || ""),
+    email: String(formData.get("email") || ""),
+    billingAddressLine1: String(formData.get("billingAddressLine1") || ""),
+    billingAddressLine2: String(formData.get("billingAddressLine2") || ""),
+    city: String(formData.get("city") || ""),
+    state: String(formData.get("state") || ""),
+    postalCode: String(formData.get("postalCode") || ""),
+    country: String(formData.get("country") || "IN"),
+    gstRegistrationStatus: gstRegistrationStatusFromForm(
+      formData.get("gstRegistrationStatus")
+    ),
+    gstin: String(formData.get("gstin") || ""),
+  };
+}
 
 const audit = createPrismaAuditRepository(prisma);
 const outbox = createPrismaOutboxRepository(prisma);
@@ -69,19 +89,7 @@ export async function createCustomerAction(
 ): Promise<CustomerActionState> {
   let customerId: string;
 
-  const submittedValues = {
-    name: String(formData.get("name") || ""),
-    phone: String(formData.get("phone") || ""),
-    email: String(formData.get("email") || ""),
-    billingAddressLine1: String(formData.get("billingAddressLine1") || ""),
-    billingAddressLine2: String(formData.get("billingAddressLine2") || ""),
-    city: String(formData.get("city") || ""),
-    state: String(formData.get("state") || ""),
-    postalCode: String(formData.get("postalCode") || ""),
-    country: String(formData.get("country") || "IN"),
-    gstRegistrationStatus: String(formData.get("gstRegistrationStatus") || "NOT_REGISTERED"),
-    gstin: String(formData.get("gstin") || ""),
-  };
+  const submittedValues = submittedCustomerValues(formData);
 
   try {
     const tenant = await authorize("customer:create");
@@ -118,19 +126,7 @@ export async function updateCustomerAction(
 ): Promise<CustomerActionState> {
   const customerId = String(formData.get("customerId") ?? "");
 
-  const submittedValues = {
-    name: String(formData.get("name") || ""),
-    phone: String(formData.get("phone") || ""),
-    email: String(formData.get("email") || ""),
-    billingAddressLine1: String(formData.get("billingAddressLine1") || ""),
-    billingAddressLine2: String(formData.get("billingAddressLine2") || ""),
-    city: String(formData.get("city") || ""),
-    state: String(formData.get("state") || ""),
-    postalCode: String(formData.get("postalCode") || ""),
-    country: String(formData.get("country") || "IN"),
-    gstRegistrationStatus: String(formData.get("gstRegistrationStatus") || "NOT_REGISTERED"),
-    gstin: String(formData.get("gstin") || ""),
-  };
+  const submittedValues = submittedCustomerValues(formData);
 
   try {
     const tenant = await authorize("customer:update");
