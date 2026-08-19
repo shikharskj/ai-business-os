@@ -11,7 +11,7 @@ import {
   clerkOrganizationGateway,
   requireTenantForTrustedResource,
 } from "@/lib/tenant";
-import { authorize, AuthorizationError } from "@/lib/security";
+import { authorize } from "@/lib/security";
 import {
   createBusinessWithOrganization,
   inviteOrganizationMember,

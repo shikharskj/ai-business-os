@@ -12,8 +12,6 @@ import {
   Receipt,
   Settings,
   ShoppingCart,
-  Truck,
-  Users,
   Wallet,
 } from "lucide-react";
 

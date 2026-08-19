@@ -13,8 +13,9 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  ownedBusinesses Business[]   @relation("BusinessOwner")
-  memberships     Membership[]
+  ownedBusinesses     Business[]   @relation("BusinessOwner")
+  memberships         Membership[]
+  uploadedDocuments   Document[]   @relation("DocumentUploader")
 
   @@map("users")
 }
@@ -77,6 +78,7 @@ model Business {
   hsnSacCodes  HsnSacCode[]
   accounts     Account[]
   journals     Journal[]
+  documents    Document[]
 
   @@map("businesses")
 }
@@ -240,4 +242,26 @@ model JournalLine {
   @@index([tenantId, accountId])
   @@index([journalId])
   @@map("journal_lines")
+}
+
+model Document {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  ownerRecordType    String
+  ownerRecordId      String
+  filename           String
+  contentType        String
+  sizeBytes          Int
+  storageKey         String   @unique
+  uploadedByUserId   String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  business   Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  uploadedBy User     @relation("DocumentUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, ownerRecordType, ownerRecordId])
+  @@index([tenantId, createdAt])
+  @@map("documents")
 }

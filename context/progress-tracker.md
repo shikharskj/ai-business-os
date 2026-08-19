@@ -113,6 +113,14 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 # Completed
 
+* Documents and object storage (`10-documents-storage.md`):
+  * `lib/storage/` adapter interface (`upload` / `download` / `delete`) with size limits and safe keys. Local/filesystem adapter for development/test; Cloudflare R2 (S3-compatible) adapter for production.
+  * Adapter selection fails closed: production defaults to R2; missing R2 config rejects initialization; `STORAGE_DRIVER=local` is rejected in production (no silent filesystem fallback).
+  * `modules/documents/` tenant-scoped metadata (owner record type/id, filename, sniffed content type, size, storage key, uploaded by, timestamps). Binaries stay in object storage, not PostgreSQL.
+  * Upload validation sniffs magic bytes (PDF/JPEG/PNG/WebP), ignores client content-type/path, rejects oversized and disallowed types. Downloads use `Content-Disposition: attachment` and `X-Content-Type-Options: nosniff`.
+  * Permissions `document:upload` / `document:read` / `document:delete`. Queries always include `tenantId`. Uploads are audited.
+  * Settings documents page uses the existing Attachment primitive; `components/ui/*` unchanged. Prisma `Document` + migration `20260819170000_add_documents`.
+
 * Accounting foundation (`09-accounting-foundation.md`):
   * `modules/accounting/domain/` — balanced-journal invariant, period keys (`YYYY-MM` + `FY2026-27`), small Indian SMB chart template. No Prisma/Next/Clerk.
   * Posting service `postJournal` / `reverseJournal` — other modules must call these; journal tables are not written directly. Unbalanced journals rejected. Closed periods rejected via `Business.closedThroughPeriodKey`.
@@ -153,7 +161,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
   * `/app/setup` remains outside workspace layout (no sidebar before business creation).
 
 * Authorization policy layer (`05-authorization.md`):
-  * `lib/security/permissions.ts` — 23 capability-based permissions; role→permission map for OWNER, ADMIN, STAFF, ACCOUNTANT.
+  * `lib/security/permissions.ts` — 26 capability-based permissions; role→permission map for OWNER, ADMIN, STAFF, ACCOUNTANT.
   * `lib/security/authorize.ts` — `authorize(permission)` resolves tenant + checks role permission, fails closed with `AuthorizationError`. `authorizeSync` variant for pre-resolved tenant contexts.
   * `modules/tenant/application/assign-role.ts` — `assignMemberRole` use case; blocks OWNER reassignment, only allows ADMIN/STAFF/ACCOUNTANT as assignable targets.
   * Existing server actions (`updateBusinessProfileAction`, `inviteMemberAction`) and settings pages migrated from ad-hoc `requireBusinessSettingsAccess` to `authorize("settings:update")`.
@@ -220,7 +228,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Next implementable spec:** `context/feature-specs/10-documents-storage.md`
+**Next implementable spec:** `context/feature-specs/11-customers.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -769,7 +777,7 @@ Do not introduce multiple communication providers until the core notification ab
 * Input validation
 * API protection *(unauthenticated `/api/me` fails closed)*
 * Rate limiting where required
-* Secure file handling
+* Secure file handling *(spec 10: sniffed types/size limits, tenant-scoped keys, attachment download, R2 fail-closed)*
 * Secret management *(Clerk secrets server-only; webhook signing verified)*
 * Audit logging
 * Dependency security checks
@@ -1062,6 +1070,49 @@ The first objective is to deliver a complete, reliable business workflow for sma
 
 # Implementation Unit Log
 
+## 2026-08-19 — Documents and object storage
+
+Status: Complete
+
+Implemented:
+- Added `lib/storage/` with a swappable adapter (upload/download/delete), local/dev filesystem implementation, in-memory test adapter, and Cloudflare R2 production adapter (`@aws-sdk/client-s3`).
+- Adapter selection fails closed in production: missing/invalid R2 config throws; local storage cannot be selected when `NODE_ENV=production`.
+- Added tenant-scoped `Document` metadata in PostgreSQL and `modules/documents/` use cases for upload, download, list, and delete. Content type is sniffed from bytes; client paths and claimed MIME types are not trusted.
+- Authorized Settings → Documents upload/download UI using the existing Attachment primitive. Downloads are forced as attachments.
+- Added `document:upload`, `document:read`, and `document:delete` permissions; important uploads are audited.
+
+Files / Areas:
+- `lib/storage/`
+- `lib/env.ts`
+- `modules/documents/`
+- `lib/security/permissions.ts`
+- `prisma/schema.prisma`
+- `prisma/migrations/20260819170000_add_documents/`
+- `app/app/(workspace)/settings/documents/`
+- `app/api/documents/[id]/route.ts`
+- `components/business/upload-document-form.tsx`
+- `components/business/document-attachment-list.tsx`
+- `tests/storage/`
+- `tests/documents/`
+
+Tests:
+- `npm test` (107 tests)
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+
+Verification:
+- Tenant can upload and download the same bytes; another tenant cannot read by document ID.
+- Oversized files and disallowed types (including PDF magic with a `.exe` name) are rejected.
+- Production adapter config without R2 credentials throws; local driver is rejected in production.
+- Production build succeeds. `components/ui/*` was not modified.
+
+Notes:
+- Local storage root defaults to `.data/storage` (gitignored). Production must set `STORAGE_DRIVER=r2` plus Cloudflare R2 env vars.
+- Owner types include future records (expense/invoice/etc.) without foreign keys; `BUSINESS` attachments must use the current tenant id.
+- Next implementation unit is `11-customers.md`.
+
+---
 ## 2026-08-19 — Owner product decisions
 
 Status: Complete *(documentation only)*

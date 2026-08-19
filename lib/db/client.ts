@@ -14,6 +14,17 @@ function createPrismaClient() {
   return new PrismaClient({ adapter });
 }
 
+function hasDocumentDelegate(client: PrismaClient | undefined): boolean {
+  return typeof (client as { document?: { findMany?: unknown } } | undefined)
+    ?.document?.findMany === "function";
+}
+
+const existingGlobalClient = globalForPrisma.prisma;
+if (existingGlobalClient && !hasDocumentDelegate(existingGlobalClient)) {
+  void existingGlobalClient.$disconnect();
+  globalForPrisma.prisma = undefined;
+}
+
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (env.NODE_ENV !== "production") {

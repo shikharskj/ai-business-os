@@ -30,6 +30,9 @@ const ALL_PERMISSIONS: Permission[] = [
   "settings:read",
   "settings:update",
   "settings:role:assign",
+  "document:upload",
+  "document:read",
+  "document:delete",
 ];
 
 describe("roleHasPermission", () => {
@@ -50,6 +53,8 @@ describe("roleHasPermission", () => {
     expect(roleHasPermission("STAFF", "customer:read")).toBe(true);
     expect(roleHasPermission("STAFF", "supplier:read")).toBe(true);
     expect(roleHasPermission("STAFF", "product:read")).toBe(true);
+    expect(roleHasPermission("STAFF", "document:upload")).toBe(true);
+    expect(roleHasPermission("STAFF", "document:read")).toBe(true);
     expect(roleHasPermission("STAFF", "accounting:post")).toBe(false);
     expect(roleHasPermission("STAFF", "inventory:adjust")).toBe(false);
     expect(roleHasPermission("STAFF", "settings:update")).toBe(false);
@@ -61,6 +66,8 @@ describe("roleHasPermission", () => {
     expect(roleHasPermission("ACCOUNTANT", "accounting:post")).toBe(true);
     expect(roleHasPermission("ACCOUNTANT", "report:read")).toBe(true);
     expect(roleHasPermission("ACCOUNTANT", "invoice:read")).toBe(true);
+    expect(roleHasPermission("ACCOUNTANT", "document:read")).toBe(true);
+    expect(roleHasPermission("ACCOUNTANT", "document:upload")).toBe(false);
     expect(roleHasPermission("ACCOUNTANT", "invoice:create")).toBe(false);
     expect(roleHasPermission("ACCOUNTANT", "customer:create")).toBe(false);
     expect(roleHasPermission("ACCOUNTANT", "settings:update")).toBe(false);
