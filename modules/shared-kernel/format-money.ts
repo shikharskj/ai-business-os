@@ -5,6 +5,9 @@ import { moneyFromMajor, toMajorString } from "@/modules/shared-kernel/money";
  * Formats minor units into Indian grouping: ₹1,25,000.00
  */
 export function formatINR(m: Money): string {
+  if (m.currency !== "INR") {
+    throw new Error(`formatINR requires INR currency, got ${m.currency}`);
+  }
   const major = toMajorString(m);
   const negative = major.startsWith("-");
   const unsigned = negative ? major.slice(1) : major;

@@ -28,6 +28,11 @@ describe("formatINR", () => {
     const result = formatINR(m);
     expect(result).toContain("10,00,00,00,00,00,000.00");
   });
+
+  it("rejects non-INR currencies", () => {
+    const usd = money(10000n, "USD");
+    expect(() => formatINR(usd)).toThrow("formatINR requires INR currency, got USD");
+  });
 });
 
 describe("formatIndianNumber", () => {
