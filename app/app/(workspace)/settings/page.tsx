@@ -19,13 +19,22 @@ export default async function BusinessSettingsPage({
         title="Business settings"
         description="Manage your business profile, tax details, and financial year configuration."
         actions={
-          <Button
-            nativeButton={false}
-            variant="outline"
-            render={<Link href="/app/settings/members" />}
-          >
-            Members
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              nativeButton={false}
+              variant="outline"
+              render={<Link href="/app/settings/documents" />}
+            >
+              Documents
+            </Button>
+            <Button
+              nativeButton={false}
+              variant="outline"
+              render={<Link href="/app/settings/members" />}
+            >
+              Members
+            </Button>
+          </div>
         }
       />
 

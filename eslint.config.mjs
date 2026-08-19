@@ -27,6 +27,11 @@ const eslintConfig = defineConfig([
               message:
                 "Domain modules must not import Clerk. Use lib/auth instead.",
             },
+            {
+              name: "@aws-sdk/client-s3",
+              message:
+                "Domain modules must not import object storage SDKs. Use lib/storage instead.",
+            },
           ],
         },
       ],

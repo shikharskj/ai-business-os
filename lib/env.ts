@@ -51,6 +51,40 @@ const envSchema = z.object({
     emptyToUndefined,
     z.string().min(1).optional()
   ),
+  STORAGE_DRIVER: z.preprocess(
+    emptyToUndefined,
+    z.enum(["local", "r2"]).optional()
+  ),
+  LOCAL_STORAGE_ROOT: z.preprocess(
+    emptyToUndefined,
+    z.string().min(1).optional()
+  ),
+  STORAGE_MAX_BYTES: z.preprocess((value) => {
+    if (value === undefined || value === "") {
+      return undefined;
+    }
+    return Number(value);
+  }, z.number().int().positive().optional()),
+  CLOUDFLARE_R2_ACCOUNT_ID: z.preprocess(
+    emptyToUndefined,
+    z.string().min(1).optional()
+  ),
+  CLOUDFLARE_R2_ACCESS_KEY_ID: z.preprocess(
+    emptyToUndefined,
+    z.string().min(1).optional()
+  ),
+  CLOUDFLARE_R2_SECRET_ACCESS_KEY: z.preprocess(
+    emptyToUndefined,
+    z.string().min(1).optional()
+  ),
+  CLOUDFLARE_R2_BUCKET: z.preprocess(
+    emptyToUndefined,
+    z.string().min(1).optional()
+  ),
+  CLOUDFLARE_R2_ENDPOINT: z.preprocess(
+    emptyToUndefined,
+    z.string().url().optional()
+  ),
 });
 
 export const env = envSchema.parse({
@@ -60,6 +94,14 @@ export const env = envSchema.parse({
     process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
   CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
   CLERK_WEBHOOK_SIGNING_SECRET: process.env.CLERK_WEBHOOK_SIGNING_SECRET,
+  STORAGE_DRIVER: process.env.STORAGE_DRIVER,
+  LOCAL_STORAGE_ROOT: process.env.LOCAL_STORAGE_ROOT,
+  STORAGE_MAX_BYTES: process.env.STORAGE_MAX_BYTES,
+  CLOUDFLARE_R2_ACCOUNT_ID: process.env.CLOUDFLARE_R2_ACCOUNT_ID,
+  CLOUDFLARE_R2_ACCESS_KEY_ID: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
+  CLOUDFLARE_R2_SECRET_ACCESS_KEY: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+  CLOUDFLARE_R2_BUCKET: process.env.CLOUDFLARE_R2_BUCKET,
+  CLOUDFLARE_R2_ENDPOINT: process.env.CLOUDFLARE_R2_ENDPOINT,
 });
 
 if (

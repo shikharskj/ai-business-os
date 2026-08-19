@@ -23,7 +23,10 @@ export type Permission =
   | "product:update"
   | "settings:read"
   | "settings:update"
-  | "settings:role:assign";
+  | "settings:role:assign"
+  | "document:upload"
+  | "document:read"
+  | "document:delete";
 
 const OWNER_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "invoice:create",
@@ -49,6 +52,9 @@ const OWNER_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "settings:read",
   "settings:update",
   "settings:role:assign",
+  "document:upload",
+  "document:read",
+  "document:delete",
 ]);
 
 const ADMIN_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
@@ -74,6 +80,9 @@ const ADMIN_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "product:update",
   "settings:read",
   "settings:update",
+  "document:upload",
+  "document:read",
+  "document:delete",
 ]);
 
 const STAFF_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
@@ -90,6 +99,9 @@ const STAFF_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "supplier:read",
   "product:read",
   "settings:read",
+  "document:upload",
+  "document:read",
+  "document:delete",
 ]);
 
 const ACCOUNTANT_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
@@ -102,6 +114,7 @@ const ACCOUNTANT_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "supplier:read",
   "product:read",
   "settings:read",
+  "document:read",
 ]);
 
 const ROLE_PERMISSIONS: Record<MembershipRole, ReadonlySet<Permission>> = {
