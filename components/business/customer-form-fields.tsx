@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { GST_STATE_CODES } from "@/modules/tax/domain/gstin";
-import type { Customer } from "@/modules/party/domain/types";
+import type { Party } from "@/modules/party/domain/types";
 
 function FieldError({
   name,
@@ -55,16 +55,18 @@ function Field({
 export function CustomerFormFields({
   defaultValues,
   fieldErrors,
+  heading = "Customer details",
 }: {
-  defaultValues?: Partial<Customer>;
+  defaultValues?: Partial<Party>;
   fieldErrors?: Record<string, string>;
+  heading?: string;
 }) {
   const states = Object.values(GST_STATE_CODES);
 
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium">Customer details</h2>
+        <h2 className="text-sm font-medium">{heading}</h2>
         <Field label="Business name" name="name" fieldErrors={fieldErrors}>
           <Input
             id="name"

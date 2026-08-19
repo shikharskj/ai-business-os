@@ -4,6 +4,8 @@ import { PartyValidationError } from "@/modules/party/domain/errors";
 import type {
   CustomerInput,
   PartyGstRegistrationStatus,
+  PartyInput,
+  SupplierInput,
 } from "@/modules/party/domain/types";
 
 function emptyToNull(value: string | null | undefined): string | null {
@@ -14,10 +16,13 @@ function emptyToNull(value: string | null | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-export function normalizeCustomerInput(input: CustomerInput): CustomerInput {
+export function normalizePartyInput(
+  input: PartyInput,
+  noun: "Customer" | "Supplier"
+): PartyInput {
   const name = input.name.trim();
   if (name.length < 2) {
-    throw new PartyValidationError("Customer name is required.");
+    throw new PartyValidationError(`${noun} name is required.`);
   }
 
   const gstRegistrationStatus: PartyGstRegistrationStatus =
@@ -65,4 +70,12 @@ export function normalizeCustomerInput(input: CustomerInput): CustomerInput {
     gstRegistrationStatus,
     gstin,
   };
+}
+
+export function normalizeCustomerInput(input: CustomerInput): CustomerInput {
+  return normalizePartyInput(input, "Customer");
+}
+
+export function normalizeSupplierInput(input: SupplierInput): SupplierInput {
+  return normalizePartyInput(input, "Supplier");
 }
