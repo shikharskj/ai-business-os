@@ -30,6 +30,10 @@ export default async function EditSupplierPage({
     throw error;
   }
 
+  if (supplier.status !== "ACTIVE") {
+    notFound();
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-6">
       <PageHeader

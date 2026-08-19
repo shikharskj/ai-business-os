@@ -125,7 +125,7 @@ describe("listSuppliers", () => {
     await createSupplier({
       tenantId: "tenant-b",
       actorUserId: "user-2",
-      fields: { ...validSupplier, name: "Other Traders" },
+      fields: { ...validSupplier, name: "XYZ Corp" },
       parties,
       audit,
       outbox,

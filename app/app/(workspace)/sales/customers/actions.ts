@@ -6,8 +6,6 @@ import { ZodError } from "zod";
 
 import { prisma } from "@/lib/db";
 import { authorize, AuthorizationError } from "@/lib/security";
-import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
-import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 import {
   createCustomer,
   updateCustomer,
@@ -16,7 +14,6 @@ import {
   PartyError,
 } from "@/modules/party";
 import type { Customer, PartyGstRegistrationStatus } from "@/modules/party/domain/types";
-import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 
 export type CustomerActionState = {
   error?: string;
@@ -55,8 +52,6 @@ function submittedCustomerValues(formData: FormData): Partial<Customer> {
   };
 }
 
-const audit = createPrismaAuditRepository(prisma);
-const outbox = createPrismaOutboxRepository(prisma);
 
 function formatZodErrors(error: ZodError): Record<string, string> {
   return Object.fromEntries(
@@ -98,9 +93,7 @@ export async function createCustomerAction(
       tenantId: tenant.tenantId,
       actorUserId: tenant.membership.userId,
       fields,
-      parties: prismaPartyRepository,
-      audit,
-      outbox,
+      prisma,
     });
     customerId = customer.id;
   } catch (error) {
@@ -136,9 +129,7 @@ export async function updateCustomerAction(
       actorUserId: tenant.membership.userId,
       customerId,
       fields,
-      parties: prismaPartyRepository,
-      audit,
-      outbox,
+      prisma,
     });
   } catch (error) {
     if (error instanceof ZodError) {
@@ -167,9 +158,7 @@ export async function deactivateCustomerAction(
       tenantId: tenant.tenantId,
       actorUserId: tenant.membership.userId,
       customerId,
-      parties: prismaPartyRepository,
-      audit,
-      outbox,
+      prisma,
     });
 
     revalidatePath("/app/sales/customers");

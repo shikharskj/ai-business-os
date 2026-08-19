@@ -6,8 +6,6 @@ import { ZodError } from "zod";
 
 import { prisma } from "@/lib/db";
 import { authorize, AuthorizationError } from "@/lib/security";
-import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
-import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 import {
   createSupplier,
   updateSupplier,
@@ -16,7 +14,6 @@ import {
   PartyError,
 } from "@/modules/party";
 import type { PartyGstRegistrationStatus, Supplier } from "@/modules/party/domain/types";
-import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 
 export type SupplierActionState = {
   error?: string;
@@ -55,8 +52,6 @@ function submittedSupplierValues(formData: FormData): Partial<Supplier> {
   };
 }
 
-const audit = createPrismaAuditRepository(prisma);
-const outbox = createPrismaOutboxRepository(prisma);
 
 function formatZodErrors(error: ZodError): Record<string, string> {
   return Object.fromEntries(
@@ -98,9 +93,7 @@ export async function createSupplierAction(
       tenantId: tenant.tenantId,
       actorUserId: tenant.membership.userId,
       fields,
-      parties: prismaPartyRepository,
-      audit,
-      outbox,
+      prisma,
     });
     supplierId = supplier.id;
   } catch (error) {
@@ -135,9 +128,7 @@ export async function updateSupplierAction(
       actorUserId: tenant.membership.userId,
       supplierId,
       fields,
-      parties: prismaPartyRepository,
-      audit,
-      outbox,
+      prisma,
     });
   } catch (error) {
     if (error instanceof ZodError) {
@@ -166,9 +157,7 @@ export async function deactivateSupplierAction(
       tenantId: tenant.tenantId,
       actorUserId: tenant.membership.userId,
       supplierId,
-      parties: prismaPartyRepository,
-      audit,
-      outbox,
+      prisma,
     });
 
     revalidatePath("/app/purchases/suppliers");
