@@ -5,6 +5,10 @@ export type Permission =
   | "invoice:read"
   | "invoice:update"
   | "invoice:cancel"
+  | "quotation:create"
+  | "quotation:read"
+  | "quotation:update"
+  | "quotation:cancel"
   | "payment:create"
   | "payment:read"
   | "expense:create"
@@ -33,6 +37,10 @@ const OWNER_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "invoice:read",
   "invoice:update",
   "invoice:cancel",
+  "quotation:create",
+  "quotation:read",
+  "quotation:update",
+  "quotation:cancel",
   "payment:create",
   "payment:read",
   "expense:create",
@@ -62,6 +70,10 @@ const ADMIN_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "invoice:read",
   "invoice:update",
   "invoice:cancel",
+  "quotation:create",
+  "quotation:read",
+  "quotation:update",
+  "quotation:cancel",
   "payment:create",
   "payment:read",
   "expense:create",
@@ -89,6 +101,9 @@ const STAFF_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "invoice:create",
   "invoice:read",
   "invoice:update",
+  "quotation:create",
+  "quotation:read",
+  "quotation:update",
   "payment:create",
   "payment:read",
   "expense:create",
@@ -105,6 +120,7 @@ const STAFF_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
 
 const ACCOUNTANT_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "invoice:read",
+  "quotation:read",
   "payment:read",
   "expense:read",
   "report:read",
