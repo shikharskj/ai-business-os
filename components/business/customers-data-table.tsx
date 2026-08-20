@@ -82,7 +82,6 @@ export function CustomersDataTable({
       total={total}
       buildHref={buildHref}
       listKey="customers"
-      reorderPath="/app/sales/customers"
     />
   );
 }

@@ -47,22 +47,24 @@ type DataTableProps<TData extends RowData> = {
   total: number;
   buildHref: (updates: { page?: number; pageSize?: PageSize }) => string;
   listKey?: ListKey;
-  reorderPath?: string;
   enableReorder?: boolean;
 };
 
-function DragHandle({ id }: { id: string }) {
-  const { attributes, listeners, setActivatorNodeRef, isDragging } = useSortable({
-    id,
-  });
-
+function DragHandle({
+  attributes,
+  listeners,
+  setActivatorNodeRef,
+}: {
+  attributes: ReturnType<typeof useSortable>["attributes"];
+  listeners: ReturnType<typeof useSortable>["listeners"];
+  setActivatorNodeRef: ReturnType<typeof useSortable>["setActivatorNodeRef"];
+}) {
   return (
     <button
       type="button"
       ref={setActivatorNodeRef}
       className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
       aria-label="Drag to reorder"
-      disabled={isDragging}
       {...attributes}
       {...listeners}
     >
@@ -83,7 +85,7 @@ function SortableRow<TData extends RowData>({
   enableReorder: boolean;
 }) {
   const id = getRowId(row.original);
-  const { setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const { setNodeRef, transform, transition, isDragging, attributes, listeners, setActivatorNodeRef } = useSortable({ id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -98,7 +100,11 @@ function SortableRow<TData extends RowData>({
     >
       {enableReorder ? (
         <TableCell className="w-10">
-          <DragHandle id={id} />
+          <DragHandle
+            attributes={attributes}
+            listeners={listeners}
+            setActivatorNodeRef={setActivatorNodeRef}
+          />
         </TableCell>
       ) : null}
       {row.getVisibleCells().map((cell) => (
@@ -119,8 +125,7 @@ function DataTableInner<TData extends RowData>({
   total,
   buildHref,
   listKey,
-  reorderPath,
-  enableReorder = Boolean(listKey && reorderPath),
+  enableReorder = Boolean(listKey),
 }: DataTableProps<TData>) {
   const router = useRouter();
   const dndContextId = `list-dnd-${listKey ?? "table"}`;
@@ -140,7 +145,7 @@ function DataTableInner<TData extends RowData>({
   );
 
   async function handleDragEnd(event: DragEndEvent) {
-    if (!enableReorder || !listKey || !reorderPath || isSaving) {
+    if (!enableReorder || !listKey || isSaving) {
       return;
     }
     const { active, over } = event;
@@ -163,7 +168,8 @@ function DataTableInner<TData extends RowData>({
         orderedIds: nextRows.map(getRowId),
         movedId: String(active.id),
         newIndex,
-        path: reorderPath,
+        page,
+        pageSize,
       });
       if (result.error) {
         setRows(initialData);

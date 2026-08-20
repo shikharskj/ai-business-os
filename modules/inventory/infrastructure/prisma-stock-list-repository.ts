@@ -110,7 +110,7 @@ export async function listStockProductIdsPage(input: {
         AND o."recordId" = p.id
       ${stockJoinSql(input.tenantId)}
       WHERE ${whereSql}
-      ORDER BY o."sortOrder" ASC NULLS FIRST, p.name ASC
+      ORDER BY o."sortOrder" ASC NULLS FIRST, p.name ASC, p.id ASC
       LIMIT ${input.pageSize}
       OFFSET ${skip}
     `

@@ -77,7 +77,6 @@ export function StockDataTable({
       total={total}
       buildHref={buildHref}
       listKey="stock"
-      reorderPath="/app/inventory/stock"
     />
   );
 }

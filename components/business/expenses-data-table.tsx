@@ -77,7 +77,6 @@ export function ExpensesDataTable({
       total={total}
       buildHref={buildHref}
       listKey="expenses"
-      reorderPath="/app/expenses"
     />
   );
 }

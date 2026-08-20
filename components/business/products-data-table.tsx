@@ -76,7 +76,6 @@ export function ProductsDataTable({
       total={total}
       buildHref={buildHref}
       listKey="products"
-      reorderPath="/app/inventory/products"
     />
   );
 }

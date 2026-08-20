@@ -11,85 +11,31 @@ export type ListOrderRepository = {
     orderedIds: string[];
     movedId: string;
     newIndex: number;
+    page: number;
+    pageSize: number;
   }): Promise<void>;
 };
 
 export function createPrismaListOrderRepository(
-  client: PrismaClient | Prisma.TransactionClient
+  client: Pick<PrismaClient, "listRowOrder" | "$transaction">
 ): ListOrderRepository {
   return {
     async savePageOrder(input) {
-      const { tenantId, listKey, orderedIds, movedId, newIndex } = input;
+      const { tenantId, listKey, orderedIds, movedId, newIndex, page, pageSize } = input;
       if (!orderedIds.includes(movedId)) {
         throw new Error("Moved row is not in the ordered page.");
       }
 
-      const neighborIds = [
-        newIndex > 0 ? orderedIds[newIndex - 1] : null,
-        newIndex < orderedIds.length - 1 ? orderedIds[newIndex + 1] : null,
-      ].filter((id): id is string => id !== null);
+      const pageOffset = (page - 1) * pageSize;
 
-      const neighbors = await client.listRowOrder.findMany({
-        where: {
-          tenantId,
-          listKey,
-          recordId: { in: neighborIds },
-        },
-      });
-      const rankById = new Map(neighbors.map((row) => [row.recordId, row.sortOrder]));
-
-      const prevRank =
-        newIndex > 0 ? rankById.get(orderedIds[newIndex - 1]!) ?? null : null;
-      const nextRank =
-        newIndex < orderedIds.length - 1
-          ? rankById.get(orderedIds[newIndex + 1]!) ?? null
-          : null;
-
-      let newRank = computeRank(prevRank, nextRank, orderedIds, newIndex);
-
-      if (needsRebalance(prevRank, nextRank, newRank)) {
+      await client.$transaction(async (tx) => {
         await rebalancePageRanks({
-          client,
+          client: tx,
           tenantId,
           listKey,
           orderedIds,
+          pageOffset,
         });
-        const refreshed = await client.listRowOrder.findMany({
-          where: {
-            tenantId,
-            listKey,
-            recordId: { in: neighborIds },
-          },
-        });
-        const refreshedRankById = new Map(
-          refreshed.map((row) => [row.recordId, row.sortOrder])
-        );
-        const refreshedPrev =
-          newIndex > 0 ? refreshedRankById.get(orderedIds[newIndex - 1]!) ?? null : null;
-        const refreshedNext =
-          newIndex < orderedIds.length - 1
-            ? refreshedRankById.get(orderedIds[newIndex + 1]!) ?? null
-            : null;
-        newRank = computeRank(refreshedPrev, refreshedNext, orderedIds, newIndex);
-      }
-
-      await client.listRowOrder.upsert({
-        where: {
-          tenantId_listKey_recordId: {
-            tenantId,
-            listKey,
-            recordId: movedId,
-          },
-        },
-        create: {
-          tenantId,
-          listKey,
-          recordId: movedId,
-          sortOrder: newRank,
-        },
-        update: {
-          sortOrder: newRank,
-        },
       });
     },
   };
@@ -142,6 +88,7 @@ async function rebalancePageRanks(input: {
   tenantId: string;
   listKey: ListKey;
   orderedIds: string[];
+  pageOffset: number;
 }) {
   const operations = input.orderedIds.map((recordId, index) =>
     input.client.listRowOrder.upsert({
@@ -156,10 +103,10 @@ async function rebalancePageRanks(input: {
         tenantId: input.tenantId,
         listKey: input.listKey,
         recordId,
-        sortOrder: (index + 1) * RANK_STEP,
+        sortOrder: (input.pageOffset + index + 1) * RANK_STEP,
       },
       update: {
-        sortOrder: (index + 1) * RANK_STEP,
+        sortOrder: (input.pageOffset + index + 1) * RANK_STEP,
       },
     })
   );
@@ -181,67 +128,73 @@ export function createMemoryListOrderRepository(): ListOrderRepository & {
     sortOrder: number;
   }> = [];
 
+  const mockClient = {
+    listRowOrder: {
+      findMany: async ({
+        where,
+      }: {
+        where: {
+          tenantId: string;
+          listKey: ListKey;
+          recordId: { in: string[] };
+        };
+      }) =>
+        rows.filter(
+          (row) =>
+            row.tenantId === where.tenantId &&
+            row.listKey === where.listKey &&
+            where.recordId.in.includes(row.recordId)
+        ),
+      upsert: async ({
+        where,
+        create,
+        update,
+      }: {
+        where: {
+          tenantId_listKey_recordId: {
+            tenantId: string;
+            listKey: ListKey;
+            recordId: string;
+          };
+        };
+        create: {
+          tenantId: string;
+          listKey: ListKey;
+          recordId: string;
+          sortOrder: number;
+        };
+        update: { sortOrder: number };
+      }) => {
+        const key = where.tenantId_listKey_recordId;
+        const existingIndex = rows.findIndex(
+          (row) =>
+            row.tenantId === key.tenantId &&
+            row.listKey === key.listKey &&
+            row.recordId === key.recordId
+        );
+        if (existingIndex >= 0) {
+          rows[existingIndex] = {
+            ...rows[existingIndex]!,
+            sortOrder: update.sortOrder,
+          };
+          return rows[existingIndex]!;
+        }
+        const created = { ...create };
+        rows.push(created);
+        return created;
+      },
+    },
+    $transaction: async (
+      fn: (tx: unknown) => Promise<unknown>
+    ) => {
+      return fn(mockClient);
+    },
+  };
+
   return {
     rows,
     async savePageOrder(input) {
-      await createPrismaListOrderRepository({
-        listRowOrder: {
-          findMany: async ({
-            where,
-          }: {
-            where: {
-              tenantId: string;
-              listKey: ListKey;
-              recordId: { in: string[] };
-            };
-          }) =>
-            rows.filter(
-              (row) =>
-                row.tenantId === where.tenantId &&
-                row.listKey === where.listKey &&
-                where.recordId.in.includes(row.recordId)
-            ),
-          upsert: async ({
-            where,
-            create,
-            update,
-          }: {
-            where: {
-              tenantId_listKey_recordId: {
-                tenantId: string;
-                listKey: ListKey;
-                recordId: string;
-              };
-            };
-            create: {
-              tenantId: string;
-              listKey: ListKey;
-              recordId: string;
-              sortOrder: number;
-            };
-            update: { sortOrder: number };
-          }) => {
-            const key = where.tenantId_listKey_recordId;
-            const existingIndex = rows.findIndex(
-              (row) =>
-                row.tenantId === key.tenantId &&
-                row.listKey === key.listKey &&
-                row.recordId === key.recordId
-            );
-            if (existingIndex >= 0) {
-              rows[existingIndex] = {
-                ...rows[existingIndex]!,
-                sortOrder: update.sortOrder,
-              };
-              return rows[existingIndex]!;
-            }
-            const created = { ...create };
-            rows.push(created);
-            return created;
-          },
-        },
-        $transaction: async (ops: Promise<unknown>[]) => Promise.all(ops),
-      } as unknown as PrismaClient).savePageOrder(input);
+      await createPrismaListOrderRepository(mockClient as unknown as PrismaClient).savePageOrder(input);
     },
   };
 }

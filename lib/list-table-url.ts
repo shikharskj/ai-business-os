@@ -15,7 +15,10 @@ export function parseListTableParams(
     ? searchParams.pageSize[0]
     : searchParams.pageSize;
 
-  const page = Math.max(1, Number(pageRaw ?? 1) || 1);
+  const pageNumber = Number(pageRaw ?? 1);
+  const page = Number.isFinite(pageNumber) && Number.isInteger(pageNumber)
+    ? Math.max(1, pageNumber)
+    : 1;
   const pageSizeCandidate = String(pageSizeRaw ?? "10");
   const pageSize = (PAGE_SIZE_OPTIONS as readonly number[]).includes(
     Number(pageSizeCandidate)

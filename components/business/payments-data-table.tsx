@@ -69,7 +69,6 @@ export function PaymentsDataTable({
       total={total}
       buildHref={buildHref}
       listKey="payments"
-      reorderPath="/app/sales/payments"
     />
   );
 }

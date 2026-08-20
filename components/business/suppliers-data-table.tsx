@@ -82,7 +82,6 @@ export function SuppliersDataTable({
       total={total}
       buildHref={buildHref}
       listKey="suppliers"
-      reorderPath="/app/purchases/suppliers"
     />
   );
 }

@@ -60,7 +60,7 @@ export async function fetchOrderedPage<T>(
         AND o."listKey" = ${input.listKey}
         AND o."recordId" = ${input.idColumn}
       WHERE ${whereSql}
-      ORDER BY o."sortOrder" ASC NULLS FIRST, ${input.defaultOrderSql}
+      ORDER BY o."sortOrder" ASC NULLS FIRST, ${input.defaultOrderSql}, ${input.idColumn} ASC
       LIMIT ${input.pageSize}
       OFFSET ${skip}
     `

@@ -38,7 +38,14 @@ const columns: ColumnDef<DataTableFeatures, SalesInvoice>[] = [
     ),
   },
   { accessorKey: "customerName", header: "Customer" },
-  { accessorKey: "issuedOn", header: "Date" },
+  {
+    accessorKey: "issuedOn",
+    header: "Date",
+    cell: ({ row }) => {
+      const date = new Date(row.original.issuedOn);
+      return date.toLocaleDateString("en-IN", { timeZone: "UTC" });
+    },
+  },
   {
     id: "amount",
     header: () => <span className="block text-right">Amount</span>,
@@ -83,7 +90,6 @@ export function InvoicesDataTable({
       total={total}
       buildHref={buildHref}
       listKey="invoices"
-      reorderPath="/app/sales/invoices"
     />
   );
 }

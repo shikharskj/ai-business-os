@@ -77,7 +77,6 @@ export function QuotationsDataTable({
       total={total}
       buildHref={buildHref}
       listKey="quotations"
-      reorderPath="/app/sales/quotations"
     />
   );
 }

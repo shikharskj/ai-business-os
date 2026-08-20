@@ -15,20 +15,36 @@ export type SaveListOrderState = {
   error?: string;
 };
 
+const LIST_KEY_PATHS: Record<ListKey, string> = {
+  invoices: "/app/sales/invoices",
+  quotations: "/app/sales/quotations",
+  customers: "/app/sales/customers",
+  payments: "/app/sales/payments",
+  suppliers: "/app/purchases/suppliers",
+  products: "/app/inventory/products",
+  stock: "/app/inventory/stock",
+  expenses: "/app/expenses",
+};
+
 const saveListOrderInputSchema = z.object({
   listKey: z.string().refine(isListKey, "Invalid list key."),
-  orderedIds: z.array(z.string().uuid()).min(1),
+  orderedIds: z.array(z.string().uuid()).min(1).max(100),
   movedId: z.string().uuid(),
   newIndex: z.coerce.number().int().min(0),
-  path: z.string().min(1),
-});
+  page: z.coerce.number().int().min(1),
+  pageSize: z.coerce.number().int().min(1),
+}).refine(
+  (data) => data.newIndex <= data.orderedIds.length - 1,
+  { message: "newIndex must not exceed orderedIds length minus one." }
+);
 
 export async function saveListOrder(input: {
   listKey: ListKey;
   orderedIds: string[];
   movedId: string;
   newIndex: number;
-  path: string;
+  page: number;
+  pageSize: number;
 }): Promise<SaveListOrderState> {
   try {
     const parsed = saveListOrderInputSchema.safeParse(input);
@@ -36,7 +52,7 @@ export async function saveListOrder(input: {
       return { error: "Invalid reorder request." };
     }
 
-    const { listKey, orderedIds, movedId, newIndex, path } = parsed.data;
+    const { listKey, orderedIds, movedId, newIndex, page, pageSize } = parsed.data;
     const tenant = await authorize(LIST_KEY_PERMISSIONS[listKey]);
 
     await prismaListOrderRepository.savePageOrder({
@@ -45,8 +61,11 @@ export async function saveListOrder(input: {
       orderedIds,
       movedId,
       newIndex,
+      page,
+      pageSize,
     });
 
+    const path = LIST_KEY_PATHS[listKey];
     revalidatePath(path);
     return {};
   } catch {
@@ -63,6 +82,7 @@ export async function saveListOrderAction(
     orderedIds: formData.getAll("orderedIds").map(String),
     movedId: String(formData.get("movedId")),
     newIndex: Number(formData.get("newIndex")),
-    path: String(formData.get("path")),
+    page: Number(formData.get("page")),
+    pageSize: Number(formData.get("pageSize")),
   });
 }
