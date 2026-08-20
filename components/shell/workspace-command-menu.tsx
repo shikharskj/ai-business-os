@@ -13,9 +13,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  SEARCH_ENTITY_LABEL,
+  type SearchResult,
+} from "@/modules/search/domain/types";
 
 const ROUTES = [
   { label: "Dashboard", href: "/app", keywords: "home overview" },
+  { label: "Search", href: "/app/search", keywords: "find records" },
   { label: "Invoices", href: "/app/sales/invoices", keywords: "sales bill" },
   { label: "Customers", href: "/app/sales/customers", keywords: "party" },
   { label: "Expenses", href: "/app/expenses", keywords: "spend" },
@@ -27,10 +32,18 @@ const ROUTES = [
   { label: "AI Assistant", href: "/app/assistant", keywords: "chat help" },
 ] as const;
 
+type SearchApiResponse = {
+  query: string;
+  results: SearchResult[];
+  total: number;
+};
+
 export function WorkspaceCommandMenu() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [recordResults, setRecordResults] = useState<SearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -43,8 +56,46 @@ export function WorkspaceCommandMenu() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
+  const trimmedQuery = query.trim();
+
+  useEffect(() => {
+    if (!open || trimmedQuery.length < 1) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(
+          `/api/search?q=${encodeURIComponent(trimmedQuery)}&limit=8`,
+          { signal: controller.signal }
+        );
+        if (!response.ok) {
+          setRecordResults([]);
+          return;
+        }
+        const data = (await response.json()) as SearchApiResponse;
+        setRecordResults(data.results);
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
+          setRecordResults([]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }, 200);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [open, trimmedQuery]);
+
+  const displayedRecords = trimmedQuery.length < 1 ? [] : recordResults;
+
+  const routeResults = useMemo(() => {
+    const q = trimmedQuery.toLowerCase();
     if (!q) return ROUTES;
     return ROUTES.filter(
       (route) =>
@@ -52,13 +103,20 @@ export function WorkspaceCommandMenu() {
         route.keywords.includes(q) ||
         route.href.includes(q)
     );
-  }, [query]);
+  }, [trimmedQuery]);
 
   function go(href: string) {
     setOpen(false);
     setQuery("");
+    setRecordResults([]);
     router.push(href);
   }
+
+  const showEmpty =
+    trimmedQuery.length > 0 &&
+    !loading &&
+    displayedRecords.length === 0 &&
+    routeResults.length === 0;
 
   return (
     <>
@@ -81,7 +139,7 @@ export function WorkspaceCommandMenu() {
         size="icon"
         className="md:hidden"
         onClick={() => setOpen(true)}
-        aria-label="Open command menu"
+        aria-label="Open search"
       >
         <Search className="size-4" />
       </Button>
@@ -89,37 +147,93 @@ export function WorkspaceCommandMenu() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="gap-3 sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Go to</DialogTitle>
+            <DialogTitle>Search</DialogTitle>
             <DialogDescription>
-              Jump to a workspace page. Full search arrives in a later release.
+              Find business records or jump to a workspace page.
             </DialogDescription>
           </DialogHeader>
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Type a page name…"
+            placeholder="Customer, invoice, product, payment…"
             autoFocus
           />
-          <ul className="max-h-72 overflow-auto rounded-md border border-border">
-            {results.length === 0 ? (
-              <li className="p-3 text-base text-muted-foreground">No matches.</li>
-            ) : (
-              results.map((route) => (
-                <li key={route.href}>
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-between px-3 py-2.5 text-left text-base hover:bg-muted/50"
-                    onClick={() => go(route.href)}
-                  >
-                    <span>{route.label}</span>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {route.href}
-                    </span>
-                  </button>
-                </li>
-              ))
-            )}
-          </ul>
+          <div className="max-h-80 overflow-auto rounded-md border border-border">
+            {loading ? (
+              <p className="p-3 text-base text-muted-foreground">Searching…</p>
+            ) : null}
+
+            {showEmpty ? (
+              <p className="p-3 text-base text-muted-foreground">No matches.</p>
+            ) : null}
+
+            {displayedRecords.length > 0 ? (
+              <div>
+                <p className="border-b border-border px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Records
+                </p>
+                <ul>
+                  {displayedRecords.map((row) => (
+                    <li key={`${row.entityType}:${row.id}`}>
+                      <button
+                        type="button"
+                        className="flex w-full flex-col items-start gap-0.5 px-3 py-2.5 text-left hover:bg-muted/50"
+                        onClick={() => go(row.href)}
+                      >
+                        <span className="flex w-full items-baseline justify-between gap-2">
+                          <span className="font-medium">{row.title}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {SEARCH_ENTITY_LABEL[row.entityType]}
+                          </span>
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {[row.subtitle, row.status, row.amountLabel]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {routeResults.length > 0 ? (
+              <div>
+                <p className="border-b border-border px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Pages
+                </p>
+                <ul>
+                  {routeResults.map((route) => (
+                    <li key={route.href}>
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-between px-3 py-2.5 text-left text-base hover:bg-muted/50"
+                        onClick={() => go(route.href)}
+                      >
+                        <span>{route.label}</span>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {route.href}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+          {trimmedQuery.length > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() =>
+                go(`/app/search?q=${encodeURIComponent(trimmedQuery)}`)
+              }
+            >
+              Open full search
+            </Button>
+          ) : null}
         </DialogContent>
       </Dialog>
     </>

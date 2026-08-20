@@ -102,7 +102,8 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Accounting            | Complete    |
 | GST                   | Complete    |
 | Dashboard             | Complete    |
-| Reports               | Not Started |
+| Reports               | Complete    |
+| Search                | Complete    |
 | AI Assistant          | Not Started |
 | Notifications         | Not Started |
 | Testing               | Not Started |
@@ -112,6 +113,16 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Search (`25-search.md`):
+  * `modules/search/` — tenant-scoped PostgreSQL FTS (`to_tsvector` / `to_tsquery`) over customers, suppliers, products, invoices, purchases, payments, supplier payments, expenses. Permission-gated by existing `*:read` permissions. Derived GIN indexes via migration (no Elasticsearch).
+  * Top-bar ⌘K search wired to `/api/search`; full page at `/app/search` with type / status / date filters. Empty and no-match states handled.
+  * Tests: `tests/search/search.test.ts` (tenant isolation, type filter, empty results).
+
+* Reports (`24-reports.md`):
+  * `modules/reporting/` business report use cases — sales, expenses, profit, receivables, payables, inventory — plus CSV helpers. GST (`22`) and ledger/trial balance (`21` via `getLedger` / `getTrialBalance`) reused under `/app/reports`.
+  * Reports hub + nested sidebar; date filters on period reports; CSV export routes under `/api/reports/*/export`. Permission `report:read`; read-only (no mutations / no GST recalculation).
+  * Tests: `tests/reporting/business-reports.test.ts` (sales totals, profit math, AR/AP outstanding, tenant isolation).
 
 * Supervisor-led dashboard Generative UI (UX overhaul on top of `23-dashboard.md`):
   * `modules/ai/` Supervisor orchestrates Data Fetcher → Analyst → Anomaly Scout → Generative UI Mapper. KPIs cite fact ids only (Zod `DashboardViewSchema` + quality gate).
@@ -1420,6 +1431,60 @@ Verification:
 
 Notes:
 - Next implementation unit is `21-accounting-workspace.md`.
+
+---
+
+## 2026-08-21 — Search
+
+Status: Complete
+
+Implemented:
+- Added `modules/search/` with permission-aware `searchBusinessRecords` and Prisma FTS repository querying parties, products, invoices, purchases, payments, and expenses. Search is derived from transactional tables (GIN indexes); not a write path.
+- Wired top-bar ⌘K (`WorkspaceCommandMenu`) to `/api/search` for live record results plus page jumps; added `/app/search` with filters and empty/no-match states.
+- Sidebar Overview → Search entry.
+
+Files / Areas:
+- `modules/search/`
+- `app/api/search/route.ts`
+- `app/app/(workspace)/search/page.tsx`
+- `components/shell/workspace-command-menu.tsx`, `app-sidebar.tsx`
+- `prisma/migrations/20260821010000_add_search_fts_indexes/`
+- `tests/search/search.test.ts`
+
+Tests:
+- `npx vitest run tests/search/`
+- `npm run typecheck`
+- `npm run lint`
+
+Notes:
+- Next implementation unit is `26-notifications.md`. Apply the FTS migration (`prisma migrate deploy` / `db push` as used in this project) before relying on indexes in production.
+
+---
+
+## 2026-08-21 — Reports
+
+Status: Complete
+
+Implemented:
+- Extended `modules/reporting/` with sales, expense, profit, receivables, payables, and inventory report queries plus CSV export helpers. Figures come from posted documents / allocations / stock — no GST recalculation and no mutations.
+- Reports hub lists all MVP reports. UI under `/app/reports/{sales,expenses,profit,receivables,payables,inventory,gst,ledger,trial-balance}` with date filters where applicable and CSV export routes. Ledger and trial balance reuse `getLedger` / `getTrialBalance` from accounting.
+- Nested Reports sidebar entries; permission `report:read`; tenant isolation covered in tests.
+
+Files / Areas:
+- `modules/reporting/application/business-reports.ts`, `export-business-reports.ts`
+- `modules/reporting/domain/business-report-types.ts`, `csv.ts`
+- `app/app/(workspace)/reports/**`
+- `app/api/reports/*/export`
+- `components/shell/app-sidebar.tsx`
+- `tests/reporting/business-reports.test.ts`
+
+Tests:
+- `npx vitest run tests/reporting/`
+- `npm run typecheck`
+- `npm run lint`
+
+Notes:
+- Next implementation unit is `25-search.md`.
 
 ---
 
