@@ -3,8 +3,12 @@ import { notFound } from "next/navigation";
 
 import { DeactivateCustomerButton } from "@/components/business/deactivate-customer-button";
 import { MoneyDisplay } from "@/components/business/money-display";
+import { StatusBadge } from "@/components/business/status-badge";
+import {
+  PARTY_STATUS_LABELS,
+  PARTY_STATUS_TONES,
+} from "@/components/business/status-tone";
 import { PageHeader } from "@/components/shell/page-header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { authorize } from "@/lib/security";
@@ -93,9 +97,9 @@ export default async function CustomerDetailPage({
       ) : null}
 
       <div className="flex items-center gap-2">
-        <Badge variant={customer.status === "ACTIVE" ? "secondary" : "outline"}>
-          {customer.status === "ACTIVE" ? "Active" : "Inactive"}
-        </Badge>
+        <StatusBadge tone={PARTY_STATUS_TONES[customer.status]}>
+          {PARTY_STATUS_LABELS[customer.status]}
+        </StatusBadge>
       </div>
 
       <Card>

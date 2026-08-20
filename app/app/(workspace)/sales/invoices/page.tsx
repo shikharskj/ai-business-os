@@ -4,7 +4,11 @@ import Link from "next/link";
 import { EmptyState } from "@/components/shell/empty-state";
 import { PageHeader } from "@/components/shell/page-header";
 import { MoneyDisplay } from "@/components/business/money-display";
-import { InvoiceStatusBadge } from "@/components/business/invoice-status-badge";
+import { StatusBadge } from "@/components/business/status-badge";
+import {
+  INVOICE_STATUS_LABELS,
+  INVOICE_STATUS_TONES,
+} from "@/components/business/status-tone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -168,7 +172,9 @@ export default async function InvoicesPage({
                     <MoneyDisplay value={invoice.grandTotal} />
                   </TableCell>
                   <TableCell>
-                    <InvoiceStatusBadge status={invoice.status} />
+                    <StatusBadge tone={INVOICE_STATUS_TONES[invoice.status]}>
+                      {INVOICE_STATUS_LABELS[invoice.status]}
+                    </StatusBadge>
                   </TableCell>
                   <TableCell>{paymentStatusLabel(invoice.status)}</TableCell>
                 </TableRow>

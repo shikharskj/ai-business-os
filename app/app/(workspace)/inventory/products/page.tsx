@@ -3,7 +3,9 @@ import Link from "next/link";
 
 import { EmptyState } from "@/components/shell/empty-state";
 import { PageHeader } from "@/components/shell/page-header";
-import { Badge } from "@/components/ui/badge";
+import { MoneyDisplay } from "@/components/business/money-display";
+import { StatusBadge } from "@/components/business/status-badge";
+import { catalogKindPresentation } from "@/components/business/status-tone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,7 +25,6 @@ import {
 } from "@/components/ui/table";
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
-import { MoneyDisplay } from "@/components/business/money-display";
 import { listProducts, productSearchSchema } from "@/modules/catalog";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 
@@ -143,7 +144,9 @@ export default async function ProductsPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.map((product) => (
+              {products.map((product) => {
+                const kind = catalogKindPresentation(product.kind);
+                return (
                 <TableRow key={product.id}>
                   <TableCell>
                     <Link
@@ -166,12 +169,11 @@ export default async function ProductsPage({
                     <MoneyDisplay value={product.sellingPrice} />
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">
-                      {product.kind === "SERVICE" ? "Service" : "Product"}
-                    </Badge>
+                    <StatusBadge tone={kind.tone}>{kind.label}</StatusBadge>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>

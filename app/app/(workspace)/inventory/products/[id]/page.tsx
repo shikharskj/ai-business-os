@@ -2,8 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { MoneyDisplay } from "@/components/business/money-display";
+import { StatusBadge } from "@/components/business/status-badge";
+import {
+  catalogKindPresentation,
+  catalogTrackingPresentation,
+  stockStatusPresentation,
+} from "@/components/business/status-tone";
 import { PageHeader } from "@/components/shell/page-header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { authorize } from "@/lib/security";
@@ -16,7 +21,6 @@ import {
   getStockPosition,
   parseLowStockThreshold,
 } from "@/modules/inventory";
-import { StockStatusBadge } from "@/components/business/stock-status-badge";
 
 function gstRateLabel(bps: number): string {
   return `${bps / 100}%`;
@@ -54,6 +58,12 @@ export default async function ProductDetailPage({
     lowStockThreshold: parseLowStockThreshold(tenant.business.lowStockThreshold),
     catalog: prismaCatalogRepository,
     inventory: prismaInventoryRepository,
+  });
+  const kindBadge = catalogKindPresentation(product.kind);
+  const trackingBadge = catalogTrackingPresentation(product.tracksInventory);
+  const stockBadge = stockStatusPresentation({
+    isLowStock: stock.isLowStock,
+    hasMovements: stock.hasMovements,
   });
 
   return (
@@ -97,14 +107,8 @@ export default async function ProductDetailPage({
       ) : null}
 
       <div className="flex items-center gap-2">
-        <Badge variant="secondary">
-          {product.kind === "SERVICE" ? "Service" : "Product"}
-        </Badge>
-        {product.tracksInventory ? (
-          <Badge variant="outline">Inventory tracked</Badge>
-        ) : (
-          <Badge variant="outline">Inventory not tracked</Badge>
-        )}
+        <StatusBadge tone={kindBadge.tone}>{kindBadge.label}</StatusBadge>
+        <StatusBadge tone={trackingBadge.tone}>{trackingBadge.label}</StatusBadge>
       </div>
 
       <Card>
@@ -117,10 +121,7 @@ export default async function ProductDetailPage({
               <p className="text-2xl font-semibold tabular-nums tracking-tight">
                 {formatQuantity(stock.quantity)} {product.unitOfMeasurement}
               </p>
-              <StockStatusBadge
-                isLowStock={stock.isLowStock}
-                hasMovements={stock.hasMovements}
-              />
+              <StatusBadge tone={stockBadge.tone}>{stockBadge.label}</StatusBadge>
               {!stock.hasMovements ? (
                 <p className="text-base text-muted-foreground">
                   No stock movements yet

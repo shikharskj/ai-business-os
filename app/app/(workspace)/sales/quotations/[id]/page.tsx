@@ -3,8 +3,12 @@ import { notFound } from "next/navigation";
 
 import { GstBreakdown } from "@/components/business/gst-breakdown";
 import { MoneyDisplay } from "@/components/business/money-display";
+import { StatusBadge } from "@/components/business/status-badge";
+import {
+  QUOTATION_STATUS_LABELS,
+  QUOTATION_STATUS_TONES,
+} from "@/components/business/status-tone";
 import { QuotationStatusActions } from "@/components/business/quotation-status-actions";
-import { QuotationStatusBadge } from "@/components/business/quotation-status-badge";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,7 +64,9 @@ export default async function QuotationDetailPage({
         description={quotation.customerName}
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <QuotationStatusBadge status={quotation.status} />
+            <StatusBadge tone={QUOTATION_STATUS_TONES[quotation.status]}>
+              {QUOTATION_STATUS_LABELS[quotation.status]}
+            </StatusBadge>
             <Button
               nativeButton={false}
               variant="outline"

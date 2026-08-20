@@ -4,7 +4,11 @@ import { notFound } from "next/navigation";
 import { GstBreakdown } from "@/components/business/gst-breakdown";
 import { MoneyDisplay } from "@/components/business/money-display";
 import { InvoiceStatusActions } from "@/components/business/invoice-status-actions";
-import { InvoiceStatusBadge } from "@/components/business/invoice-status-badge";
+import { StatusBadge } from "@/components/business/status-badge";
+import {
+  INVOICE_STATUS_LABELS,
+  INVOICE_STATUS_TONES,
+} from "@/components/business/status-tone";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,7 +65,9 @@ export default async function InvoiceDetailPage({
         description={invoice.customerName}
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <InvoiceStatusBadge status={invoice.status} />
+            <StatusBadge tone={INVOICE_STATUS_TONES[invoice.status]}>
+              {INVOICE_STATUS_LABELS[invoice.status]}
+            </StatusBadge>
             <Button
               nativeButton={false}
               variant="outline"

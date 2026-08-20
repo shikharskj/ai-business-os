@@ -113,6 +113,11 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 # Completed
 
+* Unified status badges (UI):
+  * Single `StatusBadge` in `components/business/status-badge.tsx` with semantic tones (`success` / `warning` / `danger` / `info` / `neutral`) mapped to `--state-*` CSS tokens (not Tailwind hue palettes). Sizes: `sm` (previous default), `md` (new default), `lg`.
+  * Domain maps in `components/business/status-tone.ts` for quotations, invoices, stock, parties, and catalog kind/tracking.
+  * Replaced per-domain badge components and raw status `Badge` usages across sales, purchases, and inventory list/detail pages. shadcn `components/ui/badge.tsx` unchanged.
+
 * Sales invoices (`16-sales-invoices.md`):
   * `modules/sales/` sales invoices + lines. Create/edit (draft only)/view/list/search. Customer + catalog lines, quantity, line discount, GST via `modules/tax` only.
   * Per-tenant number series `INV/{FY}/{seq}`. Status: draft / posted / unpaid / partially paid / paid / cancelled. Draft-only edits; posted amounts are immutable (cancel draft only).
