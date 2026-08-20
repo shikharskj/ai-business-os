@@ -38,6 +38,7 @@ export { recordCustomerPayment } from "@/modules/payments/application/record-pay
 export {
   getPayment,
   listPayments,
+  listPaymentsPage,
   listPaymentsForInvoice,
   getInvoiceOutstanding,
   listOpenReceivableInvoices,

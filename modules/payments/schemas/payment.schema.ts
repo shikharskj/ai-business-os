@@ -48,4 +48,7 @@ export function toPaymentFields(input: RecordCustomerPaymentFormInput) {
 export const paymentSearchSchema = z.object({
   q: z.string().trim().optional().default(""),
   customerId: z.string().uuid().optional(),
+  method: z.enum(["ALL", ...PAYMENT_METHODS]).optional().default("ALL"),
+  from: businessDateSchema.optional(),
+  to: businessDateSchema.optional(),
 });

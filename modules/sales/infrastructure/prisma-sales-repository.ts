@@ -1,7 +1,9 @@
 import "server-only";
 
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
+import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { fetchOrderedPage } from "@/modules/list-order/infrastructure/ordered-page";
 import { businessDate } from "@/modules/shared-kernel/dates";
 import {
   moneyFromPrismaDecimal,
@@ -21,7 +23,7 @@ import type {
   SalesInvoiceStatus,
 } from "@/modules/sales/domain/types";
 import type { SalesRepository } from "@/modules/sales/infrastructure/repositories";
-import type { PreparedInvoice, PreparedQuotation } from "@/modules/sales/domain/types";
+import type { InvoiceListFilter, PreparedInvoice, PreparedQuotation } from "@/modules/sales/domain/types";
 
 type PrismaSalesClient = Pick<
   PrismaClient,
@@ -354,6 +356,65 @@ function mapInvoice(record: {
   };
 }
 
+function quotationWhereConditions(filter: {
+  tenantId: string;
+  query?: string;
+  status?: QuotationStatus | "ALL";
+  fromDate?: string;
+  toDate?: string;
+}): Prisma.Sql[] {
+  const conditions: Prisma.Sql[] = [Prisma.sql`q."tenantId" = ${filter.tenantId}`];
+  if (filter.status && filter.status !== "ALL") {
+    conditions.push(Prisma.sql`q.status = ${filter.status}`);
+  }
+  if (filter.fromDate) {
+    conditions.push(Prisma.sql`q."issuedOn" >= ${filter.fromDate}`);
+  }
+  if (filter.toDate) {
+    conditions.push(Prisma.sql`q."issuedOn" <= ${filter.toDate}`);
+  }
+  const query = filter.query?.trim();
+  if (query) {
+    const pattern = `%${query}%`;
+    conditions.push(Prisma.sql`(
+      q.number ILIKE ${pattern}
+      OR q."customerName" ILIKE ${pattern}
+    )`);
+  }
+  return conditions;
+}
+
+function invoiceWhereConditions(filter: InvoiceListFilter): Prisma.Sql[] {
+  const conditions: Prisma.Sql[] = [Prisma.sql`i."tenantId" = ${filter.tenantId}`];
+  if (filter.customerId) {
+    conditions.push(Prisma.sql`i."customerId" = ${filter.customerId}`);
+  }
+  const statuses =
+    filter.statuses && filter.statuses.length > 0
+      ? [...filter.statuses]
+      : !filter.status || filter.status === "ALL"
+        ? undefined
+        : [filter.status];
+  if (statuses) {
+    conditions.push(Prisma.sql`i.status IN (${Prisma.join(statuses)})`);
+  }
+  if (filter.fromDate) {
+    conditions.push(Prisma.sql`i."issuedOn" >= ${filter.fromDate}`);
+  }
+  if (filter.toDate) {
+    conditions.push(Prisma.sql`i."issuedOn" <= ${filter.toDate}`);
+  }
+  const query = filter.query?.trim();
+  if (query) {
+    const pattern = `%${query}%`;
+    conditions.push(Prisma.sql`(
+      i.number ILIKE ${pattern}
+      OR i."customerName" ILIKE ${pattern}
+    )`);
+  }
+  return conditions;
+}
+
 export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRepository {
   return {
     async allocateNextQuotationNumber(tenantId, financialYearKey) {
@@ -465,6 +526,28 @@ export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRep
         orderBy: [{ issuedOn: "desc" }, { number: "desc" }],
       });
       return records.map(mapQuotation);
+    },
+
+    async listQuotationsPage(filter) {
+      return fetchOrderedPage({
+        client,
+        tenantId: filter.tenantId,
+        listKey: "quotations",
+        fromSql: Prisma.sql`quotations q`,
+        idColumn: Prisma.sql`q.id`,
+        whereConditions: quotationWhereConditions(filter),
+        defaultOrderSql: Prisma.sql`q."issuedOn" DESC, q.number DESC`,
+        page: filter.page,
+        pageSize: filter.pageSize,
+        fetchByIds: async (ids) => {
+          const records = await client.quotation.findMany({
+            where: { tenantId: filter.tenantId, id: { in: ids } },
+            include: { lines: true },
+          });
+          return records.map(mapQuotation);
+        },
+        getId: (quotation) => quotation.id,
+      });
     },
 
     async allocateNextInvoiceNumber(tenantId, financialYearKey) {
@@ -629,6 +712,28 @@ export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRep
         orderBy: [{ issuedOn: "desc" }, { number: "desc" }],
       });
       return records.map(mapInvoice);
+    },
+
+    async listInvoicesPage(filter) {
+      return fetchOrderedPage({
+        client,
+        tenantId: filter.tenantId,
+        listKey: "invoices",
+        fromSql: Prisma.sql`sales_invoices i`,
+        idColumn: Prisma.sql`i.id`,
+        whereConditions: invoiceWhereConditions(filter),
+        defaultOrderSql: Prisma.sql`i."issuedOn" DESC, i.number DESC`,
+        page: filter.page,
+        pageSize: filter.pageSize,
+        fetchByIds: async (ids) => {
+          const records = await client.salesInvoice.findMany({
+            where: { tenantId: filter.tenantId, id: { in: ids } },
+            include: { lines: true },
+          });
+          return records.map(mapInvoice);
+        },
+        getId: (invoice) => invoice.id,
+      });
     },
   };
 }

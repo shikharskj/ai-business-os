@@ -92,8 +92,27 @@ model Business {
   customerPayments CustomerPayment[]
   customerPaymentAllocations CustomerPaymentAllocation[]
   customerPaymentNumberSeries CustomerPaymentNumberSeries[]
+  expenses Expense[]
+  expenseNumberSeries ExpenseNumberSeries[]
+  listRowOrders ListRowOrder[]
 
   @@map("businesses")
+}
+
+model ListRowOrder {
+  id        String   @id @default(uuid())
+  tenantId  String
+  listKey   String
+  recordId  String
+  sortOrder Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, listKey, recordId])
+  @@index([tenantId, listKey, sortOrder])
+  @@map("list_row_orders")
 }
 
 model Membership {
@@ -234,6 +253,7 @@ model Journal {
   lines    JournalLine[]
   salesInvoices SalesInvoice[]
   customerPayments CustomerPayment[]
+  expenses Expense[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, reversalOfJournalId])
@@ -643,4 +663,64 @@ model CustomerPaymentNumberSeries {
 
   @@unique([tenantId, financialYearKey])
   @@map("customer_payment_number_series")
+}
+
+enum ExpenseCategory {
+  RENT
+  UTILITIES
+  TRAVEL
+  OFFICE
+  MARKETING
+  PROFESSIONAL_FEES
+  REPAIRS
+  INSURANCE
+  BANK_CHARGES
+  MEALS
+  SOFTWARE
+  OTHER
+}
+
+model Expense {
+  id             String           @id @default(uuid())
+  tenantId       String
+  number         String
+  category       ExpenseCategory
+  incurredOn     String
+  method         PaymentMethod
+  vendorGstin    String?
+  notes          String?
+  taxableAmount  Decimal          @db.Decimal(18, 2)
+  taxRateBps     Int
+  cgst           Decimal          @db.Decimal(18, 2)
+  sgst           Decimal          @db.Decimal(18, 2)
+  igst           Decimal          @db.Decimal(18, 2)
+  totalTax       Decimal          @db.Decimal(18, 2)
+  grandTotal     Decimal          @db.Decimal(18, 2)
+  supplyType     String
+  treatment      String
+  journalId      String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  journal  Journal  @relation(fields: [journalId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, number])
+  @@unique([journalId, tenantId])
+  @@index([tenantId, category])
+  @@index([tenantId, incurredOn])
+  @@map("expenses")
+}
+
+model ExpenseNumberSeries {
+  id               String @id @default(uuid())
+  tenantId         String
+  financialYearKey String
+  lastNumber       Int
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, financialYearKey])
+  @@map("expense_number_series")
 }

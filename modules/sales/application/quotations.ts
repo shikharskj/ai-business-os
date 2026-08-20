@@ -302,6 +302,27 @@ export async function getQuotation(input: {
   return quotation;
 }
 
+export async function listQuotationsPage(input: {
+  tenantId: string;
+  query?: string;
+  status?: QuotationStatus | "ALL";
+  fromDate?: QuotationListFilter["fromDate"];
+  toDate?: QuotationListFilter["toDate"];
+  page: number;
+  pageSize: import("@/modules/shared-kernel/list-page").PageSize;
+  sales: SalesRepository;
+}) {
+  return input.sales.listQuotationsPage({
+    tenantId: input.tenantId,
+    query: input.query,
+    status: input.status,
+    fromDate: input.fromDate,
+    toDate: input.toDate,
+    page: input.page,
+    pageSize: input.pageSize,
+  });
+}
+
 export async function listQuotations(input: {
   tenantId: string;
   query?: string;

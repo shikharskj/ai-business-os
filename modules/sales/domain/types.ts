@@ -83,6 +83,8 @@ export type QuotationListFilter = {
   tenantId: string;
   query?: string;
   status?: QuotationStatus | "ALL";
+  fromDate?: BusinessDate;
+  toDate?: BusinessDate;
 };
 
 export type QuotationTaxContext = {
@@ -199,6 +201,8 @@ export type InvoiceListFilter = {
   status?: SalesInvoiceStatus | "ALL";
   customerId?: string;
   statuses?: readonly SalesInvoiceStatus[];
+  fromDate?: BusinessDate;
+  toDate?: BusinessDate;
 };
 
 export type PreparedInvoiceLine = PreparedQuotationLine;

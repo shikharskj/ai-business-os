@@ -1,7 +1,9 @@
 import "server-only";
 
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
+import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { fetchOrderedPage } from "@/modules/list-order/infrastructure/ordered-page";
 import type {
   Customer,
   CustomerInput,
@@ -115,8 +117,32 @@ function listWhere(kind: PartyKind, filter: PartyListFilter): Prisma.PartyWhereI
   };
 }
 
+function partyWhereConditions(
+  kind: PartyKind,
+  filter: PartyListFilter
+): Prisma.Sql[] {
+  const conditions: Prisma.Sql[] = [
+    Prisma.sql`p."tenantId" = ${filter.tenantId}`,
+    Prisma.sql`p.kind = ${kind}`,
+  ];
+  if (filter.status && filter.status !== "ALL") {
+    conditions.push(Prisma.sql`p.status = ${filter.status}`);
+  }
+  const query = filter.query?.trim();
+  if (query) {
+    const pattern = `%${query}%`;
+    conditions.push(Prisma.sql`(
+      p.name ILIKE ${pattern}
+      OR COALESCE(p.email, '') ILIKE ${pattern}
+      OR COALESCE(p.phone, '') ILIKE ${pattern}
+      OR COALESCE(p.gstin, '') ILIKE ${pattern}
+    )`);
+  }
+  return conditions;
+}
+
 export function createPrismaPartyRepository(
-  client: Pick<PrismaClient, "party">
+  client: Pick<PrismaClient, "party" | "$queryRaw">
 ): PartyRepository {
   return {
     async createCustomer(input) {
@@ -163,6 +189,27 @@ export function createPrismaPartyRepository(
         orderBy: { name: "asc" },
       });
       return records.map(asCustomer);
+    },
+
+    async listCustomersPage(filter) {
+      return fetchOrderedPage({
+        client,
+        tenantId: filter.tenantId,
+        listKey: "customers",
+        fromSql: Prisma.sql`parties p`,
+        idColumn: Prisma.sql`p.id`,
+        whereConditions: partyWhereConditions("CUSTOMER", filter),
+        defaultOrderSql: Prisma.sql`p.name ASC`,
+        page: filter.page,
+        pageSize: filter.pageSize,
+        fetchByIds: async (ids) => {
+          const records = await client.party.findMany({
+            where: { tenantId: filter.tenantId, kind: "CUSTOMER", id: { in: ids } },
+          });
+          return records.map(asCustomer);
+        },
+        getId: (customer) => customer.id,
+      });
     },
 
     async deactivateCustomer(tenantId, customerId) {
@@ -228,6 +275,27 @@ export function createPrismaPartyRepository(
         orderBy: { name: "asc" },
       });
       return records.map(asSupplier);
+    },
+
+    async listSuppliersPage(filter) {
+      return fetchOrderedPage({
+        client,
+        tenantId: filter.tenantId,
+        listKey: "suppliers",
+        fromSql: Prisma.sql`parties p`,
+        idColumn: Prisma.sql`p.id`,
+        whereConditions: partyWhereConditions("SUPPLIER", filter),
+        defaultOrderSql: Prisma.sql`p.name ASC`,
+        page: filter.page,
+        pageSize: filter.pageSize,
+        fetchByIds: async (ids) => {
+          const records = await client.party.findMany({
+            where: { tenantId: filter.tenantId, kind: "SUPPLIER", id: { in: ids } },
+          });
+          return records.map(asSupplier);
+        },
+        getId: (supplier) => supplier.id,
+      });
     },
 
     async deactivateSupplier(tenantId, supplierId) {

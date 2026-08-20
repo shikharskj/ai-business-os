@@ -6,6 +6,8 @@ import type {
   PaymentListFilter,
   PaymentMethod,
 } from "@/modules/payments/domain/types";
+import type { ListPageParams, ListPageResult } from "@/modules/shared-kernel/list-page";
+import { paginateArray } from "@/modules/shared-kernel/list-page";
 
 export type CreateCustomerPaymentRecordInput = {
   id?: string;
@@ -30,6 +32,9 @@ export type PaymentRepository = {
   createPayment(input: CreateCustomerPaymentRecordInput): Promise<CustomerPayment>;
   findPaymentById(tenantId: string, paymentId: string): Promise<CustomerPayment | null>;
   listPayments(filter: PaymentListFilter): Promise<CustomerPayment[]>;
+  listPaymentsPage(
+    filter: PaymentListFilter & ListPageParams
+  ): Promise<ListPageResult<CustomerPayment>>;
   listPaymentsForInvoice(
     tenantId: string,
     invoiceId: string
@@ -108,6 +113,9 @@ export function createMemoryPaymentRepository(
           if (filter.customerId && record.customerId !== filter.customerId) {
             return false;
           }
+          if (filter.method && record.method !== filter.method) return false;
+          if (filter.fromDate && record.receivedOn < filter.fromDate) return false;
+          if (filter.toDate && record.receivedOn > filter.toDate) return false;
           if (!query) {
             return true;
           }
@@ -119,6 +127,9 @@ export function createMemoryPaymentRepository(
             b.receivedOn.localeCompare(a.receivedOn) || b.number.localeCompare(a.number)
         )
         .map(clonePayment);
+    },
+    async listPaymentsPage(filter) {
+      return paginateArray(await this.listPayments(filter), filter.page, filter.pageSize);
     },
     async listPaymentsForInvoice(tenantId, invoiceId) {
       return payments

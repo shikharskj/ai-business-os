@@ -120,6 +120,27 @@ export async function getProduct(input: {
   return product;
 }
 
+export async function listProductsPage(input: {
+  tenantId: string;
+  query?: string;
+  kind?: ProductKind | "ALL";
+  fromDate?: string;
+  toDate?: string;
+  page: number;
+  pageSize: import("@/modules/shared-kernel/list-page").PageSize;
+  catalog: CatalogRepository;
+}) {
+  return input.catalog.listProductsPage({
+    tenantId: input.tenantId,
+    query: input.query,
+    kind: input.kind,
+    fromDate: input.fromDate,
+    toDate: input.toDate,
+    page: input.page,
+    pageSize: input.pageSize,
+  });
+}
+
 export async function listProducts(input: {
   tenantId: string;
   query?: string;

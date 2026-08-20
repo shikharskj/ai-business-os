@@ -1,9 +1,13 @@
 import type { Product, ProductInput, ProductKind } from "@/modules/catalog/domain/types";
+import type { ListPageParams, ListPageResult } from "@/modules/shared-kernel/list-page";
+import { paginateArray } from "@/modules/shared-kernel/list-page";
 
 export type ProductListFilter = {
   tenantId: string;
   query?: string;
   kind?: ProductKind | "ALL";
+  fromDate?: string;
+  toDate?: string;
 };
 
 export type CatalogRepository = {
@@ -19,6 +23,9 @@ export type CatalogRepository = {
   findProductById(tenantId: string, productId: string): Promise<Product | null>;
   findProductBySku(tenantId: string, sku: string): Promise<Product | null>;
   listProducts(filter: ProductListFilter): Promise<Product[]>;
+  listProductsPage(
+    filter: ProductListFilter & ListPageParams
+  ): Promise<ListPageResult<Product>>;
 };
 
 export function createMemoryCatalogRepository(
@@ -99,6 +106,17 @@ export function createMemoryCatalogRepository(
           return record.kind === filter.kind;
         })
         .filter((record) => {
+          if (filter.fromDate) {
+            const dateStr = record.createdAt.toISOString().slice(0, 10);
+            if (dateStr < filter.fromDate) return false;
+          }
+          if (filter.toDate) {
+            const dateStr = record.createdAt.toISOString().slice(0, 10);
+            if (dateStr > filter.toDate) return false;
+          }
+          return true;
+        })
+        .filter((record) => {
           if (!query) {
             return true;
           }
@@ -107,6 +125,9 @@ export function createMemoryCatalogRepository(
             .some((value) => value!.toLowerCase().includes(query));
         })
         .sort((a, b) => a.name.localeCompare(b.name));
+    },
+    async listProductsPage(filter) {
+      return paginateArray(await this.listProducts(filter), filter.page, filter.pageSize);
     },
   };
 }

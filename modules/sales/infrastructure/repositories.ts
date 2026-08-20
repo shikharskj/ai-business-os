@@ -8,6 +8,8 @@ import type {
   SalesInvoiceStatus,
 } from "@/modules/sales/domain/types";
 import type { QuotationStatus } from "@/modules/sales/domain/types";
+import type { ListPageParams, ListPageResult } from "@/modules/shared-kernel/list-page";
+import { paginateArray } from "@/modules/shared-kernel/list-page";
 
 export type CreateQuotationRecordInput = {
   tenantId: string;
@@ -48,6 +50,9 @@ export type SalesRepository = {
   }): Promise<Quotation | null>;
   findQuotationById(tenantId: string, quotationId: string): Promise<Quotation | null>;
   listQuotations(filter: QuotationListFilter): Promise<Quotation[]>;
+  listQuotationsPage(
+    filter: QuotationListFilter & ListPageParams
+  ): Promise<ListPageResult<Quotation>>;
   allocateNextInvoiceNumber(
     tenantId: string,
     financialYearKey: string
@@ -76,6 +81,9 @@ export type SalesRepository = {
     quotationId: string
   ): Promise<SalesInvoice | null>;
   listInvoices(filter: InvoiceListFilter): Promise<SalesInvoice[]>;
+  listInvoicesPage(
+    filter: InvoiceListFilter & ListPageParams
+  ): Promise<ListPageResult<SalesInvoice>>;
 };
 
 function cloneQuotation(quotation: Quotation): Quotation {
@@ -239,6 +247,11 @@ export function createMemorySalesRepository(
           return record.status === filter.status;
         })
         .filter((record) => {
+          if (filter.fromDate && record.issuedOn < filter.fromDate) return false;
+          if (filter.toDate && record.issuedOn > filter.toDate) return false;
+          return true;
+        })
+        .filter((record) => {
           if (!query) {
             return true;
           }
@@ -247,6 +260,9 @@ export function createMemorySalesRepository(
         })
         .sort((a, b) => b.issuedOn.localeCompare(a.issuedOn) || b.number.localeCompare(a.number))
         .map(cloneQuotation);
+    },
+    async listQuotationsPage(filter) {
+      return paginateArray(await this.listQuotations(filter), filter.page, filter.pageSize);
     },
     async allocateNextInvoiceNumber(tenantId, financialYearKey) {
       const key = `${tenantId}:${financialYearKey}`;
@@ -386,6 +402,11 @@ export function createMemorySalesRepository(
           return record.status === filter.status;
         })
         .filter((record) => {
+          if (filter.fromDate && record.issuedOn < filter.fromDate) return false;
+          if (filter.toDate && record.issuedOn > filter.toDate) return false;
+          return true;
+        })
+        .filter((record) => {
           if (!query) {
             return true;
           }
@@ -394,6 +415,9 @@ export function createMemorySalesRepository(
         })
         .sort((a, b) => b.issuedOn.localeCompare(a.issuedOn) || b.number.localeCompare(a.number))
         .map(cloneInvoice);
+    },
+    async listInvoicesPage(filter) {
+      return paginateArray(await this.listInvoices(filter), filter.page, filter.pageSize);
     },
   };
 }

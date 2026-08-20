@@ -65,6 +65,9 @@ export type PaymentListFilter = {
   tenantId: string;
   query?: string;
   customerId?: string;
+  method?: PaymentMethod;
+  fromDate?: BusinessDate;
+  toDate?: BusinessDate;
 };
 
 export type InvoiceOutstanding = {

@@ -11,14 +11,21 @@ import { Input } from "@/components/ui/input";
 
 const initialState: DocumentActionState = {};
 
-export function UploadDocumentForm() {
-  const [state, formAction, isPending] = useActionState(
-    uploadBusinessDocumentAction,
-    initialState
-  );
+export function UploadDocumentForm({
+  action = uploadBusinessDocumentAction,
+  children,
+}: {
+  action?: (
+    prevState: DocumentActionState,
+    formData: FormData
+  ) => Promise<DocumentActionState>;
+  children?: React.ReactNode;
+}) {
+  const [state, formAction, isPending] = useActionState(action, initialState);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      {children}
       <div className="flex flex-col gap-2">
         <label htmlFor="file" className="text-base font-medium">
           Supporting file

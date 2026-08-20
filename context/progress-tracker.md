@@ -96,7 +96,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Sales                 | Complete    |
 | Invoices              | Complete    |
 | Payments              | Complete    |
-| Expenses              | Not Started |
+| Expenses              | Complete    |
 | Suppliers             | Complete    |
 | Purchases             | Not Started |
 | Accounting            | In Progress |
@@ -112,6 +112,13 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Expenses (`18-expenses.md`):
+  * `modules/expenses/` record/list/detail. Category, business date, money amount, optional GST via tax engine, payment methods matching spec 17 (Cash, UPI, Bank Transfer, Card, Cheque), notes.
+  * Attachments through `modules/documents/` (`ownerRecordType: EXPENSE`); document upload/read/delete permissions are still required.
+  * Atomic record: balanced journal (Dr Operating expense, Dr Input GST when taxed, Cr Cash/Bank) + audit + outbox (`ExpenseRecorded`). Number series `EXP/{FY}/{seq}`.
+  * Permissions `expense:create` / `expense:read`. Expenses UI with category and date filters.
+  * Tests: `tests/expenses/expenses.test.ts` (untaxed/taxed journals, filters, attachments, cross-tenant rejection).
 
 * Customer payments (`17-customer-payments.md`):
   * `modules/payments/` customer receipts + allocation lines. Record against one or more unpaid/partial invoices in-tenant. Partial and full payment. Over-allocation rejected.
@@ -285,7 +292,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Current implementable spec:** `context/feature-specs/18-expenses.md`
+**Current implementable spec:** `context/feature-specs/19-purchases.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -1129,6 +1136,171 @@ The first objective is to deliver a complete, reliable business workflow for sma
 ---
 
 # Implementation Unit Log
+
+## 2026-08-20 — DataTable dnd-kit hydration mismatch
+
+Status: Complete
+
+Implemented:
+- Pass a stable `id={`list-dnd-${listKey}`}` to `DndContext` and `SortableContext` so drag-handle `aria-describedby` matches on server and client when changing rows per page.
+
+Files / Areas:
+- `components/data-table/data-table.tsx`
+
+---
+
+## 2026-08-20 — Server-driven list filters (From–To dates + payment method)
+
+Status: Complete
+
+Implemented:
+- From–To date range filters on invoices (`issuedOn`), quotations (`issuedOn`), payments (`receivedOn`), products (`createdAt`), stock (`createdAt`), and expenses (already had them). Customers and suppliers excluded by design.
+- Payment method filter on the payments list page.
+- Each filter: search schema (Zod `from`/`to`/`method`), domain filter type, Prisma SQL `WHERE`, memory repo, use case function, and page toolbar with `type="date"` inputs and a method `<Select>`.
+- `hasFilters` on each page treats `from`/`to`/`method` as active filters for empty-state messaging.
+- Tests for invoice, quotation, payment (date + method), and product date-range filtering.
+
+Files / Areas:
+- `modules/sales/schemas/invoice.schema.ts`, `quotation.schema.ts`
+- `modules/payments/schemas/payment.schema.ts`
+- `modules/catalog/schemas/product.schema.ts`
+- `modules/inventory/schemas/inventory.schema.ts`
+- `modules/sales/domain/types.ts` (InvoiceListFilter, QuotationListFilter)
+- `modules/payments/domain/types.ts` (PaymentListFilter + method)
+- `modules/catalog/infrastructure/repositories.ts` (ProductListFilter)
+- `modules/sales/infrastructure/prisma-sales-repository.ts`
+- `modules/payments/infrastructure/prisma-payments-repository.ts`
+- `modules/catalog/infrastructure/prisma-catalog-repository.ts`
+- `modules/inventory/infrastructure/prisma-stock-list-repository.ts`
+- `modules/sales/infrastructure/repositories.ts` (memory)
+- `modules/payments/infrastructure/repositories.ts` (memory)
+- `modules/catalog/infrastructure/repositories.ts` (memory)
+- `modules/sales/application/invoices.ts`, `quotations.ts`
+- `modules/payments/application/queries.ts`
+- `modules/catalog/application/products.ts`
+- `modules/inventory/application/stock-list-page.ts`
+- `app/app/(workspace)/sales/invoices/page.tsx`
+- `app/app/(workspace)/sales/quotations/page.tsx`
+- `app/app/(workspace)/sales/payments/page.tsx`
+- `app/app/(workspace)/inventory/products/page.tsx`
+- `app/app/(workspace)/inventory/stock/page.tsx`
+- `tests/list-filters/date-range-filters.test.ts`
+
+---
+
+## 2026-08-20 — Shadcn DatePicker on list From–To filters
+
+Status: Complete
+
+Implemented:
+- Extended `DatePicker` with `id` / `name` / `defaultValue` and a hidden `YYYY-MM-DD` input so GET list toolbars submit `from`/`to` without native `<input type="date">`.
+- Local calendar parse/format (no UTC `toISOString` slice); month/year dropdown caption; trigger sized like `Input`.
+- Replaced From/To date inputs on expenses, invoices, quotations, payments, products, and stock list pages. Create/edit forms still use native dates.
+
+Files / Areas:
+- `components/date-picker.tsx`
+- `app/app/(workspace)/expenses/page.tsx`
+- `app/app/(workspace)/sales/invoices/page.tsx`
+- `app/app/(workspace)/sales/quotations/page.tsx`
+- `app/app/(workspace)/sales/payments/page.tsx`
+- `app/app/(workspace)/inventory/products/page.tsx`
+- `app/app/(workspace)/inventory/stock/page.tsx`
+
+---
+
+## 2026-08-20 — Calendar month/year shadcn Select dropdowns
+
+Status: Complete
+
+Implemented:
+- Replaced DayPicker’s native `<select>` month/year dropdowns with shadcn `Select` via `components.Dropdown` in `Calendar`, so menus use design-system popover tokens instead of OS chrome.
+- DatePicker keeps the calendar open when interacting with nested Select (`outside-press` / `focus-out` cancel when the event hits select content).
+- Nav overlay no longer steals clicks (`pointer-events-none` on nav, `pointer-events-auto` on prev/next).
+- DatePicker controlled `month` stays in sync with the selected value; changing month/year via dropdowns moves the selected day into that month (clamped).
+
+Files / Areas:
+- `components/ui/calendar.tsx`
+- `components/date-picker.tsx`
+
+---
+
+## 2026-08-20 — Reusable server-paginated DataTable
+
+Status: Complete
+
+Implemented:
+- Shared list contract: `ListPageResult`, `listPageParamsSchema`, and `list*Page` on all eight list queries (invoices, quotations, customers, payments, suppliers, products, stock, expenses) with SQL `skip`/`take`/`count`.
+- `ListRowOrder` Prisma model + migration; read path joins order in SQL (`NULLS FIRST`); write path uses neighbor-based ranks without loading full lists.
+- Extended `components/data-table/` (TanStack v9, `@dnd-kit`) with server pagination footer, drag handle, and `saveListOrder` server action.
+- Migrated eight workspace list pages to `*DataTable` wrappers; filters stay GET/server-side; empty state when filtered `total === 0`.
+- Stock list: low-stock filter and pagination in SQL via movement aggregates.
+
+Files / Areas:
+- `modules/shared-kernel/list-page.ts`, `modules/list-order/`
+- `components/data-table/`, `components/business/*-data-table.tsx`
+- `lib/list-table-url.ts`
+- Eight list pages under `app/app/(workspace)/`
+- `prisma/migrations/20260820080000_add_list_row_orders/`
+
+---
+
+## 2026-08-20 — Server-paginated list pages
+
+Status: Complete (superseded by Reusable server-paginated DataTable entry above)
+
+Implemented:
+- Wired seven workspace list pages to server pagination (`list*Page`) and shared `*DataTable` wrappers, matching the expenses list pattern.
+- Parse `page` / `pageSize` via `parseListTableParams`; empty state uses `result.total === 0`; filter forms preserve `pageSize` when not default and omit `page` (reset to 1).
+- Stock list uses `listStockPositionsPage`; low-stock alert count uses a separate count query (`lowStockOnly: true`, `pageSize: 1`) when the stock filter is `ALL`.
+
+Files / Areas:
+- `app/app/(workspace)/sales/invoices/page.tsx`
+- `app/app/(workspace)/sales/quotations/page.tsx`
+- `app/app/(workspace)/sales/customers/page.tsx`
+- `app/app/(workspace)/sales/payments/page.tsx`
+- `app/app/(workspace)/purchases/suppliers/page.tsx`
+- `app/app/(workspace)/inventory/products/page.tsx`
+- `app/app/(workspace)/inventory/stock/page.tsx`
+
+---
+
+## 2026-08-20 — Expenses
+
+Status: Complete
+
+Implemented:
+- Added `modules/expenses/` to record business spend: category, business date, money amount, optional GST via the tax engine, payment method (same labels as spec 17), and notes.
+- Recording is posted immediately in one transaction: numbered expense, balanced journal (Dr Operating expense, Dr Input GST when tax applies, Cr Cash or Bank), audit, and outbox (`ExpenseRecorded`).
+- List/filter by category and date. Detail shows GST breakdown and attachments via the documents module (`EXPENSE` owner). Document upload/read/delete permissions are not bypassed.
+- Prisma `Expense` + `ExpenseNumberSeries`. Migration `20260820070000_add_expenses`. Number series `EXP/{FY}/{seq}`. Permissions `expense:create` / `expense:read`.
+- Expenses UI under `/app/expenses`. No payroll, reimbursements, corporate cards, or payment gateway.
+
+Files / Areas:
+- `modules/expenses/`
+- `prisma/schema.prisma`
+- `prisma/migrations/20260820070000_add_expenses/`
+- `app/app/(workspace)/expenses/`
+- `components/business/record-expense-form.tsx`
+- `components/business/document-attachment-list.tsx`
+- `components/business/upload-document-form.tsx`
+- `tests/expenses/expenses.test.ts`
+
+Tests:
+- `npm test` (182 tests)
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+
+Verification:
+- Owner can record, list, filter, and attach evidence in-tenant.
+- Posted expense creates a balanced journal.
+- Cross-tenant get-by-id and attachment are rejected.
+- Production build succeeds.
+
+Notes:
+- Next implementation unit is `19-purchases.md`.
+
+---
 
 ## 2026-08-20 — Customer payments
 

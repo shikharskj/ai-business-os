@@ -614,7 +614,13 @@ Cards should have:
 
 Tables are a core UI pattern because business applications are data-heavy.
 
-Wrap list tables in a shell: `overflow-hidden rounded-md border border-border bg-card`. Keep a toolbar row for filters; do not migrate every list to the heavy data-table unless the screen already uses it.
+**List screens** (invoices, customers, stock, etc.) use the shared `DataTable` in `components/data-table/` with thin entity wrappers in `components/business/*-data-table.tsx`. Pagination and filtering are **server-driven via URL** (`page`, `pageSize`, plus existing filter params). The client renders only the current page returned by the server — no client-side `slice`, filter, or sort of the full dataset. Pagination controls update the query string so the RSC refetches.
+
+Row order within a page can be changed with the drag handle; order is persisted per tenant + list key (`list_row_orders`) and survives refresh.
+
+**Nested or detail tables** (line items on invoice/quotation detail, payments on invoice detail, etc.) stay on the simple `Table` primitive — do not use the shared DataTable there.
+
+Wrap list tables in a shell: `overflow-hidden rounded-md border border-border bg-card`. Keep a toolbar row for GET filter forms above the table; omit `page` on filter submit so results reset to page 1.
 
 Tables should:
 

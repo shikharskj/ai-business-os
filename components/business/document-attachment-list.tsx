@@ -32,19 +32,20 @@ function formatSize(bytes: number): string {
 export function DocumentAttachmentList({
   documents,
   canDelete,
+  emptyMessage = "No documents yet. Upload a receipt, invoice scan, or other supporting file to keep it with this business.",
+  onDelete = deleteBusinessDocumentAction,
 }: {
   documents: DocumentRecord[];
   canDelete: boolean;
+  emptyMessage?: string;
+  onDelete?: (documentId: string) => Promise<{ error?: string }>;
 }) {
   const [isPending, startTransition] = useTransition();
   const [deleteError, setDeleteError] = useState<Record<string, string>>({});
 
   if (documents.length === 0) {
     return (
-      <p className="text-base text-muted-foreground">
-        No documents yet. Upload a receipt, invoice scan, or other supporting
-        file to keep it with this business.
-      </p>
+      <p className="text-base text-muted-foreground">{emptyMessage}</p>
     );
   }
 
@@ -54,7 +55,7 @@ export function DocumentAttachmentList({
     }
 
     startTransition(async () => {
-      const result = await deleteBusinessDocumentAction(documentId);
+      const result = await onDelete(documentId);
       if (result.error) {
         setDeleteError((prev) => ({ ...prev, [documentId]: result.error! }));
       } else {

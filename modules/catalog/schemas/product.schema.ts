@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { moneyInputSchema } from "@/modules/shared-kernel/schemas";
+import { businessDateSchema, moneyInputSchema } from "@/modules/shared-kernel/schemas";
 import { moneyFromMajor } from "@/modules/shared-kernel/money";
 import { COMMON_GST_RATE_BPS } from "@/modules/tax/domain/types";
 import { CATALOG_UNITS } from "@/modules/catalog/domain/types";
@@ -50,4 +50,6 @@ export type ProductFormInput = z.infer<typeof productInputSchema>;
 export const productSearchSchema = z.object({
   q: z.string().trim().optional().default(""),
   kind: z.enum(["PRODUCT", "SERVICE", "ALL"]).optional().default("ALL"),
+  from: businessDateSchema.optional(),
+  to: businessDateSchema.optional(),
 });
