@@ -29,6 +29,7 @@ import {
   PAYMENT_METHOD_LABELS,
 } from "@/modules/payments";
 import { prismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
+import { money } from "@/modules/shared-kernel/money";
 import { GST_STATE_CODES } from "@/modules/tax/domain/gstin";
 import {
   getInvoice,
@@ -276,7 +277,7 @@ export default async function InvoiceDetailPage({
                     {payments.map((payment) => {
                       const allocated =
                         payment.allocations.find((row) => row.invoiceId === invoice.id)
-                          ?.amount ?? payment.amount;
+                          ?.amount ?? money(0n, payment.amount.currency);
                       return (
                         <TableRow key={payment.id}>
                           <TableCell>

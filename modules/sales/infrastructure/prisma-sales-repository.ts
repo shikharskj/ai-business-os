@@ -565,6 +565,13 @@ export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRep
     },
 
     async lockInvoiceForUpdate(tenantId, invoiceId) {
+      if (client === prisma) {
+        throw new Error(
+          "lockInvoiceForUpdate requires a transaction-bound Prisma client. " +
+          "The row lock must remain held through findFirst and mapInvoice. " +
+          "Use prisma.$transaction() and pass the transaction client to createPrismaSalesRepository()."
+        );
+      }
       await client.$queryRaw`
         SELECT id FROM sales_invoices
         WHERE id = ${invoiceId} AND "tenantId" = ${tenantId}

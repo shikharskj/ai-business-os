@@ -526,9 +526,9 @@ Tenant resolution must happen from trusted authenticated context and application
 * Discount — Complete (line discount)
 * Tax calculation — Complete (tax engine preview/stored breakdown)
 * Invoice creation — Complete (`16-sales-invoices.md`)
-* Invoice numbering — Not started
-* Invoice total — Not started
-* Invoice status — Not started
+* Invoice numbering — Complete
+* Invoice total — Complete
+* Invoice payment status — Complete
 * Convert quotation → invoice — Stubbed until spec `16`
 
 ---

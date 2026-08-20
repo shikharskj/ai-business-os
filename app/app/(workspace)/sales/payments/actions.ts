@@ -55,7 +55,17 @@ function readPaymentFields(formData: FormData) {
   const allocations = Array.from({ length: allocationCount }, (_, index) => ({
     invoiceId: String(formData.get(`allocation-${index}-invoiceId`) ?? ""),
     amount: String(formData.get(`allocation-${index}-amount`) ?? "").trim(),
-  })).filter((row) => row.amount !== "" && row.amount !== "0");
+  })).filter((row) => {
+    const trimmed = row.amount.trim();
+    if (trimmed === "" || trimmed === ".") {
+      return false;
+    }
+    try {
+      return parseFloat(trimmed) > 0;
+    } catch {
+      return false;
+    }
+  });
 
   return toPaymentFields(
     recordCustomerPaymentSchema.parse({

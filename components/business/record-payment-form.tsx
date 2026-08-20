@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -91,6 +91,16 @@ export function RecordPaymentForm({
     }
     return { [selectedInvoice.invoiceId]: toMajorString(selectedInvoice.outstanding) };
   });
+
+  useEffect(() => {
+    if (selectedInvoice) {
+      setAmount(toMajorString(selectedInvoice.outstanding));
+      setAllocations({ [selectedInvoice.invoiceId]: toMajorString(selectedInvoice.outstanding) });
+    } else {
+      setAmount("");
+      setAllocations({});
+    }
+  }, [selectedCustomerId, selectedInvoice]);
 
   const methodItems = useMemo(
     () =>

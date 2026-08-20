@@ -194,6 +194,19 @@ describe("payment allocation rules", () => {
       AllocationExceedsOutstandingError
     );
   });
+
+  it("rejects payment amount greater than total allocation", () => {
+    expect(() =>
+      validateAllocations({
+        customerId: "cust-1",
+        paymentAmount: money(500_00n),
+        allocations: [{ invoiceId: "inv-1", amount: money(200_00n) }],
+        invoices: [
+          { invoiceId: "inv-1", customerId: "cust-1", outstanding: money(500_00n) },
+        ],
+      })
+    ).toThrow(PaymentValidationError);
+  });
 });
 
 describe("customer payments", () => {
@@ -393,7 +406,38 @@ describe("customer payments", () => {
 
   it("rejects allocating another tenant's invoice", async () => {
     const seed = await postedInvoice("tenant-a");
-    const other = await postedInvoice("tenant-b");
+    const otherCustomer = await seedCustomer(seed.parties, "tenant-b");
+    const otherProduct = await seedProduct(seed.catalog, "tenant-b");
+    const otherDraft = await createInvoice({
+      tenantId: "tenant-b",
+      actorUserId: "user-1",
+      fields: invoiceFields(otherCustomer.id, otherProduct.id),
+      taxContext: taxContext(),
+      sales: seed.sales,
+      parties: seed.parties,
+      catalog: seed.catalog,
+      taxRates: seed.taxRates,
+      hsnSac: seed.hsnSac,
+      audit: createMemoryAuditRepository(),
+      outbox: createMemoryOutboxRepository(),
+    });
+    const otherInvoice = await postInvoice({
+      tenantId: "tenant-b",
+      actorUserId: "user-1",
+      invoiceId: otherDraft.id,
+      taxContext: taxContext(),
+      closedThroughPeriodKey: null,
+      accounts: seed.accounts,
+      journals: seed.journals,
+      inventory: createMemoryInventoryRepository(),
+      sales: seed.sales,
+      parties: seed.parties,
+      catalog: seed.catalog,
+      taxRates: seed.taxRates,
+      hsnSac: seed.hsnSac,
+      audit: createMemoryAuditRepository(),
+      outbox: createMemoryOutboxRepository(),
+    });
     const repos = paymentRepos(seed);
     await expect(
       recordCustomerPayment({
@@ -406,7 +450,7 @@ describe("customer payments", () => {
           receivedOn: businessDate("2026-04-10"),
           method: "CASH",
           amount: money(360_00n),
-          allocations: [{ invoiceId: other.invoice.id, amount: money(360_00n) }],
+          allocations: [{ invoiceId: otherInvoice.id, amount: money(360_00n) }],
         },
         ...repos,
       })

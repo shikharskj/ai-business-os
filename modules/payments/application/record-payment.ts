@@ -61,8 +61,9 @@ export async function recordCustomerPayment(input: {
   }
 
   const uniqueInvoiceIds = [...new Set(input.fields.allocations.map((row) => row.invoiceId))];
+  const sortedInvoiceIds = uniqueInvoiceIds.sort();
   const invoices = [];
-  for (const invoiceId of uniqueInvoiceIds) {
+  for (const invoiceId of sortedInvoiceIds) {
     const invoice = await input.sales.lockInvoiceForUpdate(input.tenantId, invoiceId);
     if (!invoice) {
       throw new PaymentValidationError("Invoice was not found.");
