@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { prisma } from "@/lib/db";
 import { businessDate } from "@/modules/shared-kernel/dates";
@@ -8,15 +8,52 @@ import { createPrismaSalesRepository } from "@/modules/sales/infrastructure/pris
 import type { PreparedQuotation } from "@/modules/sales/domain/types";
 
 describe("prisma sales repository createQuotation", () => {
-  it("creates quotation and nested lines without tenantId on line payload", async () => {
-    const business = await prisma.business.findFirst();
-    if (!business) {
-      throw new Error("No business found for test");
-    }
+  let tenantId = "";
+  let userId = "";
 
+  beforeAll(async () => {
+    const user = await prisma.user.create({
+      data: { clerkUserId: `clerk_quotation_test_${crypto.randomUUID()}` },
+    });
+    userId = user.id;
+
+    const business = await prisma.business.create({
+      data: {
+        clerkOrganizationId: `org_quotation_test_${crypto.randomUUID()}`,
+        name: "Quotation Test Business",
+        type: "PROPRIETORSHIP",
+        ownerUserId: user.id,
+        addressLine1: "1 Test Street",
+        city: "Mumbai",
+        state: "Maharashtra",
+        postalCode: "400001",
+        phone: "9999999999",
+        email: "quotation-test@example.com",
+        gstRegistrationStatus: "NOT_REGISTERED",
+        financialYearStartMonth: 4,
+      },
+    });
+    tenantId = business.id;
+  });
+
+  afterAll(async () => {
+    if (tenantId) {
+      await prisma.quotationLine.deleteMany({ where: { tenantId } });
+      await prisma.quotation.deleteMany({ where: { tenantId } });
+      await prisma.quotationNumberSeries.deleteMany({ where: { tenantId } });
+      await prisma.product.deleteMany({ where: { tenantId } });
+      await prisma.party.deleteMany({ where: { tenantId } });
+      await prisma.business.delete({ where: { id: tenantId } });
+    }
+    if (userId) {
+      await prisma.user.delete({ where: { id: userId } });
+    }
+  });
+
+  it("creates quotation and nested lines without tenantId on line payload", async () => {
     const customer = await prisma.party.create({
       data: {
-        tenantId: business.id,
+        tenantId,
         kind: "CUSTOMER",
         name: "Test Customer",
         state: "Maharashtra",
@@ -25,7 +62,7 @@ describe("prisma sales repository createQuotation", () => {
 
     const product = await prisma.product.create({
       data: {
-        tenantId: business.id,
+        tenantId,
         kind: "PRODUCT",
         name: "Test Product",
         sku: `TEST-${Date.now()}`,
@@ -84,12 +121,12 @@ describe("prisma sales repository createQuotation", () => {
     let quotation;
     try {
       quotation = await sales.createQuotation({
-        tenantId: business.id,
+        tenantId,
         number,
         prepared,
       });
       expect(quotation.lines).toHaveLength(1);
-      expect(quotation.lines[0]?.tenantId).toBe(business.id);
+      expect(quotation.lines[0]?.tenantId).toBe(tenantId);
     } finally {
       if (quotation) {
         await prisma.quotationLine.deleteMany({ where: { quotationId: quotation.id } });
