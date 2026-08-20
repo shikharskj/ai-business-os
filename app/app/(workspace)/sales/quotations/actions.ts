@@ -216,7 +216,8 @@ export async function cancelQuotationAction(quotationId: string): Promise<Quotat
   );
 }
 
-export async function convertQuotationAction(_quotationId: string): Promise<QuotationActionState> {
+export async function convertQuotationAction(quotationId: string): Promise<QuotationActionState> {
+  void quotationId;
   try {
     await authorize("quotation:update");
     await convertQuotation();

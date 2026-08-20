@@ -406,18 +406,6 @@ function toStockPositionFromAggregate(input: {
   };
 }
 
-function groupMovements(
-  movements: InventoryMovement[]
-): Map<string, InventoryMovement[]> {
-  const grouped = new Map<string, InventoryMovement[]>();
-  for (const movement of movements) {
-    const current = grouped.get(movement.productId) ?? [];
-    current.push(movement);
-    grouped.set(movement.productId, current);
-  }
-  return grouped;
-}
-
 function auditActionForCause(cause: InventoryMovementCause): string {
   if (cause === "OPENING") return "inventory.opening";
   if (cause === "ADJUSTMENT") return "inventory.adjusted";
