@@ -9,7 +9,7 @@ import type { PreparedQuotation } from "@/modules/sales/domain/types";
 
 describe("prisma sales repository createQuotation", () => {
   it("creates quotation and nested lines without tenantId on line payload", async () => {
-    let business = await prisma.business.findFirst();
+    const business = await prisma.business.findFirst();
     if (!business) {
       throw new Error("No business found for test");
     }
