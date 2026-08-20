@@ -5,7 +5,7 @@ const TRANSITIONS: Record<SalesInvoiceStatus, readonly SalesInvoiceStatus[]> = {
   DRAFT: ["CANCELLED"],
   POSTED: ["UNPAID", "PARTIALLY_PAID", "PAID"],
   UNPAID: ["PARTIALLY_PAID", "PAID"],
-  PARTIALLY_PAID: ["PAID"],
+  PARTIALLY_PAID: ["PARTIALLY_PAID", "PAID"],
   PAID: [],
   CANCELLED: [],
 };
@@ -14,6 +14,9 @@ export function canTransitionInvoiceStatus(
   from: SalesInvoiceStatus,
   to: SalesInvoiceStatus
 ): boolean {
+  if (from === to) {
+    return true;
+  }
   return TRANSITIONS[from].includes(to);
 }
 
@@ -38,6 +41,18 @@ export function assertInvoiceEditable(status: SalesInvoiceStatus): void {
 
 export function isPostedInvoiceStatus(status: SalesInvoiceStatus): boolean {
   return status !== "DRAFT" && status !== "CANCELLED";
+}
+
+export const RECEIVABLE_INVOICE_STATUSES: readonly SalesInvoiceStatus[] = [
+  "POSTED",
+  "UNPAID",
+  "PARTIALLY_PAID",
+];
+
+export function isReceivableInvoiceStatus(status: SalesInvoiceStatus): boolean {
+  return (
+    status === "POSTED" || status === "UNPAID" || status === "PARTIALLY_PAID"
+  );
 }
 
 export function paymentStatusLabel(status: SalesInvoiceStatus): string {

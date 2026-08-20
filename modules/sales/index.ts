@@ -37,7 +37,9 @@ export {
   assertInvoiceTransition,
   canTransitionInvoiceStatus,
   isPostedInvoiceStatus,
+  isReceivableInvoiceStatus,
   paymentStatusLabel,
+  RECEIVABLE_INVOICE_STATUSES,
 } from "@/modules/sales/domain/invoice-status";
 export {
   formatQuotationNumber,
