@@ -30,6 +30,9 @@ export async function listPaymentsPage(input: {
   tenantId: string;
   query?: string;
   customerId?: string;
+  method?: PaymentListFilter["method"];
+  fromDate?: PaymentListFilter["fromDate"];
+  toDate?: PaymentListFilter["toDate"];
   page: number;
   pageSize: import("@/modules/shared-kernel/list-page").PageSize;
   payments: PaymentRepository;
@@ -38,6 +41,9 @@ export async function listPaymentsPage(input: {
     tenantId: input.tenantId,
     query: input.query,
     customerId: input.customerId,
+    method: input.method,
+    fromDate: input.fromDate,
+    toDate: input.toDate,
     page: input.page,
     pageSize: input.pageSize,
   });

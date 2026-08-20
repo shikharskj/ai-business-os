@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ExpensesDataTable } from "@/components/business/expenses-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
+import { DatePicker } from "@/components/date-picker";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -129,22 +130,22 @@ export default async function ExpensesPage({
           <label htmlFor="from" className="text-base font-medium">
             From
           </label>
-          <Input
+          <DatePicker
             id="from"
             name="from"
-            type="date"
-            defaultValue={filters.from ?? ""}
+            defaultValue={filters.from}
+            placeholder="From"
           />
         </div>
         <div className="flex w-44 flex-col gap-2">
           <label htmlFor="to" className="text-base font-medium">
             To
           </label>
-          <Input
+          <DatePicker
             id="to"
             name="to"
-            type="date"
-            defaultValue={filters.to ?? ""}
+            defaultValue={filters.to}
+            placeholder="To"
           />
         </div>
         <Button type="submit" variant="outline">

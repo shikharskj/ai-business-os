@@ -4,6 +4,7 @@ import Link from "next/link";
 import { LowStockAlert } from "@/components/business/low-stock-alert";
 import { StockDataTable } from "@/components/business/stock-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
+import { DatePicker } from "@/components/date-picker";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,8 @@ export default async function StockPage({
   searchParams: Promise<{
     q?: string;
     stock?: string;
+    from?: string;
+    to?: string;
     page?: string;
     pageSize?: string;
   }>;
@@ -41,16 +44,20 @@ export default async function StockPage({
   const parseResult = stockSearchSchema.safeParse({
     q: params.q,
     stock: params.stock,
+    from: params.from || undefined,
+    to: params.to || undefined,
   });
   const filters = parseResult.success
     ? parseResult.data
-    : { q: "", stock: "ALL" as const };
+    : { q: "", stock: "ALL" as const, from: undefined, to: undefined };
   const threshold = parseLowStockThreshold(tenant.business.lowStockThreshold);
   const result = await listStockPositionsPage({
     tenantId: tenant.tenantId,
     query: filters.q,
     lowStockOnly: filters.stock === "LOW",
     lowStockThreshold: threshold,
+    fromDate: filters.from,
+    toDate: filters.to,
     page,
     pageSize,
     catalog: prismaCatalogRepository,
@@ -64,6 +71,8 @@ export default async function StockPage({
             query: filters.q,
             lowStockOnly: true,
             lowStockThreshold: threshold,
+            fromDate: filters.from,
+            toDate: filters.to,
             page: 1,
             pageSize: 1 as PageSize,
             catalog: prismaCatalogRepository,
@@ -71,7 +80,9 @@ export default async function StockPage({
           })
         ).total
       : 0;
-  const hasFilters = Boolean(filters.q || filters.stock === "LOW");
+  const hasFilters = Boolean(
+    filters.q || filters.stock === "LOW" || filters.from || filters.to
+  );
   const queryString = toQueryString(params);
 
   return (
@@ -118,6 +129,28 @@ export default async function StockPage({
             </SelectContent>
           </Select>
         </div>
+        <div className="flex w-44 flex-col gap-2">
+          <label htmlFor="from" className="text-base font-medium">
+            From
+          </label>
+          <DatePicker
+            id="from"
+            name="from"
+            defaultValue={filters.from}
+            placeholder="From"
+          />
+        </div>
+        <div className="flex w-44 flex-col gap-2">
+          <label htmlFor="to" className="text-base font-medium">
+            To
+          </label>
+          <DatePicker
+            id="to"
+            name="to"
+            defaultValue={filters.to}
+            placeholder="To"
+          />
+        </div>
         <Button type="submit" variant="outline">
           Filter
         </Button>
@@ -131,7 +164,7 @@ export default async function StockPage({
           }
           description={
             hasFilters
-              ? "Try a different name, SKU, or stock filter."
+              ? "Try a different name, SKU, stock filter, or date range."
               : "Turn on inventory tracking when you add a product to start recording stock."
           }
           action={

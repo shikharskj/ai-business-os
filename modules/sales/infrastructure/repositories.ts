@@ -247,6 +247,11 @@ export function createMemorySalesRepository(
           return record.status === filter.status;
         })
         .filter((record) => {
+          if (filter.fromDate && record.issuedOn < filter.fromDate) return false;
+          if (filter.toDate && record.issuedOn > filter.toDate) return false;
+          return true;
+        })
+        .filter((record) => {
           if (!query) {
             return true;
           }
@@ -395,6 +400,11 @@ export function createMemorySalesRepository(
             return true;
           }
           return record.status === filter.status;
+        })
+        .filter((record) => {
+          if (filter.fromDate && record.issuedOn < filter.fromDate) return false;
+          if (filter.toDate && record.issuedOn > filter.toDate) return false;
+          return true;
         })
         .filter((record) => {
           if (!query) {

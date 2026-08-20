@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { QuotationsDataTable } from "@/components/business/quotations-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
+import { DatePicker } from "@/components/date-picker";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
 import { listQuotationsPage, quotationSearchSchema } from "@/modules/sales";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
+import { businessDate } from "@/modules/shared-kernel/dates";
 
 export default async function QuotationsPage({
   searchParams,
@@ -25,6 +27,8 @@ export default async function QuotationsPage({
   searchParams: Promise<{
     q?: string;
     status?: string;
+    from?: string;
+    to?: string;
     page?: string;
     pageSize?: string;
   }>;
@@ -35,20 +39,26 @@ export default async function QuotationsPage({
   const parseResult = quotationSearchSchema.safeParse({
     q: params.q,
     status: params.status,
+    from: params.from || undefined,
+    to: params.to || undefined,
   });
   const filters = parseResult.success
     ? parseResult.data
-    : { q: "", status: "ALL" as const };
+    : { q: "", status: "ALL" as const, from: undefined, to: undefined };
   const canCreate = roleHasPermission(tenant.membership.role, "quotation:create");
   const result = await listQuotationsPage({
     tenantId: tenant.tenantId,
     query: filters.q,
     status: filters.status,
+    fromDate: filters.from ? businessDate(filters.from) : undefined,
+    toDate: filters.to ? businessDate(filters.to) : undefined,
     page,
     pageSize,
     sales: prismaSalesRepository,
   });
-  const hasFilters = Boolean(filters.q || filters.status !== "ALL");
+  const hasFilters = Boolean(
+    filters.q || filters.status !== "ALL" || filters.from || filters.to
+  );
   const queryString = toQueryString(params);
 
   return (
@@ -115,6 +125,28 @@ export default async function QuotationsPage({
             </SelectContent>
           </Select>
         </div>
+        <div className="flex w-44 flex-col gap-2">
+          <label htmlFor="from" className="text-base font-medium">
+            From
+          </label>
+          <DatePicker
+            id="from"
+            name="from"
+            defaultValue={filters.from}
+            placeholder="From"
+          />
+        </div>
+        <div className="flex w-44 flex-col gap-2">
+          <label htmlFor="to" className="text-base font-medium">
+            To
+          </label>
+          <DatePicker
+            id="to"
+            name="to"
+            defaultValue={filters.to}
+            placeholder="To"
+          />
+        </div>
         <Button type="submit" variant="outline">
           Filter
         </Button>
@@ -126,7 +158,7 @@ export default async function QuotationsPage({
           title={hasFilters ? "No matching quotations" : "No quotations yet"}
           description={
             hasFilters
-              ? "Try a different number, customer, or status."
+              ? "Try a different number, customer, status, or date range."
               : "Create a quotation to send pricing with GST to a customer. Stock and accounts stay unchanged."
           }
           action={

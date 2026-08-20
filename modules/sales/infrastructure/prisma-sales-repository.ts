@@ -360,10 +360,18 @@ function quotationWhereConditions(filter: {
   tenantId: string;
   query?: string;
   status?: QuotationStatus | "ALL";
+  fromDate?: string;
+  toDate?: string;
 }): Prisma.Sql[] {
   const conditions: Prisma.Sql[] = [Prisma.sql`q."tenantId" = ${filter.tenantId}`];
   if (filter.status && filter.status !== "ALL") {
     conditions.push(Prisma.sql`q.status = ${filter.status}`);
+  }
+  if (filter.fromDate) {
+    conditions.push(Prisma.sql`q."issuedOn" >= ${filter.fromDate}`);
+  }
+  if (filter.toDate) {
+    conditions.push(Prisma.sql`q."issuedOn" <= ${filter.toDate}`);
   }
   const query = filter.query?.trim();
   if (query) {
@@ -389,6 +397,12 @@ function invoiceWhereConditions(filter: InvoiceListFilter): Prisma.Sql[] {
         : [filter.status];
   if (statuses) {
     conditions.push(Prisma.sql`i.status IN (${Prisma.join(statuses)})`);
+  }
+  if (filter.fromDate) {
+    conditions.push(Prisma.sql`i."issuedOn" >= ${filter.fromDate}`);
+  }
+  if (filter.toDate) {
+    conditions.push(Prisma.sql`i."issuedOn" <= ${filter.toDate}`);
   }
   const query = filter.query?.trim();
   if (query) {

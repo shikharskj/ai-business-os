@@ -306,6 +306,8 @@ export async function listQuotationsPage(input: {
   tenantId: string;
   query?: string;
   status?: QuotationStatus | "ALL";
+  fromDate?: QuotationListFilter["fromDate"];
+  toDate?: QuotationListFilter["toDate"];
   page: number;
   pageSize: import("@/modules/shared-kernel/list-page").PageSize;
   sales: SalesRepository;
@@ -314,6 +316,8 @@ export async function listQuotationsPage(input: {
     tenantId: input.tenantId,
     query: input.query,
     status: input.status,
+    fromDate: input.fromDate,
+    toDate: input.toDate,
     page: input.page,
     pageSize: input.pageSize,
   });

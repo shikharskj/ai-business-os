@@ -390,6 +390,8 @@ export async function listInvoicesPage(input: {
   tenantId: string;
   query?: string;
   status?: SalesInvoiceStatus | "ALL";
+  fromDate?: InvoiceListFilter["fromDate"];
+  toDate?: InvoiceListFilter["toDate"];
   page: number;
   pageSize: import("@/modules/shared-kernel/list-page").PageSize;
   sales: SalesRepository;
@@ -398,6 +400,8 @@ export async function listInvoicesPage(input: {
     tenantId: input.tenantId,
     query: input.query,
     status: input.status,
+    fromDate: input.fromDate,
+    toDate: input.toDate,
     page: input.page,
     pageSize: input.pageSize,
   });

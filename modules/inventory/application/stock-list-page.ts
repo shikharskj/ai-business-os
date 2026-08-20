@@ -16,6 +16,8 @@ export async function listStockPositionsPage(input: {
   query?: string;
   lowStockOnly?: boolean;
   lowStockThreshold?: Quantity;
+  fromDate?: string;
+  toDate?: string;
   page: number;
   pageSize: PageSize;
   catalog: CatalogRepository;
@@ -27,6 +29,8 @@ export async function listStockPositionsPage(input: {
     query: input.query,
     lowStockOnly: input.lowStockOnly,
     threshold,
+    fromDate: input.fromDate,
+    toDate: input.toDate,
     page: input.page,
     pageSize: input.pageSize,
   });

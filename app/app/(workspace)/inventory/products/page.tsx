@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ProductsDataTable } from "@/components/business/products-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
+import { DatePicker } from "@/components/date-picker";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,8 @@ export default async function ProductsPage({
   searchParams: Promise<{
     q?: string;
     kind?: string;
+    from?: string;
+    to?: string;
     page?: string;
     pageSize?: string;
   }>;
@@ -35,20 +38,26 @@ export default async function ProductsPage({
   const parseResult = productSearchSchema.safeParse({
     q: params.q,
     kind: params.kind,
+    from: params.from || undefined,
+    to: params.to || undefined,
   });
   const filters = parseResult.success
     ? parseResult.data
-    : { q: "", kind: "ALL" as const };
+    : { q: "", kind: "ALL" as const, from: undefined, to: undefined };
   const canCreate = roleHasPermission(tenant.membership.role, "product:create");
   const result = await listProductsPage({
     tenantId: tenant.tenantId,
     query: filters.q,
     kind: filters.kind,
+    fromDate: filters.from,
+    toDate: filters.to,
     page,
     pageSize,
     catalog: prismaCatalogRepository,
   });
-  const hasFilters = Boolean(filters.q || filters.kind !== "ALL");
+  const hasFilters = Boolean(
+    filters.q || filters.kind !== "ALL" || filters.from || filters.to
+  );
   const queryString = toQueryString(params);
 
   return (
@@ -105,6 +114,28 @@ export default async function ProductsPage({
             </SelectContent>
           </Select>
         </div>
+        <div className="flex w-44 flex-col gap-2">
+          <label htmlFor="from" className="text-base font-medium">
+            From
+          </label>
+          <DatePicker
+            id="from"
+            name="from"
+            defaultValue={filters.from}
+            placeholder="From"
+          />
+        </div>
+        <div className="flex w-44 flex-col gap-2">
+          <label htmlFor="to" className="text-base font-medium">
+            To
+          </label>
+          <DatePicker
+            id="to"
+            name="to"
+            defaultValue={filters.to}
+            placeholder="To"
+          />
+        </div>
         <Button type="submit" variant="outline">
           Filter
         </Button>
@@ -116,7 +147,7 @@ export default async function ProductsPage({
           title={hasFilters ? "No matching products" : "No products yet"}
           description={
             hasFilters
-              ? "Try a different name, SKU, HSN/SAC, or category."
+              ? "Try a different name, SKU, HSN/SAC, category, or date range."
               : "Add your first product or service to start invoicing."
           }
           action={

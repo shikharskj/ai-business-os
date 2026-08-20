@@ -20,11 +20,19 @@ function stockWhereConditions(input: {
   query?: string;
   lowStockOnly?: boolean;
   threshold: Quantity;
+  fromDate?: string;
+  toDate?: string;
 }): Prisma.Sql[] {
   const conditions: Prisma.Sql[] = [
     Prisma.sql`p."tenantId" = ${input.tenantId}`,
     Prisma.sql`p."tracksInventory" = true`,
   ];
+  if (input.fromDate) {
+    conditions.push(Prisma.sql`p."createdAt" >= ${input.fromDate}::date`);
+  }
+  if (input.toDate) {
+    conditions.push(Prisma.sql`p."createdAt" < (${input.toDate}::date + interval '1 day')`);
+  }
   const query = input.query?.trim();
   if (query) {
     const pattern = `%${query}%`;
@@ -68,6 +76,8 @@ export async function listStockProductIdsPage(input: {
   query?: string;
   lowStockOnly?: boolean;
   threshold: Quantity;
+  fromDate?: string;
+  toDate?: string;
   page: number;
   pageSize: PageSize;
 }): Promise<ListPageResult<string>> {

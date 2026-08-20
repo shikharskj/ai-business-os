@@ -107,6 +107,15 @@ function paymentWhereConditions(filter: PaymentListFilter): Prisma.Sql[] {
   if (filter.customerId) {
     conditions.push(Prisma.sql`cp."customerId" = ${filter.customerId}`);
   }
+  if (filter.method) {
+    conditions.push(Prisma.sql`cp.method = ${filter.method}`);
+  }
+  if (filter.fromDate) {
+    conditions.push(Prisma.sql`cp."receivedOn" >= ${filter.fromDate}`);
+  }
+  if (filter.toDate) {
+    conditions.push(Prisma.sql`cp."receivedOn" <= ${filter.toDate}`);
+  }
   const query = filter.query?.trim();
   if (query) {
     const pattern = `%${query}%`;

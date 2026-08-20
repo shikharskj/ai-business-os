@@ -113,6 +113,9 @@ export function createMemoryPaymentRepository(
           if (filter.customerId && record.customerId !== filter.customerId) {
             return false;
           }
+          if (filter.method && record.method !== filter.method) return false;
+          if (filter.fromDate && record.receivedOn < filter.fromDate) return false;
+          if (filter.toDate && record.receivedOn > filter.toDate) return false;
           if (!query) {
             return true;
           }

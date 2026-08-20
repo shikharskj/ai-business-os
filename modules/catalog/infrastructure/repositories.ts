@@ -6,6 +6,8 @@ export type ProductListFilter = {
   tenantId: string;
   query?: string;
   kind?: ProductKind | "ALL";
+  fromDate?: string;
+  toDate?: string;
 };
 
 export type CatalogRepository = {
@@ -102,6 +104,17 @@ export function createMemoryCatalogRepository(
             return true;
           }
           return record.kind === filter.kind;
+        })
+        .filter((record) => {
+          if (filter.fromDate) {
+            const dateStr = record.createdAt.toISOString().slice(0, 10);
+            if (dateStr < filter.fromDate) return false;
+          }
+          if (filter.toDate) {
+            const dateStr = record.createdAt.toISOString().slice(0, 10);
+            if (dateStr > filter.toDate) return false;
+          }
+          return true;
         })
         .filter((record) => {
           if (!query) {

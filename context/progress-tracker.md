@@ -1149,6 +1149,65 @@ Files / Areas:
 
 ---
 
+## 2026-08-20 — Server-driven list filters (From–To dates + payment method)
+
+Status: Complete
+
+Implemented:
+- From–To date range filters on invoices (`issuedOn`), quotations (`issuedOn`), payments (`receivedOn`), products (`createdAt`), stock (`createdAt`), and expenses (already had them). Customers and suppliers excluded by design.
+- Payment method filter on the payments list page.
+- Each filter: search schema (Zod `from`/`to`/`method`), domain filter type, Prisma SQL `WHERE`, memory repo, use case function, and page toolbar with `type="date"` inputs and a method `<Select>`.
+- `hasFilters` on each page treats `from`/`to`/`method` as active filters for empty-state messaging.
+- Tests for invoice, quotation, payment (date + method), and product date-range filtering.
+
+Files / Areas:
+- `modules/sales/schemas/invoice.schema.ts`, `quotation.schema.ts`
+- `modules/payments/schemas/payment.schema.ts`
+- `modules/catalog/schemas/product.schema.ts`
+- `modules/inventory/schemas/inventory.schema.ts`
+- `modules/sales/domain/types.ts` (InvoiceListFilter, QuotationListFilter)
+- `modules/payments/domain/types.ts` (PaymentListFilter + method)
+- `modules/catalog/infrastructure/repositories.ts` (ProductListFilter)
+- `modules/sales/infrastructure/prisma-sales-repository.ts`
+- `modules/payments/infrastructure/prisma-payments-repository.ts`
+- `modules/catalog/infrastructure/prisma-catalog-repository.ts`
+- `modules/inventory/infrastructure/prisma-stock-list-repository.ts`
+- `modules/sales/infrastructure/repositories.ts` (memory)
+- `modules/payments/infrastructure/repositories.ts` (memory)
+- `modules/catalog/infrastructure/repositories.ts` (memory)
+- `modules/sales/application/invoices.ts`, `quotations.ts`
+- `modules/payments/application/queries.ts`
+- `modules/catalog/application/products.ts`
+- `modules/inventory/application/stock-list-page.ts`
+- `app/app/(workspace)/sales/invoices/page.tsx`
+- `app/app/(workspace)/sales/quotations/page.tsx`
+- `app/app/(workspace)/sales/payments/page.tsx`
+- `app/app/(workspace)/inventory/products/page.tsx`
+- `app/app/(workspace)/inventory/stock/page.tsx`
+- `tests/list-filters/date-range-filters.test.ts`
+
+---
+
+## 2026-08-20 — Shadcn DatePicker on list From–To filters
+
+Status: Complete
+
+Implemented:
+- Extended `DatePicker` with `id` / `name` / `defaultValue` and a hidden `YYYY-MM-DD` input so GET list toolbars submit `from`/`to` without native `<input type="date">`.
+- Local calendar parse/format (no UTC `toISOString` slice); month/year dropdown caption; trigger sized like `Input`.
+- Replaced From/To date inputs on expenses, invoices, quotations, payments, products, and stock list pages. Create/edit forms still use native dates.
+
+Files / Areas:
+- `components/date-picker.tsx`
+- `app/app/(workspace)/expenses/page.tsx`
+- `app/app/(workspace)/sales/invoices/page.tsx`
+- `app/app/(workspace)/sales/quotations/page.tsx`
+- `app/app/(workspace)/sales/payments/page.tsx`
+- `app/app/(workspace)/inventory/products/page.tsx`
+- `app/app/(workspace)/inventory/stock/page.tsx`
+
+---
+
 ## 2026-08-20 — Reusable server-paginated DataTable
 
 Status: Complete

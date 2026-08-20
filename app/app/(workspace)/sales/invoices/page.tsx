@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { InvoicesDataTable } from "@/components/business/invoices-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
+import { DatePicker } from "@/components/date-picker";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import {
   invoiceSearchSchema,
 } from "@/modules/sales";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
+import { businessDate } from "@/modules/shared-kernel/dates";
 
 const STATUS_FILTER_LABELS: Record<(typeof INVOICE_STATUSES)[number] | "ALL", string> = {
   ALL: "All",
@@ -39,6 +41,8 @@ export default async function InvoicesPage({
   searchParams: Promise<{
     q?: string;
     status?: string;
+    from?: string;
+    to?: string;
     page?: string;
     pageSize?: string;
   }>;
@@ -49,20 +53,26 @@ export default async function InvoicesPage({
   const parseResult = invoiceSearchSchema.safeParse({
     q: params.q,
     status: params.status,
+    from: params.from || undefined,
+    to: params.to || undefined,
   });
   const filters = parseResult.success
     ? parseResult.data
-    : { q: "", status: "ALL" as const };
+    : { q: "", status: "ALL" as const, from: undefined, to: undefined };
   const canCreate = roleHasPermission(tenant.membership.role, "invoice:create");
   const result = await listInvoicesPage({
     tenantId: tenant.tenantId,
     query: filters.q,
     status: filters.status,
+    fromDate: filters.from ? businessDate(filters.from) : undefined,
+    toDate: filters.to ? businessDate(filters.to) : undefined,
     page,
     pageSize,
     sales: prismaSalesRepository,
   });
-  const hasFilters = Boolean(filters.q || filters.status !== "ALL");
+  const hasFilters = Boolean(
+    filters.q || filters.status !== "ALL" || filters.from || filters.to
+  );
   const queryString = toQueryString(params);
 
   return (
@@ -121,6 +131,28 @@ export default async function InvoicesPage({
             </SelectContent>
           </Select>
         </div>
+        <div className="flex w-44 flex-col gap-2">
+          <label htmlFor="from" className="text-base font-medium">
+            From
+          </label>
+          <DatePicker
+            id="from"
+            name="from"
+            defaultValue={filters.from}
+            placeholder="From"
+          />
+        </div>
+        <div className="flex w-44 flex-col gap-2">
+          <label htmlFor="to" className="text-base font-medium">
+            To
+          </label>
+          <DatePicker
+            id="to"
+            name="to"
+            defaultValue={filters.to}
+            placeholder="To"
+          />
+        </div>
         <Button type="submit" variant="outline">
           Filter
         </Button>
@@ -132,7 +164,7 @@ export default async function InvoicesPage({
           title={hasFilters ? "No matching invoices" : "No invoices yet"}
           description={
             hasFilters
-              ? "Try a different number, customer, or status."
+              ? "Try a different number, customer, status, or date range."
               : "Create an invoice to bill a customer. Post when ready to update stock and accounts."
           }
           action={

@@ -53,10 +53,18 @@ function productWhereConditions(filter: {
   tenantId: string;
   query?: string;
   kind?: Product["kind"] | "ALL";
+  fromDate?: string;
+  toDate?: string;
 }): Prisma.Sql[] {
   const conditions: Prisma.Sql[] = [Prisma.sql`p."tenantId" = ${filter.tenantId}`];
   if (filter.kind && filter.kind !== "ALL") {
     conditions.push(Prisma.sql`p.kind = ${filter.kind}`);
+  }
+  if (filter.fromDate) {
+    conditions.push(Prisma.sql`p."createdAt" >= ${filter.fromDate}::date`);
+  }
+  if (filter.toDate) {
+    conditions.push(Prisma.sql`p."createdAt" < (${filter.toDate}::date + interval '1 day')`);
   }
   const query = filter.query?.trim();
   if (query) {

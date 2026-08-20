@@ -56,6 +56,8 @@ export const adjustStockInputSchema = z.object({
 export const stockSearchSchema = z.object({
   q: z.string().trim().optional().default(""),
   stock: z.enum(["ALL", "LOW"]).optional().default("ALL"),
+  from: businessDateSchema.optional(),
+  to: businessDateSchema.optional(),
 });
 
 export type OpeningStockFormInput = z.infer<typeof openingStockInputSchema>;
