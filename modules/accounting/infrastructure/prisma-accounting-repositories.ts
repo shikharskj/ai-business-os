@@ -8,7 +8,6 @@ import {
   money,
   moneyFromPrismaDecimal,
   toDecimalForPrisma,
-  addMoney,
 } from "@/modules/shared-kernel/money";
 import type { Account, PostedJournal } from "@/modules/accounting/domain/types";
 import type {
@@ -190,38 +189,64 @@ export function createPrismaJournalRepository(
             }
           : {}),
       };
+
+      const limit = filter.limit ?? 1000;
+      const offset = filter.offset ?? 0;
+
       const rows = await client.journal.findMany({
         where,
-        include: journalInclude,
-        orderBy: [{ accountingDate: "desc" }, { postedAt: "desc" }],
+        orderBy: [{ accountingDate: "desc" }, { postedAt: "desc" }, { id: "asc" }],
+        take: limit,
+        skip: offset,
       });
+
+      const totals = await client.journalLine.groupBy({
+        by: ["journalId"],
+        where: {
+          journalId: { in: rows.map((r) => r.id) },
+        },
+        _sum: { debit: true, credit: true },
+        _count: { id: true },
+      });
+
+      const totalsMap = new Map(
+        totals.map((t) => [
+          t.journalId,
+          {
+            debit: t._sum.debit ? moneyFromPrismaDecimal(t._sum.debit) : money(0n),
+            credit: t._sum.credit ? moneyFromPrismaDecimal(t._sum.credit) : money(0n),
+            lineCount: t._count.id,
+          },
+        ])
+      );
+
       return rows.map((row) => {
-        const journal = mapJournal(row);
-        const totals = journal.lines.reduce(
-          (sum, line) => ({
-            debit: addMoney(sum.debit, line.debit),
-            credit: addMoney(sum.credit, line.credit),
-          }),
-          { debit: money(0n), credit: money(0n) }
-        );
+        const totalsData = totalsMap.get(row.id) ?? {
+          debit: money(0n),
+          credit: money(0n),
+          lineCount: 0,
+        };
         return {
-          id: journal.id,
-          tenantId: journal.tenantId,
-          accountingDate: journal.accountingDate,
-          periodKey: journal.periodKey,
-          financialYearKey: journal.financialYearKey,
-          sourceType: journal.sourceType,
-          sourceId: journal.sourceId,
-          memo: journal.memo,
-          reversalOfJournalId: journal.reversalOfJournalId,
-          postedAt: journal.postedAt,
-          totalDebits: totals.debit,
-          totalCredits: totals.credit,
-          lineCount: journal.lines.length,
+          id: row.id,
+          tenantId: row.tenantId,
+          accountingDate: businessDate(row.accountingDate),
+          periodKey: row.periodKey,
+          financialYearKey: row.financialYearKey,
+          sourceType: row.sourceType,
+          sourceId: row.sourceId,
+          memo: row.memo,
+          reversalOfJournalId: row.reversalOfJournalId,
+          postedAt: row.postedAt,
+          totalDebits: totalsData.debit,
+          totalCredits: totalsData.credit,
+          lineCount: totalsData.lineCount,
         };
       });
     },
     async listLedgerLines(query) {
+      const limit = query.limit ?? 10000;
+      const offset = query.offset ?? 0;
+
       const rows = await client.journalLine.findMany({
         where: {
           tenantId: query.tenantId,
@@ -245,7 +270,10 @@ export function createPrismaJournalRepository(
         orderBy: [
           { journal: { accountingDate: "asc" } },
           { journalId: "asc" },
+          { id: "asc" },
         ],
+        take: limit,
+        skip: offset,
       });
       return rows.map((row) => ({
         journalId: row.journalId,

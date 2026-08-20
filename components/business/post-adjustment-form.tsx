@@ -49,15 +49,15 @@ function FieldError({
   );
 }
 
-function parseAmount(value: string) {
+function parseAmount(value: string): { valid: boolean; amount: bigint } {
   const trimmed = value.trim();
   if (!trimmed || trimmed === ".") {
-    return 0n;
+    return { valid: true, amount: 0n };
   }
   try {
-    return moneyFromMajor(trimmed).amountMinor;
+    return { valid: true, amount: moneyFromMajor(trimmed).amountMinor };
   } catch {
-    return 0n;
+    return { valid: false, amount: 0n };
   }
 }
 
@@ -82,8 +82,12 @@ export function PostAdjustmentForm({
     [accounts]
   );
 
-  const debitTotal = lines.reduce((sum, line) => sum + parseAmount(line.debit), 0n);
-  const creditTotal = lines.reduce((sum, line) => sum + parseAmount(line.credit), 0n);
+  const debitParsed = lines.map((line) => parseAmount(line.debit));
+  const creditParsed = lines.map((line) => parseAmount(line.credit));
+  const hasInvalidAmount = debitParsed.some((p) => !p.valid) || creditParsed.some((p) => !p.valid);
+
+  const debitTotal = debitParsed.reduce((sum, p) => sum + p.amount, 0n);
+  const creditTotal = creditParsed.reduce((sum, p) => sum + p.amount, 0n);
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
@@ -222,7 +226,11 @@ export function PostAdjustmentForm({
         <p>
           Debits {formatINR(money(debitTotal))} · Credits{" "}
           {formatINR(money(creditTotal))}
-          {debitTotal !== creditTotal ? " · unbalanced" : " · balanced"}
+          {hasInvalidAmount
+            ? " · invalid"
+            : debitTotal !== creditTotal
+              ? " · unbalanced"
+              : " · balanced"}
         </p>
       </section>
 

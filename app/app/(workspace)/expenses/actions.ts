@@ -83,13 +83,16 @@ export async function recordExpenseAction(
         notes: formData.get("notes") || undefined,
       })
     );
-    const expense = await prisma.$transaction(async (tx) =>
-      recordExpense({
+    const expense = await prisma.$transaction(async (tx) => {
+      const business = await tx.business.findUnique({
+        where: { id: tenant.tenantId },
+      });
+      return recordExpense({
         tenantId: tenant.tenantId,
         actorUserId: tenant.membership.userId,
         fields,
         taxContext: expenseTaxContextFromTenant(tenant),
-        closedThroughPeriodKey: tenant.business.closedThroughPeriodKey,
+        closedThroughPeriodKey: business?.closedThroughPeriodKey ?? null,
         expenses: createPrismaExpenseRepository(tx),
         accounts: createPrismaAccountRepository(tx),
         journals: createPrismaJournalRepository(tx),
@@ -97,8 +100,8 @@ export async function recordExpenseAction(
         hsnSac: prismaHsnSacRepository,
         audit: createPrismaAuditRepository(tx),
         outbox: createPrismaOutboxRepository(tx),
-      })
-    );
+      });
+    });
     expenseId = expense.id;
   } catch (error) {
     const mapped = mapError(error);

@@ -175,13 +175,16 @@ function NavGroup({
                   <SidebarMenuSub>
                     {item.children.map((child) => {
                       const childIsActive = pathMatches(pathname, child.href);
+                      const childIsExactMatch = pathname === child.href;
+                      const parentExactMatch = pathname === item.href;
+                      const shouldHighlight = childIsExactMatch || (childIsActive && !parentExactMatch);
 
                       return (
                         <SidebarMenuSubItem key={child.href}>
                           <SidebarMenuSubButton
                             render={<Link href={child.href} />}
-                            isActive={childIsActive}
-                            aria-current={childIsActive ? "page" : undefined}
+                            isActive={shouldHighlight}
+                            aria-current={childIsExactMatch ? "page" : undefined}
                           >
                             {child.label}
                           </SidebarMenuSubButton>

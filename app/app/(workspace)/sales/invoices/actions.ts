@@ -215,13 +215,16 @@ async function statusAction(
 export async function postInvoiceAction(invoiceId: string): Promise<InvoiceActionState> {
   try {
     const tenant = await authorize("invoice:update");
-    await prisma.$transaction(async (tx) =>
-      postInvoice({
+    await prisma.$transaction(async (tx) => {
+      const business = await tx.business.findUnique({
+        where: { id: tenant.tenantId },
+      });
+      return postInvoice({
         tenantId: tenant.tenantId,
         actorUserId: tenant.membership.userId,
         invoiceId,
         taxContext: taxContextFromTenant(tenant),
-        closedThroughPeriodKey: tenant.business.closedThroughPeriodKey,
+        closedThroughPeriodKey: business?.closedThroughPeriodKey ?? null,
         sales: createPrismaSalesRepository(tx),
         parties: createPrismaPartyRepository(tx),
         catalog: createPrismaCatalogRepository(tx),
@@ -232,8 +235,8 @@ export async function postInvoiceAction(invoiceId: string): Promise<InvoiceActio
         journals: createPrismaJournalRepository(tx),
         audit: createPrismaAuditRepository(tx),
         outbox: createPrismaOutboxRepository(tx),
-      })
-    );
+      });
+    });
   } catch (error) {
     const mapped = mapError(error);
     if (mapped) {

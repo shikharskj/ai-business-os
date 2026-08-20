@@ -32,6 +32,11 @@ export function ClosePeriodForm({ defaultPeriodKey }: { defaultPeriodKey: string
           defaultValue={defaultPeriodKey}
           placeholder="YYYY-MM"
         />
+        {state.fieldErrors?.periodKey ? (
+          <p className="text-base text-destructive" role="alert">
+            {state.fieldErrors.periodKey}
+          </p>
+        ) : null}
       </div>
       {state.error ? (
         <p className="text-base text-destructive" role="alert">

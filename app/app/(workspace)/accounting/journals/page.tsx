@@ -29,15 +29,27 @@ export default async function JournalsPage({
 }) {
   const tenant = await authorize("report:read");
   const params = await searchParams;
-  const parseResult = journalSearchSchema.safeParse({
-    q: params.q,
-    period: params.period || undefined,
-    from: params.from || undefined,
-    to: params.to || undefined,
-  });
-  const filters = parseResult.success
-    ? parseResult.data
-    : { q: "", period: undefined, from: undefined, to: undefined };
+
+  const q = typeof params.q === "string" ? params.q.trim() : "";
+  const periodValue = Array.isArray(params.period) ? params.period[0] : params.period;
+  const fromValue = Array.isArray(params.from) ? params.from[0] : params.from;
+  const toValue = Array.isArray(params.to) ? params.to[0] : params.to;
+
+  const periodResult = periodValue ? journalSearchSchema.shape.period.safeParse(periodValue) : { success: true, data: undefined };
+  const fromResult = fromValue ? journalSearchSchema.shape.from.safeParse(fromValue) : { success: true, data: undefined };
+  const toResult = toValue ? journalSearchSchema.shape.to.safeParse(toValue) : { success: true, data: undefined };
+
+  const filters = {
+    q,
+    period: periodResult.success ? periodResult.data : undefined,
+    from: fromResult.success ? fromResult.data : undefined,
+    to: toResult.success ? toResult.data : undefined,
+  };
+
+  const validationErrors: string[] = [];
+  if (!periodResult.success) validationErrors.push("Invalid period format");
+  if (!fromResult.success) validationErrors.push("Invalid from date");
+  if (!toResult.success) validationErrors.push("Invalid to date");
   const canPost = roleHasPermission(tenant.membership.role, "accounting:post");
   const currentPeriod = periodKeyFromDate(todayInTimezone(tenant.business.timezone));
   const journals = await listJournals({
@@ -80,6 +92,12 @@ export default async function JournalsPage({
           </div>
         }
       />
+
+      {validationErrors.length > 0 ? (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-base text-destructive">
+          {validationErrors.join(", ")}
+        </div>
+      ) : null}
 
       <form className="flex flex-wrap items-end gap-3" method="get">
         <div className="flex min-w-56 flex-1 flex-col gap-2">

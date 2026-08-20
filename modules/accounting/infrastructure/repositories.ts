@@ -172,6 +172,9 @@ export function createMemoryJournalRepository(): JournalRepository & {
     },
     async listJournals(filter) {
       const query = filter.query?.trim().toLowerCase() ?? "";
+      const limit = filter.limit ?? 1000;
+      const offset = filter.offset ?? 0;
+
       return journals
         .filter((journal) => journal.tenantId === filter.tenantId)
         .filter((journal) => {
@@ -196,11 +199,16 @@ export function createMemoryJournalRepository(): JournalRepository & {
         .sort(
           (a, b) =>
             b.accountingDate.localeCompare(a.accountingDate) ||
-            b.postedAt.getTime() - a.postedAt.getTime()
+            b.postedAt.getTime() - a.postedAt.getTime() ||
+            a.id.localeCompare(b.id)
         )
+        .slice(offset, offset + limit)
         .map((journal) => toSummary(cloneJournal(journal)));
     },
     async listLedgerLines(query) {
+      const limit = query.limit ?? 10000;
+      const offset = query.offset ?? 0;
+
       const rows: Array<
         Omit<LedgerLine, "balance" | "accountCode" | "accountName">
       > = [];
@@ -235,11 +243,14 @@ export function createMemoryJournalRepository(): JournalRepository & {
           });
         }
       }
-      return rows.sort(
-        (a, b) =>
-          a.accountingDate.localeCompare(b.accountingDate) ||
-          a.journalId.localeCompare(b.journalId)
-      );
+      return rows
+        .sort(
+          (a, b) =>
+            a.accountingDate.localeCompare(b.accountingDate) ||
+            a.journalId.localeCompare(b.journalId) ||
+            a.journalLineId.localeCompare(b.journalLineId)
+        )
+        .slice(offset, offset + limit);
     },
     async trialBalanceForPeriod(tenantId, periodKey) {
       const byAccount = new Map<string, { debit: Money; credit: Money }>();

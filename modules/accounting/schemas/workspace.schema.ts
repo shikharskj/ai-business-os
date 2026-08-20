@@ -41,7 +41,18 @@ const adjustmentLineSchema = z.object({
 export const postAdjustmentSchema = z.object({
   accountingDate: businessDateSchema,
   memo: z.string().trim().optional(),
-  lines: z.array(adjustmentLineSchema).min(2, "Add at least two journal lines"),
+  lines: z
+    .array(adjustmentLineSchema)
+    .transform((lines) =>
+      lines.filter((line) => {
+        const debit = parseLineAmount(line.debit);
+        const credit = parseLineAmount(line.credit);
+        return debit.amountMinor > 0n || credit.amountMinor > 0n;
+      })
+    )
+    .refine((lines) => lines.length >= 2, {
+      message: "Add at least two journal lines",
+    }),
 });
 
 export type PostAdjustmentFormInput = z.infer<typeof postAdjustmentSchema>;
@@ -59,16 +70,12 @@ export function toAdjustmentLines(input: PostAdjustmentFormInput): {
   memo: string | null;
   lines: JournalLineDraft[];
 } {
-  const lines: JournalLineDraft[] = input.lines
-    .map((line) => ({
-      accountCode: line.accountCode.trim(),
-      description: line.description?.trim() || undefined,
-      debit: parseLineAmount(line.debit),
-      credit: parseLineAmount(line.credit),
-    }))
-    .filter(
-      (line) => line.debit.amountMinor > 0n || line.credit.amountMinor > 0n
-    );
+  const lines: JournalLineDraft[] = input.lines.map((line) => ({
+    accountCode: line.accountCode.trim(),
+    description: line.description?.trim() || undefined,
+    debit: parseLineAmount(line.debit),
+    credit: parseLineAmount(line.credit),
+  }));
 
   return {
     accountingDate: businessDate(input.accountingDate),

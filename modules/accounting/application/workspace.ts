@@ -19,7 +19,7 @@ import type {
 import type { BusinessRepository } from "@/modules/tenant/infrastructure/repositories";
 import type { AuditRepository } from "@/modules/shared-kernel/audit";
 import type { OutboxRepository } from "@/modules/shared-kernel/outbox";
-import type { BusinessDate } from "@/modules/shared-kernel/dates";
+import { businessDate, type BusinessDate } from "@/modules/shared-kernel/dates";
 import { addMoney, money, subtractMoney } from "@/modules/shared-kernel/money";
 import { postJournal } from "@/modules/accounting/application/post-journal";
 import { reverseJournal as reverseJournalCore } from "@/modules/accounting/application/reverse-journal";
@@ -74,7 +74,28 @@ export async function getLedger(input: {
     periodKey: input.periodKey,
   });
 
+  const periodStart = input.periodKey ? businessDate(`${input.periodKey}-01`) : undefined;
+  const effectiveFromDate = input.fromDate ?? periodStart;
+
   let running = money(0n);
+  if (effectiveFromDate) {
+    const openingLines = await input.journals.listLedgerLines({
+      tenantId: input.tenantId,
+      accountId: input.accountId,
+      toDate: businessDate(
+        new Date(new Date(effectiveFromDate).getTime() - 86400000).toISOString().split("T")[0]!
+      ),
+    });
+
+    for (const row of openingLines) {
+      const delta =
+        account.normalBalance === "DEBIT"
+          ? subtractMoney(row.debit, row.credit)
+          : subtractMoney(row.credit, row.debit);
+      running = addMoney(running, delta);
+    }
+  }
+
   const lines: LedgerLine[] = raw.map((row) => {
     const delta =
       account.normalBalance === "DEBIT"
@@ -173,10 +194,19 @@ export async function closeAccountingPeriod(input: {
     currentPeriodKey: current,
   });
 
+  const previousClosedThrough = business.closedThroughPeriodKey;
+
   const updated = await input.businesses.setClosedThroughPeriodKey(
     input.tenantId,
     input.periodKey
   );
+
+  const rereadBusiness = await input.businesses.findById(input.tenantId);
+  if (!rereadBusiness || rereadBusiness.closedThroughPeriodKey !== input.periodKey) {
+    throw new AccountingError(
+      "Period close conflict detected. Another user may have closed a different period concurrently. Please refresh and try again."
+    );
+  }
 
   await input.audit.append({
     tenantId: input.tenantId,
@@ -186,7 +216,7 @@ export async function closeAccountingPeriod(input: {
     resourceId: input.periodKey,
     metadata: {
       periodKey: input.periodKey,
-      previousClosedThrough: business.closedThroughPeriodKey,
+      previousClosedThrough,
     },
   });
 

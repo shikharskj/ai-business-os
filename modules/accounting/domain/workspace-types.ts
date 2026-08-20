@@ -12,6 +12,8 @@ export type JournalListFilter = {
   periodKey?: string;
   fromDate?: BusinessDate;
   toDate?: BusinessDate;
+  limit?: number;
+  offset?: number;
 };
 
 export type LedgerQuery = {
@@ -20,6 +22,8 @@ export type LedgerQuery = {
   fromDate?: BusinessDate;
   toDate?: BusinessDate;
   periodKey?: string;
+  limit?: number;
+  offset?: number;
 };
 
 export type LedgerLine = {

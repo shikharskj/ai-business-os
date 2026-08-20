@@ -32,10 +32,12 @@ export default async function TrialBalancePage({
   const tenant = await authorize("report:read");
   const params = await searchParams;
   const currentPeriod = periodKeyFromDate(todayInTimezone(tenant.business.timezone));
-  const parseResult = trialBalanceSearchSchema.safeParse({
-    period: params.period || currentPeriod,
-  });
-  const period = parseResult.success ? parseResult.data.period : currentPeriod;
+
+  const periodValue = Array.isArray(params.period) ? params.period[0] : params.period;
+  const parseResult = periodValue ? trialBalanceSearchSchema.shape.period.safeParse(periodValue) : { success: true, data: currentPeriod };
+
+  const period = parseResult.success ? parseResult.data : currentPeriod;
+  const validationError = !parseResult.success ? "Invalid period format (expected YYYY-MM)" : null;
 
   const trialBalance = await getTrialBalance({
     tenantId: tenant.tenantId,
@@ -59,6 +61,12 @@ export default async function TrialBalancePage({
           </Button>
         }
       />
+
+      {validationError ? (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-base text-destructive">
+          {validationError}
+        </div>
+      ) : null}
 
       <form className="flex flex-wrap items-end gap-3" method="get">
         <div className="flex w-44 flex-col gap-2">

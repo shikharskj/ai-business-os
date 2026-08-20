@@ -139,21 +139,24 @@ export async function postAdjustmentAction(
       })
     );
 
-    const journal = await prisma.$transaction(async (tx) =>
-      postAdjustmentJournal({
+    const journal = await prisma.$transaction(async (tx) => {
+      const business = await tx.business.findUnique({
+        where: { id: tenant.tenantId },
+      });
+      return postAdjustmentJournal({
         tenantId: tenant.tenantId,
         actorUserId: tenant.membership.userId,
         accountingDate: fields.accountingDate,
         financialYearStartMonth: tenant.business.financialYearStartMonth,
-        closedThroughPeriodKey: tenant.business.closedThroughPeriodKey,
+        closedThroughPeriodKey: business?.closedThroughPeriodKey ?? null,
         memo: fields.memo,
         lines: fields.lines,
         accounts: createPrismaAccountRepository(tx),
         journals: createPrismaJournalRepository(tx),
         audit: createPrismaAuditRepository(tx),
         outbox: createPrismaOutboxRepository(tx),
-      })
-    );
+      });
+    });
     journalId = journal.id;
   } catch (error) {
     const mapped = mapError(error);
@@ -182,20 +185,23 @@ export async function reverseJournalAction(
         formData.get("accountingDate") ||
         todayInTimezone(tenant.business.timezone),
     });
-    const reversal = await prisma.$transaction(async (tx) =>
-      reversePostedJournal({
+    const reversal = await prisma.$transaction(async (tx) => {
+      const business = await tx.business.findUnique({
+        where: { id: tenant.tenantId },
+      });
+      return reversePostedJournal({
         tenantId: tenant.tenantId,
         actorUserId: tenant.membership.userId,
         journalId: parsed.journalId,
         accountingDate: businessDate(parsed.accountingDate),
         financialYearStartMonth: tenant.business.financialYearStartMonth,
-        closedThroughPeriodKey: tenant.business.closedThroughPeriodKey,
+        closedThroughPeriodKey: business?.closedThroughPeriodKey ?? null,
         accounts: createPrismaAccountRepository(tx),
         journals: createPrismaJournalRepository(tx),
         audit: createPrismaAuditRepository(tx),
         outbox: createPrismaOutboxRepository(tx),
-      })
-    );
+      });
+    });
     reversalId = reversal.id;
   } catch (error) {
     const mapped = mapError(error);

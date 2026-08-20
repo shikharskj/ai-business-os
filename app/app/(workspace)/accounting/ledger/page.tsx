@@ -56,20 +56,25 @@ export default async function LedgerPage({
       ? params.accountId
       : (accounts[0]?.id ?? "");
 
-  const parseResult = ledgerSearchSchema.safeParse({
-    accountId: selectedAccountId || undefined,
-    period: params.period || undefined,
-    from: params.from || undefined,
-    to: params.to || undefined,
-  });
-  const filters = parseResult.success
-    ? parseResult.data
-    : {
-        accountId: selectedAccountId,
-        period: undefined,
-        from: undefined,
-        to: undefined,
-      };
+  const periodValue = Array.isArray(params.period) ? params.period[0] : params.period;
+  const fromValue = Array.isArray(params.from) ? params.from[0] : params.from;
+  const toValue = Array.isArray(params.to) ? params.to[0] : params.to;
+
+  const periodResult = periodValue ? ledgerSearchSchema.shape.period.safeParse(periodValue) : { success: true, data: undefined };
+  const fromResult = fromValue ? ledgerSearchSchema.shape.from.safeParse(fromValue) : { success: true, data: undefined };
+  const toResult = toValue ? ledgerSearchSchema.shape.to.safeParse(toValue) : { success: true, data: undefined };
+
+  const filters = {
+    accountId: selectedAccountId,
+    period: periodResult.success ? periodResult.data : undefined,
+    from: fromResult.success ? fromResult.data : undefined,
+    to: toResult.success ? toResult.data : undefined,
+  };
+
+  const validationErrors: string[] = [];
+  if (!periodResult.success) validationErrors.push("Invalid period format");
+  if (!fromResult.success) validationErrors.push("Invalid from date");
+  if (!toResult.success) validationErrors.push("Invalid to date");
 
   const ledger =
     filters.accountId
@@ -104,6 +109,12 @@ export default async function LedgerPage({
           </Button>
         }
       />
+
+      {validationErrors.length > 0 ? (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-base text-destructive">
+          {validationErrors.join(", ")}
+        </div>
+      ) : null}
 
       <form className="flex flex-wrap items-end gap-3" method="get">
         <div className="flex min-w-64 flex-1 flex-col gap-2">
