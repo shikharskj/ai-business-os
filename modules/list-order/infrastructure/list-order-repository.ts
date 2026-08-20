@@ -21,7 +21,7 @@ export function createPrismaListOrderRepository(
 ): ListOrderRepository {
   return {
     async savePageOrder(input) {
-      const { tenantId, listKey, orderedIds, movedId, newIndex, page, pageSize } = input;
+      const { tenantId, listKey, orderedIds, movedId, page, pageSize } = input;
       if (!orderedIds.includes(movedId)) {
         throw new Error("Moved row is not in the ordered page.");
       }
@@ -39,48 +39,6 @@ export function createPrismaListOrderRepository(
       });
     },
   };
-}
-
-function computeRank(
-  prevRank: number | null,
-  nextRank: number | null,
-  orderedIds: string[],
-  newIndex: number
-): number {
-  if (prevRank === null && nextRank === null) {
-    return (newIndex + 1) * RANK_STEP;
-  }
-  if (prevRank === null && nextRank !== null) {
-    const candidate = nextRank - RANK_STEP;
-    return candidate > 0 ? candidate : Math.floor(nextRank / 2);
-  }
-  if (prevRank !== null && nextRank === null) {
-    return prevRank + RANK_STEP;
-  }
-  if (prevRank !== null && nextRank !== null) {
-    if (nextRank - prevRank > 1) {
-      return Math.floor((prevRank + nextRank) / 2);
-    }
-    return prevRank + 1;
-  }
-  return (newIndex + 1) * RANK_STEP;
-}
-
-function needsRebalance(
-  prevRank: number | null,
-  nextRank: number | null,
-  newRank: number
-): boolean {
-  if (prevRank !== null && nextRank !== null && nextRank - prevRank <= 1) {
-    return true;
-  }
-  if (prevRank !== null && newRank <= prevRank) {
-    return true;
-  }
-  if (nextRank !== null && newRank >= nextRank) {
-    return true;
-  }
-  return false;
 }
 
 async function rebalancePageRanks(input: {
