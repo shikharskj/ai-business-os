@@ -5,39 +5,46 @@ import { redirect } from "next/navigation";
 import { ZodError } from "zod";
 
 import { prisma } from "@/lib/db";
+import { getStorageAdapter } from "@/lib/storage";
 import { authorize, AuthorizationError } from "@/lib/security";
-import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
-import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
+import { AccountingError } from "@/modules/accounting/domain/errors";
+import {
+  createPrismaAccountRepository,
+  createPrismaJournalRepository,
+} from "@/modules/accounting/infrastructure/prisma-accounting-repositories";
 import { CatalogError } from "@/modules/catalog";
 import { createPrismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
+import { prismaDocumentRepository } from "@/modules/documents/infrastructure/prisma-document-repository";
+import { InventoryError } from "@/modules/inventory/domain/errors";
+import { createPrismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";
 import { PartyError } from "@/modules/party";
 import { createPrismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
+import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
+import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 import {
   prismaHsnSacRepository,
   prismaTaxRateRepository,
 } from "@/modules/tax/infrastructure/prisma-tax-repositories";
 import {
-  QuotationAlreadyConvertedError,
+  cancelInvoice,
+  createInvoice,
+  exportInvoicePdf,
+  invoiceInputSchema,
+  postInvoice,
   SalesError,
-  acceptQuotation,
-  cancelQuotation,
-  convertQuotationToInvoice,
-  createQuotation,
-  quotationInputSchema,
-  sendQuotation,
   taxContextFromTenant,
-  toQuotationFields,
-  updateQuotation,
+  toInvoiceFields,
+  updateInvoice,
 } from "@/modules/sales";
 import { createPrismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
 import type { SalesRepository } from "@/modules/sales/infrastructure/repositories";
 import type { AuditRepository } from "@/modules/shared-kernel/audit";
 import type { OutboxRepository } from "@/modules/shared-kernel/outbox";
 
-export type QuotationActionState = {
+export type InvoiceActionState = {
   error?: string;
   fieldErrors?: Record<string, string>;
-  invoiceId?: string;
+  documentId?: string;
 };
 
 function formatZodErrors(error: ZodError): Record<string, string> {
@@ -46,7 +53,7 @@ function formatZodErrors(error: ZodError): Record<string, string> {
   );
 }
 
-function readQuotationFields(formData: FormData) {
+function readInvoiceFields(formData: FormData) {
   const lineCount = Number(formData.get("lineCount") ?? 0);
   if (!Number.isSafeInteger(lineCount) || lineCount < 0 || lineCount > 1000) {
     throw new ZodError([
@@ -64,11 +71,11 @@ function readQuotationFields(formData: FormData) {
     discount: formData.get(`line-${index}-discount`) || "0",
   }));
 
-  return toQuotationFields(
-    quotationInputSchema.parse({
+  return toInvoiceFields(
+    invoiceInputSchema.parse({
       customerId: formData.get("customerId"),
       issuedOn: formData.get("issuedOn"),
-      validUntil: formData.get("validUntil") || undefined,
+      dueOn: formData.get("dueOn") || undefined,
       notes: formData.get("notes") || undefined,
       placeOfSupplyStateCode: formData.get("placeOfSupplyStateCode"),
       lines,
@@ -76,30 +83,36 @@ function readQuotationFields(formData: FormData) {
   );
 }
 
-function mapError(error: unknown): QuotationActionState | null {
+function mapError(error: unknown): InvoiceActionState | null {
   if (error instanceof ZodError) {
     return { fieldErrors: formatZodErrors(error) };
   }
   if (error instanceof AuthorizationError) {
     return { error: "You don't have permission to perform this action." };
   }
-  if (error instanceof PartyError || error instanceof CatalogError || error instanceof SalesError) {
+  if (
+    error instanceof PartyError ||
+    error instanceof CatalogError ||
+    error instanceof SalesError ||
+    error instanceof AccountingError ||
+    error instanceof InventoryError
+  ) {
     return { error: error.message };
   }
   return null;
 }
 
-export async function createQuotationAction(
-  _prevState: QuotationActionState,
+export async function createInvoiceAction(
+  _prevState: InvoiceActionState,
   formData: FormData
-): Promise<QuotationActionState> {
-  let quotationId: string;
+): Promise<InvoiceActionState> {
+  let invoiceId: string;
 
   try {
-    const tenant = await authorize("quotation:create");
-    const fields = readQuotationFields(formData);
-    const quotation = await prisma.$transaction(async (tx) =>
-      createQuotation({
+    const tenant = await authorize("invoice:create");
+    const fields = readInvoiceFields(formData);
+    const invoice = await prisma.$transaction(async (tx) =>
+      createInvoice({
         tenantId: tenant.tenantId,
         actorUserId: tenant.membership.userId,
         fields,
@@ -113,7 +126,7 @@ export async function createQuotationAction(
         outbox: createPrismaOutboxRepository(tx),
       })
     );
-    quotationId = quotation.id;
+    invoiceId = invoice.id;
   } catch (error) {
     const mapped = mapError(error);
     if (mapped) {
@@ -122,24 +135,24 @@ export async function createQuotationAction(
     throw error;
   }
 
-  revalidatePath("/app/sales/quotations");
-  redirect(`/app/sales/quotations/${quotationId}`);
+  revalidatePath("/app/sales/invoices");
+  redirect(`/app/sales/invoices/${invoiceId}`);
 }
 
-export async function updateQuotationAction(
-  _prevState: QuotationActionState,
+export async function updateInvoiceAction(
+  _prevState: InvoiceActionState,
   formData: FormData
-): Promise<QuotationActionState> {
-  const quotationId = String(formData.get("quotationId") ?? "");
+): Promise<InvoiceActionState> {
+  const invoiceId = String(formData.get("invoiceId") ?? "");
 
   try {
-    const tenant = await authorize("quotation:update");
-    const fields = readQuotationFields(formData);
+    const tenant = await authorize("invoice:update");
+    const fields = readInvoiceFields(formData);
     await prisma.$transaction(async (tx) =>
-      updateQuotation({
+      updateInvoice({
         tenantId: tenant.tenantId,
         actorUserId: tenant.membership.userId,
-        quotationId,
+        invoiceId,
         fields,
         taxContext: taxContextFromTenant(tenant),
         sales: createPrismaSalesRepository(tx),
@@ -159,14 +172,14 @@ export async function updateQuotationAction(
     throw error;
   }
 
-  revalidatePath("/app/sales/quotations");
-  revalidatePath(`/app/sales/quotations/${quotationId}`);
-  redirect(`/app/sales/quotations/${quotationId}?saved=1`);
+  revalidatePath("/app/sales/invoices");
+  revalidatePath(`/app/sales/invoices/${invoiceId}`);
+  redirect(`/app/sales/invoices/${invoiceId}?saved=1`);
 }
 
 async function statusAction(
-  permission: "quotation:update" | "quotation:cancel",
-  quotationId: string,
+  permission: "invoice:update" | "invoice:cancel",
+  invoiceId: string,
   run: (input: {
     tenantId: string;
     actorUserId: string;
@@ -174,7 +187,7 @@ async function statusAction(
     audit: AuditRepository;
     outbox: OutboxRepository;
   }) => Promise<unknown>
-): Promise<QuotationActionState> {
+): Promise<InvoiceActionState> {
   try {
     const tenant = await authorize(permission);
     await prisma.$transaction(async (tx) =>
@@ -194,54 +207,34 @@ async function statusAction(
     throw error;
   }
 
-  revalidatePath("/app/sales/quotations");
-  revalidatePath(`/app/sales/quotations/${quotationId}`);
+  revalidatePath("/app/sales/invoices");
+  revalidatePath(`/app/sales/invoices/${invoiceId}`);
   return {};
 }
 
-export async function sendQuotationAction(quotationId: string): Promise<QuotationActionState> {
-  return statusAction("quotation:update", quotationId, (ctx) =>
-    sendQuotation({ ...ctx, quotationId })
-  );
-}
-
-export async function acceptQuotationAction(quotationId: string): Promise<QuotationActionState> {
-  return statusAction("quotation:update", quotationId, (ctx) =>
-    acceptQuotation({ ...ctx, quotationId })
-  );
-}
-
-export async function cancelQuotationAction(quotationId: string): Promise<QuotationActionState> {
-  return statusAction("quotation:cancel", quotationId, (ctx) =>
-    cancelQuotation({ ...ctx, quotationId })
-  );
-}
-
-export async function convertQuotationAction(quotationId: string): Promise<QuotationActionState> {
-  let invoiceId: string;
-
+export async function postInvoiceAction(invoiceId: string): Promise<InvoiceActionState> {
   try {
-    const tenant = await authorize("invoice:create");
-    const invoice = await prisma.$transaction(async (tx) =>
-      convertQuotationToInvoice({
+    const tenant = await authorize("invoice:update");
+    await prisma.$transaction(async (tx) =>
+      postInvoice({
         tenantId: tenant.tenantId,
         actorUserId: tenant.membership.userId,
-        quotationId,
+        invoiceId,
         taxContext: taxContextFromTenant(tenant),
+        closedThroughPeriodKey: null,
         sales: createPrismaSalesRepository(tx),
         parties: createPrismaPartyRepository(tx),
         catalog: createPrismaCatalogRepository(tx),
         taxRates: prismaTaxRateRepository,
         hsnSac: prismaHsnSacRepository,
+        inventory: createPrismaInventoryRepository(tx),
+        accounts: createPrismaAccountRepository(tx),
+        journals: createPrismaJournalRepository(tx),
         audit: createPrismaAuditRepository(tx),
         outbox: createPrismaOutboxRepository(tx),
       })
     );
-    invoiceId = invoice.id;
   } catch (error) {
-    if (error instanceof QuotationAlreadyConvertedError) {
-      return { error: error.message };
-    }
     const mapped = mapError(error);
     if (mapped) {
       return mapped;
@@ -249,9 +242,40 @@ export async function convertQuotationAction(quotationId: string): Promise<Quota
     throw error;
   }
 
-  revalidatePath("/app/sales/quotations");
-  revalidatePath(`/app/sales/quotations/${quotationId}`);
   revalidatePath("/app/sales/invoices");
   revalidatePath(`/app/sales/invoices/${invoiceId}`);
-  return { invoiceId };
+  return {};
+}
+
+export async function cancelInvoiceAction(invoiceId: string): Promise<InvoiceActionState> {
+  return statusAction("invoice:cancel", invoiceId, (ctx) =>
+    cancelInvoice({ ...ctx, invoiceId })
+  );
+}
+
+export async function exportInvoicePdfAction(
+  invoiceId: string
+): Promise<InvoiceActionState> {
+  try {
+    const tenant = await authorize("invoice:read");
+    const document = await prisma.$transaction(async (tx) =>
+      exportInvoicePdf({
+        tenantId: tenant.tenantId,
+        actorUserId: tenant.membership.userId,
+        businessName: tenant.business.name,
+        invoiceId,
+        sales: createPrismaSalesRepository(tx),
+        documents: prismaDocumentRepository,
+        storage: getStorageAdapter(),
+        audit: createPrismaAuditRepository(tx),
+      })
+    );
+    return { documentId: document.id };
+  } catch (error) {
+    const mapped = mapError(error);
+    if (mapped) {
+      return mapped;
+    }
+    throw error;
+  }
 }

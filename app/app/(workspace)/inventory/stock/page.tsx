@@ -2,7 +2,8 @@ import { Boxes, Package, Search } from "lucide-react";
 import Link from "next/link";
 
 import { LowStockAlert } from "@/components/business/low-stock-alert";
-import { StockStatusBadge } from "@/components/business/stock-status-badge";
+import { StatusBadge } from "@/components/business/status-badge";
+import { stockStatusPresentation } from "@/components/business/status-tone";
 import { EmptyState } from "@/components/shell/empty-state";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -140,7 +141,12 @@ export default async function StockPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {positions.map((position) => (
+              {positions.map((position) => {
+                const stock = stockStatusPresentation({
+                  isLowStock: position.isLowStock,
+                  hasMovements: position.hasMovements,
+                });
+                return (
                 <TableRow key={position.productId}>
                   <TableCell>
                     <Link
@@ -160,13 +166,11 @@ export default async function StockPage({
                       : "—"}
                   </TableCell>
                   <TableCell>
-                    <StockStatusBadge
-                      isLowStock={position.isLowStock}
-                      hasMovements={position.hasMovements}
-                    />
+                    <StatusBadge tone={stock.tone}>{stock.label}</StatusBadge>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>

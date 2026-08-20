@@ -3,8 +3,12 @@ import { notFound } from "next/navigation";
 
 import { DeactivateSupplierButton } from "@/components/business/deactivate-supplier-button";
 import { MoneyDisplay } from "@/components/business/money-display";
+import { StatusBadge } from "@/components/business/status-badge";
+import {
+  PARTY_STATUS_LABELS,
+  PARTY_STATUS_TONES,
+} from "@/components/business/status-tone";
 import { PageHeader } from "@/components/shell/page-header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { authorize } from "@/lib/security";
@@ -95,9 +99,9 @@ export default async function SupplierDetailPage({
       ) : null}
 
       <div className="flex items-center gap-2">
-        <Badge variant={supplier.status === "ACTIVE" ? "secondary" : "outline"}>
-          {supplier.status === "ACTIVE" ? "Active" : "Inactive"}
-        </Badge>
+        <StatusBadge tone={PARTY_STATUS_TONES[supplier.status]}>
+          {PARTY_STATUS_LABELS[supplier.status]}
+        </StatusBadge>
       </div>
 
       <Card>

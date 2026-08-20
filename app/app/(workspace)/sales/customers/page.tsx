@@ -3,7 +3,11 @@ import Link from "next/link";
 
 import { EmptyState } from "@/components/shell/empty-state";
 import { PageHeader } from "@/components/shell/page-header";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/business/status-badge";
+import {
+  PARTY_STATUS_LABELS,
+  PARTY_STATUS_TONES,
+} from "@/components/business/status-tone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -164,13 +168,9 @@ export default async function CustomersPage({
                   </TableCell>
                   <TableCell>{customer.phone ?? "—"}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant={
-                        customer.status === "ACTIVE" ? "secondary" : "outline"
-                      }
-                    >
-                      {customer.status === "ACTIVE" ? "Active" : "Inactive"}
-                    </Badge>
+                    <StatusBadge tone={PARTY_STATUS_TONES[customer.status]}>
+                      {PARTY_STATUS_LABELS[customer.status]}
+                    </StatusBadge>
                   </TableCell>
                 </TableRow>
               ))}

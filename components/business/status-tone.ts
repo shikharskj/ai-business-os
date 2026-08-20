@@ -1,0 +1,83 @@
+import type { BadgeTone } from "@/components/business/status-badge";
+import type {
+  QuotationStatus,
+  SalesInvoiceStatus,
+} from "@/modules/sales/domain/types";
+
+export const QUOTATION_STATUS_LABELS: Record<QuotationStatus, string> = {
+  DRAFT: "Draft",
+  SENT: "Sent",
+  ACCEPTED: "Accepted",
+  CANCELLED: "Cancelled",
+  CONVERTED: "Converted",
+};
+
+export const QUOTATION_STATUS_TONES: Record<QuotationStatus, BadgeTone> = {
+  DRAFT: "neutral",
+  SENT: "info",
+  ACCEPTED: "success",
+  CANCELLED: "danger",
+  CONVERTED: "success",
+};
+
+export const INVOICE_STATUS_LABELS: Record<SalesInvoiceStatus, string> = {
+  DRAFT: "Draft",
+  POSTED: "Posted",
+  UNPAID: "Unpaid",
+  PARTIALLY_PAID: "Partially paid",
+  PAID: "Paid",
+  CANCELLED: "Cancelled",
+};
+
+export const INVOICE_STATUS_TONES: Record<SalesInvoiceStatus, BadgeTone> = {
+  DRAFT: "neutral",
+  POSTED: "info",
+  UNPAID: "warning",
+  PARTIALLY_PAID: "warning",
+  PAID: "success",
+  CANCELLED: "danger",
+};
+
+export type PartyActivityStatus = "ACTIVE" | "INACTIVE";
+
+export const PARTY_STATUS_LABELS: Record<PartyActivityStatus, string> = {
+  ACTIVE: "Active",
+  INACTIVE: "Inactive",
+};
+
+export const PARTY_STATUS_TONES: Record<PartyActivityStatus, BadgeTone> = {
+  ACTIVE: "success",
+  INACTIVE: "neutral",
+};
+
+export function stockStatusPresentation(input: {
+  isLowStock: boolean;
+  hasMovements: boolean;
+}): { tone: BadgeTone; label: string } {
+  if (!input.hasMovements) {
+    return { tone: "neutral", label: "No movements yet" };
+  }
+  if (input.isLowStock) {
+    return { tone: "warning", label: "Low stock" };
+  }
+  return { tone: "success", label: "In stock" };
+}
+
+export function catalogKindPresentation(kind: "PRODUCT" | "SERVICE"): {
+  tone: BadgeTone;
+  label: string;
+} {
+  return {
+    tone: "info",
+    label: kind === "SERVICE" ? "Service" : "Product",
+  };
+}
+
+export function catalogTrackingPresentation(tracksInventory: boolean): {
+  tone: BadgeTone;
+  label: string;
+} {
+  return tracksInventory
+    ? { tone: "info", label: "Inventory tracked" }
+    : { tone: "neutral", label: "Inventory not tracked" };
+}

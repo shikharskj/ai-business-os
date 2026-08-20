@@ -4,7 +4,11 @@ import Link from "next/link";
 import { EmptyState } from "@/components/shell/empty-state";
 import { PageHeader } from "@/components/shell/page-header";
 import { MoneyDisplay } from "@/components/business/money-display";
-import { QuotationStatusBadge } from "@/components/business/quotation-status-badge";
+import { StatusBadge } from "@/components/business/status-badge";
+import {
+  QUOTATION_STATUS_LABELS,
+  QUOTATION_STATUS_TONES,
+} from "@/components/business/status-tone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -165,7 +169,9 @@ export default async function QuotationsPage({
                     <MoneyDisplay value={quotation.grandTotal} />
                   </TableCell>
                   <TableCell>
-                    <QuotationStatusBadge status={quotation.status} />
+                    <StatusBadge tone={QUOTATION_STATUS_TONES[quotation.status]}>
+                      {QUOTATION_STATUS_LABELS[quotation.status]}
+                    </StatusBadge>
                   </TableCell>
                 </TableRow>
               ))}

@@ -19,13 +19,11 @@ import {
   recordOpeningStock,
 } from "@/modules/inventory";
 import {
-  QuotationConversionNotReadyError,
   QuotationNotFoundError,
   QuotationStatusError,
   QuotationValidationError,
   acceptQuotation,
   cancelQuotation,
-  convertQuotation,
   createMemorySalesRepository,
   createQuotation,
   getQuotation,
@@ -334,12 +332,6 @@ describe("quotations", () => {
       outbox: repositories.outbox,
     });
     expect(cancelled.status).toBe("CANCELLED");
-  });
-
-  it("stubs conversion until sales invoices exist", async () => {
-    await expect(convertQuotation()).rejects.toBeInstanceOf(
-      QuotationConversionNotReadyError
-    );
   });
 
   it("rejects a zero quantity and an oversized discount", async () => {

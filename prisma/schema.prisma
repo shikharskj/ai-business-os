@@ -86,6 +86,9 @@ model Business {
   quotations   Quotation[]
   quotationLines QuotationLine[]
   quotationNumberSeries QuotationNumberSeries[]
+  salesInvoices SalesInvoice[]
+  salesInvoiceLines SalesInvoiceLine[]
+  invoiceNumberSeries InvoiceNumberSeries[]
 
   @@map("businesses")
 }
@@ -226,6 +229,7 @@ model Journal {
 
   business Business     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   lines    JournalLine[]
+  salesInvoices SalesInvoice[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, reversalOfJournalId])
@@ -304,6 +308,7 @@ model Party {
 
   business    Business     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   quotations  Quotation[]
+  salesInvoices SalesInvoice[]
 
   @@unique([id, tenantId])
   @@index([tenantId, kind, status])
@@ -335,6 +340,7 @@ model Product {
   business        Business             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   movements       InventoryMovement[]
   quotationLines  QuotationLine[]
+  salesInvoiceLines SalesInvoiceLine[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, sku])
@@ -415,6 +421,7 @@ model Quotation {
   business Business       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer Party          @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict)
   lines    QuotationLine[]
+  invoice  SalesInvoice?
 
   @@unique([id, tenantId])
   @@unique([tenantId, number])
@@ -468,4 +475,101 @@ model QuotationNumberSeries {
 
   @@unique([tenantId, financialYearKey])
   @@map("quotation_number_series")
+}
+
+enum SalesInvoiceStatus {
+  DRAFT
+  POSTED
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+model SalesInvoice {
+  id                       String             @id @default(uuid())
+  tenantId                 String
+  number                   String
+  customerId               String
+  customerName             String
+  status                   SalesInvoiceStatus @default(DRAFT)
+  quotationId              String?
+  journalId                String?
+  issuedOn                 String
+  dueOn                    String?
+  notes                    String?
+  placeOfSupplyStateCode   String
+  subtotal                 Decimal            @db.Decimal(18, 2)
+  discountTotal            Decimal            @db.Decimal(18, 2)
+  taxableAmount            Decimal            @db.Decimal(18, 2)
+  cgst                     Decimal            @db.Decimal(18, 2)
+  sgst                     Decimal            @db.Decimal(18, 2)
+  igst                     Decimal            @db.Decimal(18, 2)
+  totalTax                 Decimal            @db.Decimal(18, 2)
+  grandTotal               Decimal            @db.Decimal(18, 2)
+  supplyType               String
+  postedAt                 DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  business  Business          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer  Party             @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  quotation Quotation?        @relation(fields: [quotationId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  journal   Journal?          @relation(fields: [journalId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  lines     SalesInvoiceLine[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, number])
+  @@unique([quotationId, tenantId])
+  @@unique([journalId, tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, customerId])
+  @@index([tenantId, issuedOn])
+  @@map("sales_invoices")
+}
+
+model SalesInvoiceLine {
+  id                 String  @id @default(uuid())
+  tenantId           String
+  invoiceId          String
+  sortOrder          Int
+  productId          String
+  productName        String
+  sku                String
+  unitOfMeasurement  String
+  hsnSac             String?
+  taxRateBps         Int
+  quantity           Decimal @db.Decimal(18, 4)
+  unitPrice          Decimal @db.Decimal(18, 2)
+  discount           Decimal @db.Decimal(18, 2)
+  lineSubtotal       Decimal @db.Decimal(18, 2)
+  taxableAmount      Decimal @db.Decimal(18, 2)
+  cgst               Decimal @db.Decimal(18, 2)
+  sgst               Decimal @db.Decimal(18, 2)
+  igst               Decimal @db.Decimal(18, 2)
+  totalTax           Decimal @db.Decimal(18, 2)
+  lineTotal          Decimal @db.Decimal(18, 2)
+  supplyType         String
+  treatment          String
+
+  invoice  SalesInvoice @relation(fields: [invoiceId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  product  Product      @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  business Business     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, invoiceId])
+  @@index([invoiceId, sortOrder])
+  @@map("sales_invoice_lines")
+}
+
+model InvoiceNumberSeries {
+  id               String @id @default(uuid())
+  tenantId         String
+  financialYearKey String
+  lastNumber       Int
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, financialYearKey])
+  @@map("invoice_number_series")
 }

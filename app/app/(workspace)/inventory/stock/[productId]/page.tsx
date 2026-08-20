@@ -8,7 +8,8 @@ import {
 } from "@/components/business/inventory-labels";
 import { LowStockAlert } from "@/components/business/low-stock-alert";
 import { OpeningStockForm } from "@/components/business/opening-stock-form";
-import { StockStatusBadge } from "@/components/business/stock-status-badge";
+import { StatusBadge } from "@/components/business/status-badge";
+import { stockStatusPresentation } from "@/components/business/status-tone";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,6 +81,10 @@ export default async function StockDetailPage({
     catalog: prismaCatalogRepository,
     inventory: prismaInventoryRepository,
   });
+  const stockBadge = stockStatusPresentation({
+    isLowStock: position.isLowStock,
+    hasMovements: position.hasMovements,
+  });
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6">
@@ -120,10 +125,7 @@ export default async function StockDetailPage({
           <p className="text-2xl font-semibold tabular-nums tracking-tight">
             {formatQuantity(position.quantity)} {position.unitOfMeasurement}
           </p>
-          <StockStatusBadge
-            isLowStock={position.isLowStock}
-            hasMovements={position.hasMovements}
-          />
+          <StatusBadge tone={stockBadge.tone}>{stockBadge.label}</StatusBadge>
           {!position.hasMovements ? (
             <p className="text-base text-muted-foreground">
               No stock movements yet

@@ -18,3 +18,19 @@ export function formatQuotationNumber(
 ): string {
   return `${QUOTATION_SERIES_PREFIX}/${financialYearKey}/${String(sequence).padStart(4, "0")}`;
 }
+
+export const INVOICE_SERIES_PREFIX = "INV";
+
+export function invoiceFinancialYearKey(
+  date: BusinessDate,
+  financialYearStartMonth: number
+): string {
+  return quotationFinancialYearKey(date, financialYearStartMonth);
+}
+
+export function formatInvoiceNumber(
+  financialYearKey: string,
+  sequence: number
+): string {
+  return `${INVOICE_SERIES_PREFIX}/${financialYearKey}/${String(sequence).padStart(4, "0")}`;
+}

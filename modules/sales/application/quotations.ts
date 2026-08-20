@@ -14,7 +14,6 @@ import {
 } from "@/modules/tax/domain/gstin";
 import type { HsnSacRepository, TaxRateRepository } from "@/modules/tax/infrastructure/repositories";
 import {
-  QuotationConversionNotReadyError,
   QuotationNotFoundError,
   QuotationValidationError,
 } from "@/modules/sales/domain/errors";
@@ -405,6 +404,3 @@ export async function cancelQuotation(
   });
 }
 
-export async function convertQuotation(): Promise<never> {
-  throw new QuotationConversionNotReadyError();
-}
