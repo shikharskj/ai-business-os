@@ -37,6 +37,7 @@ import {
   purchasePaymentStatusLabel,
 } from "@/modules/purchases";
 import { prismaPurchasesRepository } from "@/modules/purchases/infrastructure/prisma-purchases-repository";
+import { money } from "@/modules/shared-kernel/money";
 
 export default async function BillDetailPage({
   params,
@@ -270,9 +271,12 @@ export default async function BillDetailPage({
                   </TableHeader>
                   <TableBody>
                     {payments.map((payment) => {
-                      const allocated =
-                        payment.allocations.find((row) => row.purchaseId === purchase.id)
-                          ?.amount ?? payment.amount;
+                      const matchingAllocation = payment.allocations.find(
+                        (row) => row.purchaseId === purchase.id
+                      );
+                      const allocated = matchingAllocation
+                        ? matchingAllocation.amount
+                        : money(0n, purchase.grandTotal.currency);
                       return (
                         <TableRow key={payment.id}>
                           <TableCell>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
+import { format } from "date-fns";
 
 import { MoneyDisplay } from "@/components/business/money-display";
 import { useListTableHref } from "@/components/business/list-table-client";
@@ -33,7 +34,16 @@ const columns: ColumnDef<DataTableFeatures, SupplierPayment>[] = [
     ),
   },
   { accessorKey: "supplierName", header: "Supplier" },
-  { accessorKey: "paidOn", header: "Date" },
+  {
+    accessorKey: "paidOn",
+    header: "Date",
+    cell: ({ row }) => {
+      const dateStr = row.original.paidOn;
+      const [year, month, day] = dateStr.split("-").map(Number);
+      const date = new Date(year!, month! - 1, day!);
+      return format(date, "dd MMM yyyy");
+    },
+  },
   {
     accessorKey: "method",
     header: "Method",

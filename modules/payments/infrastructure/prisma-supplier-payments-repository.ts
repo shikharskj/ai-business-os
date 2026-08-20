@@ -143,14 +143,7 @@ export function createPrismaSupplierPaymentRepository(
         return series.lastNumber;
       } catch (error: unknown) {
         if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
-          const series = await client.supplierPaymentNumberSeries.upsert({
-            where: {
-              tenantId_financialYearKey: { tenantId, financialYearKey },
-            },
-            create: { tenantId, financialYearKey, lastNumber: 1 },
-            update: { lastNumber: { increment: 1 } },
-          });
-          return series.lastNumber;
+          throw error;
         }
         throw error;
       }
@@ -196,6 +189,15 @@ export function createPrismaSupplierPaymentRepository(
       const where: Prisma.SupplierPaymentWhereInput = {
         tenantId: filter.tenantId,
         supplierId: filter.supplierId,
+        ...(filter.method ? { method: filter.method } : {}),
+        ...(filter.fromDate ? { paidOn: { gte: filter.fromDate } } : {}),
+        ...(filter.toDate
+          ? {
+              paidOn: filter.fromDate
+                ? { gte: filter.fromDate, lte: filter.toDate }
+                : { lte: filter.toDate },
+            }
+          : {}),
         ...(query
           ? {
               OR: [

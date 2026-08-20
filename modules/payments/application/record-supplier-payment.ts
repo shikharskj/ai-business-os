@@ -156,13 +156,19 @@ export async function recordSupplierPayment(input: {
     reference,
     notes,
     journalId: journal.id,
-    allocations: input.fields.allocations.map((allocation) => ({
-      purchaseId: allocation.purchaseId,
-      purchaseNumber:
-        allocatable.find((row) => row.purchase.id === allocation.purchaseId)?.purchase
-          .number ?? "",
-      amount: allocation.amount,
-    })),
+    allocations: input.fields.allocations.map((allocation) => {
+      const purchase = allocatable.find((row) => row.purchase.id === allocation.purchaseId);
+      if (!purchase) {
+        throw new PaymentValidationError(
+          `Purchase ${allocation.purchaseId} was not found in allocatable purchases.`
+        );
+      }
+      return {
+        purchaseId: allocation.purchaseId,
+        purchaseNumber: purchase.purchase.number,
+        amount: allocation.amount,
+      };
+    }),
   });
 
   for (const row of allocatable) {

@@ -267,20 +267,26 @@ function RecordSupplierPaymentFormFields({
                 <div className="text-right">
                   <MoneyDisplay value={purchase.outstanding} />
                 </div>
-                <Input
-                  name={`allocation-${index}-amount`}
-                  inputMode="decimal"
-                  className="text-right"
-                  placeholder="0.00"
-                  value={allocations[purchase.purchaseId] ?? ""}
-                  onChange={(event) =>
-                    setAllocations((current) => ({
-                      ...current,
-                      [purchase.purchaseId]: event.target.value,
-                    }))
-                  }
-                  aria-label={`Allocate to ${purchase.purchaseNumber}`}
-                />
+                <div className="flex flex-col gap-1">
+                  <Input
+                    name={`allocation-${index}-amount`}
+                    inputMode="decimal"
+                    className="text-right"
+                    placeholder="0.00"
+                    value={allocations[purchase.purchaseId] ?? ""}
+                    onChange={(event) =>
+                      setAllocations((current) => ({
+                        ...current,
+                        [purchase.purchaseId]: event.target.value,
+                      }))
+                    }
+                    aria-label={`Allocate to ${purchase.purchaseNumber}`}
+                  />
+                  <FieldError
+                    name={`allocations.${index}.amount`}
+                    fieldErrors={state.fieldErrors}
+                  />
+                </div>
               </div>
             ))}
           </div>

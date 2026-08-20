@@ -146,6 +146,7 @@ export async function listOpenPayablePurchases(input: {
 export async function getSupplierOutstanding(input: {
   tenantId: string;
   supplierId: string;
+  currency?: string;
   purchases: PurchasesRepository;
   supplierPayments: SupplierPaymentRepository;
 }): Promise<SupplierOutstanding> {
@@ -159,9 +160,10 @@ export async function getSupplierOutstanding(input: {
     purchases: posted,
     supplierPayments: input.supplierPayments,
   });
+  const seedCurrency = rows.length > 0 ? rows[0]!.outstanding.currency : (input.currency ?? "INR");
   const outstanding = rows.reduce(
     (sum, row) => addMoney(sum, row.outstanding),
-    money(0n)
+    money(0n, seedCurrency)
   );
   return {
     supplierId: input.supplierId,
