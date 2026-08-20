@@ -85,6 +85,7 @@ const envSchema = z.object({
     emptyToUndefined,
     z.string().url().optional()
   ),
+  CRON_SECRET: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
 });
 
 export const env = envSchema.parse({
@@ -102,6 +103,7 @@ export const env = envSchema.parse({
   CLOUDFLARE_R2_SECRET_ACCESS_KEY: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
   CLOUDFLARE_R2_BUCKET: process.env.CLOUDFLARE_R2_BUCKET,
   CLOUDFLARE_R2_ENDPOINT: process.env.CLOUDFLARE_R2_ENDPOINT,
+  CRON_SECRET: process.env.CRON_SECRET,
 });
 
 if (

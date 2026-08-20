@@ -105,7 +105,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Reports               | Complete    |
 | Search                | Complete    |
 | AI Assistant          | Not Started |
-| Notifications         | Not Started |
+| Notifications         | Complete    |
 | Testing               | Not Started |
 | Security hardening    | Not Started |
 | Production deployment | Not Started |
@@ -113,6 +113,12 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Notifications (`26-notifications.md`):
+  * `modules/notifications/` — in-app channel abstraction (email/SMS/WhatsApp later), idempotent outbox consumer, overdue scheduled check, mark read/unread. Tenant-scoped `Notification` table with unique `(tenantId, idempotencyKey)`.
+  * Top-bar inbox (`NotificationInbox`) wired to `/api/notifications` + mark-read. Post-commit kick via Next.js `after()`; cron entry at `/api/internal/outbox/process`.
+  * Events: invoice created/posted, payment received, low stock after inventory movements, invoice overdue (scheduled).
+  * Tests: `tests/notifications/notifications.test.ts` (idempotency, tenant isolation, overdue, low stock).
 
 * Search (`25-search.md`):
   * `modules/search/` — tenant-scoped PostgreSQL FTS (`to_tsvector` / `to_tsquery`) over customers, suppliers, products, invoices, purchases, payments, supplier payments, expenses. Permission-gated by existing `*:read` permissions. Derived GIN indexes via migration (no Elasticsearch).
@@ -342,7 +348,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Current implementable spec:** `context/feature-specs/24-reports.md`
+**Current implementable spec:** `context/feature-specs/27-ai-gateway-tools.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -1431,6 +1437,33 @@ Verification:
 
 Notes:
 - Next implementation unit is `21-accounting-workspace.md`.
+
+---
+
+## 2026-08-20 — Notifications
+
+Status: Complete
+
+Implemented:
+- Added `modules/notifications/` with IN_APP channel abstraction, Prisma + memory repositories, outbox consumer (`processOutboxNotifications`), and overdue invoice scan. Notifications are created after commit (never inside the business transaction).
+- Domain events → notifications: `SalesInvoiceCreated`, `SalesInvoicePosted`, `PaymentReceived`, inventory movement events (low stock when at/below threshold), overdue invoices (`invoice-overdue:{id}` idempotency).
+- Top-bar inbox with unread badge, mark one/all read. APIs: `GET /api/notifications`, `POST /api/notifications/mark-read`, `POST /api/internal/outbox/process` (optional `CRON_SECRET`).
+- Post-mutation `scheduleNotificationOutboxProcessing` on invoice create/post, payment, stock adjust/opening, purchase post.
+
+Files / Areas:
+- `modules/notifications/`
+- `prisma/schema.prisma`, `prisma/migrations/20260821020000_add_notifications/`
+- `components/shell/notification-inbox.tsx`, `app-top-bar.tsx`
+- `app/api/notifications/**`, `app/api/internal/outbox/process/route.ts`
+- `tests/notifications/notifications.test.ts`
+
+Tests:
+- `npx vitest run tests/notifications/`
+- `npm run typecheck`
+- `npm run lint`
+
+Notes:
+- Next implementation unit is `27-ai-gateway-tools.md`. Apply the notifications migration before relying on the table in production. Optional `CRON_SECRET` protects the outbox process route in production.
 
 ---
 

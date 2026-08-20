@@ -21,7 +21,7 @@ Next numbered spec
 * Implement **one spec at a time**.
 * Do **not** skip a numbered dependency.
 * Do **not** implement later specs “while you are here.”
-* Specs `01`–`25` are complete through search. Next implementable spec is `26-notifications.md`.
+* Specs `01`–`26` are complete through notifications. Next implementable spec is `27-ai-gateway-tools.md`.
 * Specs are implementation briefs. Architecture, UI, and coding rules live in the context files — follow those pointers instead of inventing behavior.
 * Do **not** silently reverse Accepted decisions in `context/progress-tracker.md`. Confirm any *new* open question with the project owner before choosing a vendor or expanding scope.
 

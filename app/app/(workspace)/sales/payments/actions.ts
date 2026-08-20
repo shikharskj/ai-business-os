@@ -22,6 +22,7 @@ import {
 import { createPrismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
 import { SalesError } from "@/modules/sales";
 import { createPrismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
+import { scheduleNotificationOutboxProcessing } from "@/modules/notifications";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 
@@ -103,9 +104,11 @@ export async function recordCustomerPaymentAction(
   formData: FormData
 ): Promise<PaymentActionState> {
   let paymentId: string;
+  let tenantId: string;
 
   try {
     const tenant = await authorize("payment:create");
+    tenantId = tenant.tenantId;
     const fields = readPaymentFields(formData);
     const payment = await prisma.$transaction(async (tx) => {
       const business = await tx.business.findUnique({
@@ -135,6 +138,7 @@ export async function recordCustomerPaymentAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/payments");
   revalidatePath("/app/sales/invoices");
   revalidatePath("/app/sales/customers");

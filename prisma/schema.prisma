@@ -101,6 +101,7 @@ model Business {
   purchaseLines PurchaseLine[]
   purchaseNumberSeries PurchaseNumberSeries[]
   listRowOrders ListRowOrder[]
+  notifications Notification[]
 
   @@map("businesses")
 }
@@ -173,6 +174,28 @@ model OutboxEvent {
   @@index([processedAt, createdAt])
   @@index([tenantId, eventType])
   @@map("outbox_events")
+}
+
+model Notification {
+  id             String    @id @default(uuid())
+  tenantId       String
+  channel        String    @default("IN_APP")
+  type           String
+  title          String
+  body           String
+  href           String?
+  resourceType   String?
+  resourceId     String?
+  idempotencyKey String
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, readAt])
+  @@map("notifications")
 }
 
 model TaxRate {

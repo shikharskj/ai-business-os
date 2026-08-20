@@ -17,6 +17,7 @@ import { InventoryError } from "@/modules/inventory/domain/errors";
 import { createPrismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";
 import { PartyError } from "@/modules/party";
 import { createPrismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
+import { scheduleNotificationOutboxProcessing } from "@/modules/notifications";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 import {
@@ -213,9 +214,11 @@ async function statusAction(
 
 export async function postPurchaseAction(purchaseId: string): Promise<PurchaseActionState> {
   let supplierId: string | undefined;
+  let tenantId: string;
 
   try {
     const tenant = await authorize("purchase:update");
+    tenantId = tenant.tenantId;
     const purchase = await prisma.$transaction(async (tx) => {
       const business = await tx.business.findUnique({
         where: { id: tenant.tenantId },
@@ -247,6 +250,7 @@ export async function postPurchaseAction(purchaseId: string): Promise<PurchaseAc
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/purchases/bills");
   revalidatePath(`/app/purchases/bills/${purchaseId}`);
   revalidatePath("/app/purchases/suppliers");
