@@ -1,5 +1,12 @@
-import type { Quotation, QuotationListFilter } from "@/modules/sales/domain/types";
-import type { PreparedQuotation } from "@/modules/sales/domain/types";
+import type {
+  InvoiceListFilter,
+  PreparedInvoice,
+  PreparedQuotation,
+  Quotation,
+  QuotationListFilter,
+  SalesInvoice,
+  SalesInvoiceStatus,
+} from "@/modules/sales/domain/types";
 import type { QuotationStatus } from "@/modules/sales/domain/types";
 
 export type CreateQuotationRecordInput = {
@@ -12,6 +19,19 @@ export type UpdateQuotationRecordInput = {
   tenantId: string;
   quotationId: string;
   prepared: PreparedQuotation;
+};
+
+export type CreateInvoiceRecordInput = {
+  tenantId: string;
+  number: string;
+  prepared: PreparedInvoice;
+  quotationId?: string | null;
+};
+
+export type UpdateInvoiceRecordInput = {
+  tenantId: string;
+  invoiceId: string;
+  prepared: PreparedInvoice;
 };
 
 export type SalesRepository = {
@@ -28,6 +48,30 @@ export type SalesRepository = {
   }): Promise<Quotation | null>;
   findQuotationById(tenantId: string, quotationId: string): Promise<Quotation | null>;
   listQuotations(filter: QuotationListFilter): Promise<Quotation[]>;
+  allocateNextInvoiceNumber(
+    tenantId: string,
+    financialYearKey: string
+  ): Promise<number>;
+  createInvoice(input: CreateInvoiceRecordInput): Promise<SalesInvoice>;
+  updateInvoice(input: UpdateInvoiceRecordInput): Promise<SalesInvoice | null>;
+  markInvoicePosted(input: {
+    tenantId: string;
+    invoiceId: string;
+    journalId: string;
+    postedAt: Date;
+    status: SalesInvoiceStatus;
+  }): Promise<SalesInvoice | null>;
+  updateInvoiceStatus(input: {
+    tenantId: string;
+    invoiceId: string;
+    status: SalesInvoiceStatus;
+  }): Promise<SalesInvoice | null>;
+  findInvoiceById(tenantId: string, invoiceId: string): Promise<SalesInvoice | null>;
+  findInvoiceByQuotationId(
+    tenantId: string,
+    quotationId: string
+  ): Promise<SalesInvoice | null>;
+  listInvoices(filter: InvoiceListFilter): Promise<SalesInvoice[]>;
 };
 
 function cloneQuotation(quotation: Quotation): Quotation {
@@ -37,7 +81,15 @@ function cloneQuotation(quotation: Quotation): Quotation {
   };
 }
 
-function withIds(
+function cloneInvoice(invoice: SalesInvoice): SalesInvoice {
+  return {
+    ...invoice,
+    postedAt: invoice.postedAt ? new Date(invoice.postedAt.getTime()) : null,
+    lines: invoice.lines.map((line) => ({ ...line })),
+  };
+}
+
+function withQuotationLineIds(
   tenantId: string,
   quotationId: string,
   prepared: PreparedQuotation
@@ -50,14 +102,32 @@ function withIds(
   }));
 }
 
+function withInvoiceLineIds(
+  tenantId: string,
+  invoiceId: string,
+  prepared: PreparedInvoice
+): SalesInvoice["lines"] {
+  return prepared.lines.map((line) => ({
+    ...line,
+    id: crypto.randomUUID(),
+    tenantId,
+    invoiceId,
+  }));
+}
+
 export function createMemorySalesRepository(
-  initial: Quotation[] = []
+  initial: Quotation[] = [],
+  initialInvoices: SalesInvoice[] = []
 ): SalesRepository & {
   records: Quotation[];
+  invoices: SalesInvoice[];
   series: Map<string, number>;
+  invoiceSeries: Map<string, number>;
 } {
   const records = initial.map(cloneQuotation);
+  const invoices = initialInvoices.map(cloneInvoice);
   const series = new Map<string, number>();
+  const invoiceSeries = new Map<string, number>();
 
   function findIndex(tenantId: string, quotationId: string) {
     return records.findIndex(
@@ -67,7 +137,9 @@ export function createMemorySalesRepository(
 
   return {
     records,
+    invoices,
     series,
+    invoiceSeries,
     async allocateNextQuotationNumber(tenantId, financialYearKey) {
       const key = `${tenantId}:${financialYearKey}`;
       const next = (series.get(key) ?? 0) + 1;
@@ -97,7 +169,7 @@ export function createMemorySalesRepository(
         totalTax: input.prepared.totalTax,
         grandTotal: input.prepared.grandTotal,
         supplyType: input.prepared.supplyType,
-        lines: withIds(input.tenantId, id, input.prepared),
+        lines: withQuotationLineIds(input.tenantId, id, input.prepared),
         createdAt: now,
         updatedAt: now,
       };
@@ -127,7 +199,7 @@ export function createMemorySalesRepository(
         totalTax: input.prepared.totalTax,
         grandTotal: input.prepared.grandTotal,
         supplyType: input.prepared.supplyType,
-        lines: withIds(input.tenantId, current.id, input.prepared),
+        lines: withQuotationLineIds(input.tenantId, current.id, input.prepared),
         updatedAt: new Date(),
       };
       records[index] = updated;
@@ -171,6 +243,140 @@ export function createMemorySalesRepository(
         })
         .sort((a, b) => b.issuedOn.localeCompare(a.issuedOn) || b.number.localeCompare(a.number))
         .map(cloneQuotation);
+    },
+    async allocateNextInvoiceNumber(tenantId, financialYearKey) {
+      const key = `${tenantId}:${financialYearKey}`;
+      const next = (invoiceSeries.get(key) ?? 0) + 1;
+      invoiceSeries.set(key, next);
+      return next;
+    },
+    async createInvoice(input) {
+      const now = new Date();
+      const id = crypto.randomUUID();
+      const invoice: SalesInvoice = {
+        id,
+        tenantId: input.tenantId,
+        number: input.number,
+        customerId: input.prepared.customerId,
+        customerName: input.prepared.customerName,
+        status: "DRAFT",
+        quotationId: input.quotationId ?? null,
+        journalId: null,
+        issuedOn: input.prepared.issuedOn,
+        dueOn: input.prepared.dueOn,
+        notes: input.prepared.notes,
+        placeOfSupplyStateCode: input.prepared.placeOfSupplyStateCode,
+        subtotal: input.prepared.subtotal,
+        discountTotal: input.prepared.discountTotal,
+        taxableAmount: input.prepared.taxableAmount,
+        cgst: input.prepared.cgst,
+        sgst: input.prepared.sgst,
+        igst: input.prepared.igst,
+        totalTax: input.prepared.totalTax,
+        grandTotal: input.prepared.grandTotal,
+        supplyType: input.prepared.supplyType,
+        postedAt: null,
+        lines: withInvoiceLineIds(input.tenantId, id, input.prepared),
+        createdAt: now,
+        updatedAt: now,
+      };
+      invoices.push(invoice);
+      return cloneInvoice(invoice);
+    },
+    async updateInvoice(input) {
+      const index = invoices.findIndex(
+        (record) => record.tenantId === input.tenantId && record.id === input.invoiceId
+      );
+      if (index === -1) {
+        return null;
+      }
+      const current = invoices[index]!;
+      const updated: SalesInvoice = {
+        ...current,
+        customerId: input.prepared.customerId,
+        customerName: input.prepared.customerName,
+        issuedOn: input.prepared.issuedOn,
+        dueOn: input.prepared.dueOn,
+        notes: input.prepared.notes,
+        placeOfSupplyStateCode: input.prepared.placeOfSupplyStateCode,
+        subtotal: input.prepared.subtotal,
+        discountTotal: input.prepared.discountTotal,
+        taxableAmount: input.prepared.taxableAmount,
+        cgst: input.prepared.cgst,
+        sgst: input.prepared.sgst,
+        igst: input.prepared.igst,
+        totalTax: input.prepared.totalTax,
+        grandTotal: input.prepared.grandTotal,
+        supplyType: input.prepared.supplyType,
+        lines: withInvoiceLineIds(input.tenantId, current.id, input.prepared),
+        updatedAt: new Date(),
+      };
+      invoices[index] = updated;
+      return cloneInvoice(updated);
+    },
+    async markInvoicePosted(input) {
+      const index = invoices.findIndex(
+        (record) => record.tenantId === input.tenantId && record.id === input.invoiceId
+      );
+      if (index === -1) {
+        return null;
+      }
+      const updated: SalesInvoice = {
+        ...invoices[index]!,
+        status: input.status,
+        journalId: input.journalId,
+        postedAt: input.postedAt,
+        updatedAt: new Date(),
+      };
+      invoices[index] = updated;
+      return cloneInvoice(updated);
+    },
+    async updateInvoiceStatus(input) {
+      const index = invoices.findIndex(
+        (record) => record.tenantId === input.tenantId && record.id === input.invoiceId
+      );
+      if (index === -1) {
+        return null;
+      }
+      const updated: SalesInvoice = {
+        ...invoices[index]!,
+        status: input.status,
+        updatedAt: new Date(),
+      };
+      invoices[index] = updated;
+      return cloneInvoice(updated);
+    },
+    async findInvoiceById(tenantId, invoiceId) {
+      const record = invoices.find(
+        (item) => item.tenantId === tenantId && item.id === invoiceId
+      );
+      return record ? cloneInvoice(record) : null;
+    },
+    async findInvoiceByQuotationId(tenantId, quotationId) {
+      const record = invoices.find(
+        (item) => item.tenantId === tenantId && item.quotationId === quotationId
+      );
+      return record ? cloneInvoice(record) : null;
+    },
+    async listInvoices(filter) {
+      const query = filter.query?.trim().toLowerCase() ?? "";
+      return invoices
+        .filter((record) => record.tenantId === filter.tenantId)
+        .filter((record) => {
+          if (!filter.status || filter.status === "ALL") {
+            return true;
+          }
+          return record.status === filter.status;
+        })
+        .filter((record) => {
+          if (!query) {
+            return true;
+          }
+          return [record.number, record.customerName]
+            .some((value) => value.toLowerCase().includes(query));
+        })
+        .sort((a, b) => b.issuedOn.localeCompare(a.issuedOn) || b.number.localeCompare(a.number))
+        .map(cloneInvoice);
     },
   };
 }

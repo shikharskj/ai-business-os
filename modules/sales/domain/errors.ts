@@ -34,3 +34,38 @@ export class QuotationConversionNotReadyError extends SalesError {
     this.name = "QuotationConversionNotReadyError";
   }
 }
+
+export class InvoiceNotFoundError extends SalesError {
+  constructor() {
+    super("Invoice was not found.");
+    this.name = "InvoiceNotFoundError";
+  }
+}
+
+export class InvoiceValidationError extends SalesError {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvoiceValidationError";
+  }
+}
+
+export class InvoiceStatusError extends SalesError {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvoiceStatusError";
+  }
+}
+
+export class InvoiceAlreadyPostedError extends SalesError {
+  constructor() {
+    super("This invoice has already been posted.");
+    this.name = "InvoiceAlreadyPostedError";
+  }
+}
+
+export class QuotationAlreadyConvertedError extends SalesError {
+  constructor() {
+    super("This quotation has already been converted to an invoice.");
+    this.name = "QuotationAlreadyConvertedError";
+  }
+}

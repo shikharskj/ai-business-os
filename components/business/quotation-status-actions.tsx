@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import {
@@ -22,12 +23,13 @@ export function QuotationStatusActions({
   canUpdate: boolean;
   canCancel: boolean;
 }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function run(
     message: string | null,
-    action: (id: string) => Promise<{ error?: string }>
+    action: (id: string) => Promise<{ error?: string; invoiceId?: string }>
   ) {
     if (message && !window.confirm(message)) {
       return;
@@ -37,7 +39,13 @@ export function QuotationStatusActions({
       const result = await action(quotationId);
       if (result.error) {
         setError(result.error);
+        return;
       }
+      if (result.invoiceId) {
+        router.push(`/app/sales/invoices/${result.invoiceId}`);
+        return;
+      }
+      router.refresh();
     });
   }
 
@@ -62,13 +70,17 @@ export function QuotationStatusActions({
             Mark accepted
           </Button>
         ) : null}
-        {canUpdate && (status === "ACCEPTED" || status === "SENT") ? (
+        {canUpdate && status === "ACCEPTED" ? (
           <Button
             type="button"
             variant="outline"
-            disabled={true}
-            onClick={() => run(null, convertQuotationAction)}
-            title="Invoice conversion is not yet implemented"
+            disabled={isPending}
+            onClick={() =>
+              run(
+                "Convert this quotation to a draft invoice? Line items and GST totals will be copied.",
+                convertQuotationAction
+              )
+            }
           >
             Convert to invoice
           </Button>

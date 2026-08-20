@@ -93,8 +93,8 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Customers             | Complete    |
 | Products              | Complete    |
 | Inventory             | Complete    |
-| Sales                 | In Progress |
-| Invoices              | Not Started |
+| Sales                 | Complete    |
+| Invoices              | Complete    |
 | Payments              | Not Started |
 | Expenses              | Not Started |
 | Suppliers             | Complete    |
@@ -113,10 +113,19 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 # Completed
 
+* Sales invoices (`16-sales-invoices.md`):
+  * `modules/sales/` sales invoices + lines. Create/edit (draft only)/view/list/search. Customer + catalog lines, quantity, line discount, GST via `modules/tax` only.
+  * Per-tenant number series `INV/{FY}/{seq}`. Status: draft / posted / unpaid / partially paid / paid / cancelled. Draft-only edits; posted amounts are immutable (cancel draft only).
+  * `postInvoice` in one transaction: validate lines, persist posted status + journal link, inventory stock-out (`SALE`/`OUT` via `recordInventoryMovement`), balanced journal (Dr Receivable, Cr Sales, Cr Output GST; Dr COGS / Cr Inventory for tracked goods), audit + outbox (`SalesInvoicePosted`).
+  * Quotation conversion: accepted quotation → draft invoice (copy lines), quotation marked `CONVERTED`; cannot convert twice.
+  * Server-side PDF export stored via documents adapter (`ownerRecordType: INVOICE`).
+  * Permissions `invoice:*`. Sales → Invoices UI with GST breakdown and payment status display (allocations in spec `17`).
+  * Tests: `tests/sales/invoices.test.ts` (posting, journal balance, inventory movement, conversion, cross-tenant rejection).
+
 * Quotations (`15-quotations.md`):
   * `modules/sales/` quotations and lines. Create/edit (draft only)/view/list/search. Customer + catalog product/service lines, quantity, line discount, GST via `modules/tax` only (stored per line and header).
   * Money primitives for amounts; quantity primitives for line qty. Per-tenant number series `QT/{FY}/{seq}`.
-  * Status: draft / sent / accepted / cancelled / converted. Convert is stubbed until spec `16` (`QuotationConversionNotReadyError`). No inventory movements or accounting journals.
+  * Status: draft / sent / accepted / cancelled / converted. Accepted quotations convert to draft invoices (spec `16`). No inventory or accounting on quotation alone.
   * Permissions `quotation:*` (staff can create/read/update; cancel is owner/admin; accountant read-only). Audit + outbox on create/update/status changes.
   * Sales → Quotations UI with GST preview on the detail page. Cross-tenant get-by-id rejected.
 
@@ -265,7 +274,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Current implementable spec:** `context/feature-specs/16-sales-invoices.md`
+**Current implementable spec:** `context/feature-specs/17-customer-payments.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -505,7 +514,7 @@ Tenant resolution must happen from trusted authenticated context and application
 * Quantity — Complete
 * Discount — Complete (line discount)
 * Tax calculation — Complete (tax engine preview/stored breakdown)
-* Invoice creation — Not started (`16-sales-invoices.md`)
+* Invoice creation — Complete (`16-sales-invoices.md`)
 * Invoice numbering — Not started
 * Invoice total — Not started
 * Invoice status — Not started
@@ -1110,6 +1119,26 @@ The first objective is to deliver a complete, reliable business workflow for sma
 
 # Implementation Unit Log
 
+## 2026-08-20 — Sales invoices UI
+
+Status: Complete (UI layer; spec `16` domain/posting may still need Prisma generate)
+
+Implemented:
+- Sales → Invoices UI mirroring quotations: list with search/status filter, create/edit forms (`dueOn`), detail with GST breakdown and payment status label.
+- Server actions: create, update, post (inventory + accounting in transaction), cancel draft, export PDF (documents storage).
+- Components: `invoice-form`, `invoice-status-badge`, `invoice-status-actions`.
+- Quotation conversion wired: `convertQuotationAction` calls `convertQuotationToInvoice`; Convert button enabled for `ACCEPTED` only and redirects to the new invoice.
+
+Files / Areas:
+- `app/app/(workspace)/sales/invoices/`
+- `components/business/invoice-form.tsx`
+- `components/business/invoice-status-badge.tsx`
+- `components/business/invoice-status-actions.tsx`
+- `app/app/(workspace)/sales/quotations/actions.ts` (convert)
+- `components/business/quotation-status-actions.tsx`
+
+---
+
 ## 2026-08-20 — Sales quotations
 
 Status: Complete
@@ -1146,7 +1175,7 @@ Verification:
 
 Notes:
 - Conversion to invoice is spec `16` only.
-- Next implementation unit is `16-sales-invoices.md`.
+- Next implementation unit is `17-customer-payments.md`.
 
 ---
 

@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { businessDate } from "@/modules/shared-kernel/dates";
 import {
@@ -73,44 +74,52 @@ function mapJournal(row: {
   };
 }
 
-export const prismaAccountRepository: AccountRepository = {
-  async listForTenant(tenantId) {
-    const rows = await prisma.account.findMany({ where: { tenantId } });
-    return rows.map(mapAccount);
-  },
-  async findByCode(tenantId, code) {
-    const row = await prisma.account.findUnique({
-      where: { tenantId_code: { tenantId, code } },
-    });
-    return row ? mapAccount(row) : null;
-  },
-  async ensureChartAccounts(accounts) {
-    if (accounts.length === 0) {
-      return [];
-    }
-    await prisma.account.createMany({
-      data: accounts.map((account) => ({
-        tenantId: account.tenantId,
-        code: account.code,
-        name: account.name,
-        type: account.type,
-        normalBalance: account.normalBalance,
-      })),
-      skipDuplicates: true,
-    });
-    const tenantId = accounts[0]!.tenantId;
-    const codes = accounts.map((account) => account.code);
-    const rows = await prisma.account.findMany({
-      where: { tenantId, code: { in: codes } },
-    });
-    return rows.map(mapAccount);
-  },
-};
+export function createPrismaAccountRepository(
+  client: Pick<PrismaClient, "account">
+): AccountRepository {
+  return {
+    async listForTenant(tenantId) {
+      const rows = await client.account.findMany({ where: { tenantId } });
+      return rows.map(mapAccount);
+    },
+    async findByCode(tenantId, code) {
+      const row = await client.account.findUnique({
+        where: { tenantId_code: { tenantId, code } },
+      });
+      return row ? mapAccount(row) : null;
+    },
+    async ensureChartAccounts(accounts) {
+      if (accounts.length === 0) {
+        return [];
+      }
+      await client.account.createMany({
+        data: accounts.map((account) => ({
+          tenantId: account.tenantId,
+          code: account.code,
+          name: account.name,
+          type: account.type,
+          normalBalance: account.normalBalance,
+        })),
+        skipDuplicates: true,
+      });
+      const tenantId = accounts[0]!.tenantId;
+      const codes = accounts.map((account) => account.code);
+      const rows = await client.account.findMany({
+        where: { tenantId, code: { in: codes } },
+      });
+      return rows.map(mapAccount);
+    },
+  };
+}
 
-export const prismaJournalRepository: JournalRepository = {
-  async insertPosted(input: JournalInsert) {
-    const row = await prisma.$transaction(async (tx) => {
-      const journal = await tx.journal.create({
+export const prismaAccountRepository = createPrismaAccountRepository(prisma);
+
+export function createPrismaJournalRepository(
+  client: Pick<PrismaClient, "journal">
+): JournalRepository {
+  return {
+    async insertPosted(input: JournalInsert) {
+      const journal = await client.journal.create({
         data: {
           tenantId: input.tenantId,
           accountingDate: input.accountingDate,
@@ -132,15 +141,16 @@ export const prismaJournalRepository: JournalRepository = {
         },
         include: { lines: { include: { account: true } } },
       });
-      return journal;
-    });
-    return mapJournal(row);
-  },
-  async findById(tenantId, journalId) {
-    const row = await prisma.journal.findFirst({
-      where: { id: journalId, tenantId },
-      include: { lines: { include: { account: true } } },
-    });
-    return row ? mapJournal(row) : null;
-  },
-};
+      return mapJournal(journal);
+    },
+    async findById(tenantId, journalId) {
+      const row = await client.journal.findFirst({
+        where: { id: journalId, tenantId },
+        include: { lines: { include: { account: true } } },
+      });
+      return row ? mapJournal(row) : null;
+    },
+  };
+}
+
+export const prismaJournalRepository = createPrismaJournalRepository(prisma);
