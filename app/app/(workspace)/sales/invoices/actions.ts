@@ -20,6 +20,7 @@ import { createPrismaInventoryRepository } from "@/modules/inventory/infrastruct
 import { PartyError } from "@/modules/party";
 import { createPrismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
+import { scheduleNotificationOutboxProcessing } from "@/modules/notifications";
 import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 import {
   prismaHsnSacRepository,
@@ -107,9 +108,11 @@ export async function createInvoiceAction(
   formData: FormData
 ): Promise<InvoiceActionState> {
   let invoiceId: string;
+  let tenantId: string;
 
   try {
     const tenant = await authorize("invoice:create");
+    tenantId = tenant.tenantId;
     const fields = readInvoiceFields(formData);
     const invoice = await prisma.$transaction(async (tx) =>
       createInvoice({
@@ -135,6 +138,7 @@ export async function createInvoiceAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/invoices");
   redirect(`/app/sales/invoices/${invoiceId}`);
 }
@@ -213,8 +217,10 @@ async function statusAction(
 }
 
 export async function postInvoiceAction(invoiceId: string): Promise<InvoiceActionState> {
+  let tenantId: string;
   try {
     const tenant = await authorize("invoice:update");
+    tenantId = tenant.tenantId;
     await prisma.$transaction(async (tx) => {
       const business = await tx.business.findUnique({
         where: { id: tenant.tenantId },
@@ -245,6 +251,7 @@ export async function postInvoiceAction(invoiceId: string): Promise<InvoiceActio
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/invoices");
   revalidatePath(`/app/sales/invoices/${invoiceId}`);
   return {};

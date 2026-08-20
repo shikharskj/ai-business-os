@@ -27,6 +27,7 @@ function hasCurrentDelegates(client: PrismaClient | undefined): boolean {
         expense?: { findMany?: unknown };
         purchase?: { findMany?: unknown };
         supplierPayment?: { findMany?: unknown };
+        notification?: { findMany?: unknown };
       }
     | undefined;
   return (
@@ -39,7 +40,8 @@ function hasCurrentDelegates(client: PrismaClient | undefined): boolean {
     typeof candidate?.customerPayment?.findMany === "function" &&
     typeof candidate?.expense?.findMany === "function" &&
     typeof candidate?.purchase?.findMany === "function" &&
-    typeof candidate?.supplierPayment?.findMany === "function"
+    typeof candidate?.supplierPayment?.findMany === "function" &&
+    typeof candidate?.notification?.findMany === "function"
   );
 }
 

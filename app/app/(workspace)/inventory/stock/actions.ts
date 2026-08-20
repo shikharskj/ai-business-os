@@ -11,6 +11,7 @@ import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 import { businessDate } from "@/modules/shared-kernel/dates";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 import { prismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";
+import { scheduleNotificationOutboxProcessing } from "@/modules/notifications";
 import {
   InventoryError,
   adjustStockInputSchema,
@@ -76,6 +77,7 @@ export async function recordOpeningStockAction(
       audit,
       outbox,
     });
+    scheduleNotificationOutboxProcessing(tenant.tenantId);
   } catch (error) {
     if (error instanceof ZodError) {
       return { fieldErrors: formatZodErrors(error), values: submittedValues };
@@ -135,6 +137,7 @@ export async function recordStockAdjustmentAction(
       audit,
       outbox,
     });
+    scheduleNotificationOutboxProcessing(tenant.tenantId);
   } catch (error) {
     if (error instanceof ZodError) {
       return { fieldErrors: formatZodErrors(error), values: submittedValues };
