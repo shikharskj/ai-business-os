@@ -179,7 +179,8 @@ export default async function BillDetailPage({
                 <span className="text-muted-foreground">Payment </span>
                 {purchasePaymentStatusLabel(purchase.status)}
               </p>
-              {isPayablePurchaseStatus(purchase.status) ? (
+              {isPayablePurchaseStatus(purchase.status) &&
+              purchase.status !== "PARTIALLY_PAID" ? (
                 <p>
                   <span className="text-muted-foreground">Outstanding </span>
                   <MoneyDisplay value={purchase.grandTotal} className="font-medium" />

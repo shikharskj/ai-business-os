@@ -17,6 +17,7 @@ export type UpdatePurchaseRecordInput = {
   tenantId: string;
   purchaseId: string;
   prepared: PreparedPurchase;
+  expectedStatus: PurchaseStatus;
 };
 
 export type PurchasesRepository = {
@@ -32,6 +33,7 @@ export type PurchasesRepository = {
     journalId: string;
     postedAt: Date;
     status: PurchaseStatus;
+    expectedStatus: PurchaseStatus;
   }): Promise<Purchase | null>;
   updatePurchaseStatus(input: {
     tenantId: string;
@@ -122,7 +124,10 @@ export function createMemoryPurchasesRepository(
     },
     async updatePurchase(input) {
       const index = records.findIndex(
-        (record) => record.tenantId === input.tenantId && record.id === input.purchaseId
+        (record) =>
+          record.tenantId === input.tenantId &&
+          record.id === input.purchaseId &&
+          record.status === input.expectedStatus
       );
       if (index === -1) {
         return null;
@@ -153,7 +158,10 @@ export function createMemoryPurchasesRepository(
     },
     async markPurchasePosted(input) {
       const index = records.findIndex(
-        (record) => record.tenantId === input.tenantId && record.id === input.purchaseId
+        (record) =>
+          record.tenantId === input.tenantId &&
+          record.id === input.purchaseId &&
+          record.status === input.expectedStatus
       );
       if (index === -1) {
         return null;

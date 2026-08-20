@@ -49,7 +49,7 @@ function formatZodErrors(error: ZodError): Record<string, string> {
   );
 }
 
-function readPurchaseFields(formData: FormData) {
+function readPurchaseFields(formData: FormData, currency: string = "INR") {
   const lineCount = Number(formData.get("lineCount") ?? 0);
   if (!Number.isSafeInteger(lineCount) || lineCount < 0 || lineCount > 1000) {
     throw new ZodError([
@@ -75,7 +75,8 @@ function readPurchaseFields(formData: FormData) {
       notes: formData.get("notes") || undefined,
       placeOfSupplyStateCode: formData.get("placeOfSupplyStateCode"),
       lines,
-    })
+    }),
+    currency
   );
 }
 
@@ -106,13 +107,14 @@ export async function createPurchaseAction(
 
   try {
     const tenant = await authorize("purchase:create");
-    const fields = readPurchaseFields(formData);
+    const taxContext = taxContextFromTenant(tenant);
+    const fields = readPurchaseFields(formData, taxContext.currency);
     const purchase = await prisma.$transaction(async (tx) =>
       createPurchase({
         tenantId: tenant.tenantId,
         actorUserId: tenant.membership.userId,
         fields,
-        taxContext: taxContextFromTenant(tenant),
+        taxContext,
         purchases: createPrismaPurchasesRepository(tx),
         parties: createPrismaPartyRepository(tx),
         catalog: createPrismaCatalogRepository(tx),
@@ -143,14 +145,15 @@ export async function updatePurchaseAction(
 
   try {
     const tenant = await authorize("purchase:update");
-    const fields = readPurchaseFields(formData);
+    const taxContext = taxContextFromTenant(tenant);
+    const fields = readPurchaseFields(formData, taxContext.currency);
     await prisma.$transaction(async (tx) =>
       updatePurchase({
         tenantId: tenant.tenantId,
         actorUserId: tenant.membership.userId,
         purchaseId,
         fields,
-        taxContext: taxContextFromTenant(tenant),
+        taxContext,
         purchases: createPrismaPurchasesRepository(tx),
         parties: createPrismaPartyRepository(tx),
         catalog: createPrismaCatalogRepository(tx),
@@ -209,9 +212,11 @@ async function statusAction(
 }
 
 export async function postPurchaseAction(purchaseId: string): Promise<PurchaseActionState> {
+  let supplierId: string | undefined;
+
   try {
     const tenant = await authorize("purchase:update");
-    await prisma.$transaction(async (tx) =>
+    const purchase = await prisma.$transaction(async (tx) =>
       postPurchase({
         tenantId: tenant.tenantId,
         actorUserId: tenant.membership.userId,
@@ -230,6 +235,7 @@ export async function postPurchaseAction(purchaseId: string): Promise<PurchaseAc
         outbox: createPrismaOutboxRepository(tx),
       })
     );
+    supplierId = purchase.supplierId;
   } catch (error) {
     const mapped = mapError(error);
     if (mapped) {
@@ -241,6 +247,9 @@ export async function postPurchaseAction(purchaseId: string): Promise<PurchaseAc
   revalidatePath("/app/purchases/bills");
   revalidatePath(`/app/purchases/bills/${purchaseId}`);
   revalidatePath("/app/purchases/suppliers");
+  if (supplierId) {
+    revalidatePath(`/app/purchases/suppliers/${supplierId}`);
+  }
   return {};
 }
 

@@ -282,9 +282,12 @@ export async function updatePurchase(input: {
     tenantId: input.tenantId,
     purchaseId: input.purchaseId,
     prepared,
+    expectedStatus: existing.status,
   });
   if (!purchase) {
-    throw new PurchaseNotFoundError();
+    throw new PurchaseStatusError(
+      "Purchase was modified by another operation. Please refresh and try again."
+    );
   }
 
   await input.audit.append({
@@ -404,6 +407,19 @@ export async function postPurchase(input: {
 
   const journalLines = buildPurchaseJournalLines(existing, productMap);
 
+  const journal = await postJournal({
+    tenantId: input.tenantId,
+    accountingDate: existing.issuedOn,
+    financialYearStartMonth: input.taxContext.financialYearStartMonth,
+    closedThroughPeriodKey: input.closedThroughPeriodKey,
+    sourceType: "Purchase",
+    sourceId: existing.id,
+    memo: `Purchase ${existing.number}`,
+    lines: journalLines,
+    accountRepository: input.accounts,
+    journalRepository: input.journals,
+  });
+
   for (const line of existing.lines) {
     const product = productMap.get(line.productId)!;
     if (!product.tracksInventory) {
@@ -430,28 +446,18 @@ export async function postPurchase(input: {
     });
   }
 
-  const journal = await postJournal({
-    tenantId: input.tenantId,
-    accountingDate: existing.issuedOn,
-    financialYearStartMonth: input.taxContext.financialYearStartMonth,
-    closedThroughPeriodKey: input.closedThroughPeriodKey,
-    sourceType: "Purchase",
-    sourceId: existing.id,
-    memo: `Purchase ${existing.number}`,
-    lines: journalLines,
-    accountRepository: input.accounts,
-    journalRepository: input.journals,
-  });
-
   const purchase = await input.purchases.markPurchasePosted({
     tenantId: input.tenantId,
     purchaseId: existing.id,
     journalId: journal.id,
     postedAt: journal.postedAt,
     status: "POSTED",
+    expectedStatus: "DRAFT",
   });
   if (!purchase) {
-    throw new PurchaseNotFoundError();
+    throw new PurchaseStatusError(
+      "Purchase was modified or posted by another operation. Please refresh and try again."
+    );
   }
 
   await input.audit.append({
@@ -539,9 +545,10 @@ export async function getSupplierOutstanding(input: {
   const open = posted.filter((bill) =>
     (PAYABLE_PURCHASE_STATUSES as readonly PurchaseStatus[]).includes(bill.status)
   );
+  const currency = open.length > 0 ? open[0]!.grandTotal.currency : "INR";
   const outstanding = open.reduce(
     (sum, bill) => addMoney(sum, bill.grandTotal),
-    money(0n)
+    zeroMoney(currency)
   );
   return {
     supplierId: input.supplierId,

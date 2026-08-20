@@ -55,7 +55,10 @@ export const purchaseInputSchema = z.object({
 
 export type PurchaseFormInput = z.infer<typeof purchaseInputSchema>;
 
-export function toPurchaseFields(input: PurchaseFormInput) {
+export function toPurchaseFields(
+  input: PurchaseFormInput,
+  currency: string = "INR"
+) {
   return {
     supplierId: input.supplierId,
     issuedOn: businessDate(input.issuedOn),
@@ -65,8 +68,8 @@ export function toPurchaseFields(input: PurchaseFormInput) {
     lines: input.lines.map((line) => ({
       productId: line.productId,
       quantity: quantityFromMajor(line.quantity),
-      unitPrice: line.unitPrice !== undefined ? moneyFromMajor(line.unitPrice) : undefined,
-      discount: moneyFromMajor(line.discount),
+      unitPrice: line.unitPrice !== undefined ? moneyFromMajor(line.unitPrice, currency) : undefined,
+      discount: moneyFromMajor(line.discount, currency),
     })),
   };
 }

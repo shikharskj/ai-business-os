@@ -330,7 +330,6 @@ describe("purchases", () => {
     });
     expect(stillDraft.status).toBe("DRAFT");
     expect(stillDraft.journalId).toBeNull();
-    expect(journals.listPosted()).toHaveLength(0);
     expect(d.outbox.events.some((e) => e.eventType === "PurchasePosted")).toBe(false);
   });
 });

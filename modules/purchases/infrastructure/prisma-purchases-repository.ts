@@ -302,21 +302,24 @@ export function createPrismaPurchasesRepository(
 
     async updatePurchase(input) {
       const existing = await client.purchase.findFirst({
-        where: { id: input.purchaseId, tenantId: input.tenantId },
+        where: {
+          id: input.purchaseId,
+          tenantId: input.tenantId,
+          status: input.expectedStatus,
+        },
       });
       if (!existing) {
         return null;
       }
 
-      await client.purchaseLine.deleteMany({
-        where: { purchaseId: existing.id, tenantId: input.tenantId },
-      });
-
       const record = await client.purchase.update({
         where: { id: existing.id },
         data: {
           ...headerData(input.prepared),
-          lines: { create: lineCreateData(input.prepared) },
+          lines: {
+            deleteMany: { tenantId: input.tenantId },
+            create: lineCreateData(input.prepared),
+          },
         },
         include: { lines: true },
       });
@@ -325,7 +328,11 @@ export function createPrismaPurchasesRepository(
 
     async markPurchasePosted(input) {
       const existing = await client.purchase.findFirst({
-        where: { id: input.purchaseId, tenantId: input.tenantId },
+        where: {
+          id: input.purchaseId,
+          tenantId: input.tenantId,
+          status: input.expectedStatus,
+        },
       });
       if (!existing) {
         return null;

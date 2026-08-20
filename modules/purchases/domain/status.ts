@@ -2,7 +2,7 @@ import { PurchaseStatusError } from "@/modules/purchases/domain/errors";
 import type { PurchaseStatus } from "@/modules/purchases/domain/types";
 
 const TRANSITIONS: Record<PurchaseStatus, readonly PurchaseStatus[]> = {
-  DRAFT: ["CANCELLED"],
+  DRAFT: ["POSTED", "CANCELLED"],
   POSTED: ["UNPAID", "PARTIALLY_PAID", "PAID"],
   UNPAID: ["PARTIALLY_PAID", "PAID"],
   PARTIALLY_PAID: ["PARTIALLY_PAID", "PAID"],
