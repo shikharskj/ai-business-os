@@ -97,7 +97,36 @@ export function DashboardInsightBanner({
         ? "border-[var(--state-warning)]/40 bg-[var(--state-warning-subtle)]"
         : "border-border bg-muted/30";
 
-  const body = (
+  if (component.href) {
+    return (
+      <div className={cn("rounded-md border p-4", severityBorder)}>
+        <div className="flex items-start justify-between gap-3">
+          <Link href={component.href} className="min-w-0 hover:opacity-95">
+            <p className="text-base font-medium">{component.title}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{component.detail}</p>
+            <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">
+              {component.kind === "fact" ? "Fact" : "Recommendation"}
+            </p>
+          </Link>
+          {component.dismissible ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                setDismissed(true);
+              }}
+            >
+              Dismiss
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  return (
     <div className={cn("rounded-md border p-4", severityBorder)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -123,15 +152,6 @@ export function DashboardInsightBanner({
       </div>
     </div>
   );
-
-  if (component.href) {
-    return (
-      <Link href={component.href} className="block hover:opacity-95">
-        {body}
-      </Link>
-    );
-  }
-  return body;
 }
 
 export function DashboardEmptyState({

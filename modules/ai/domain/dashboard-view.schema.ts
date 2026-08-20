@@ -100,6 +100,16 @@ export const dataTableComponentSchema = z.object({
   description: z.string().optional(),
   columns: z.array(z.string().min(1)).min(1),
   rows: z.array(z.array(z.string())),
+}).superRefine((data, ctx) => {
+  for (let i = 0; i < data.rows.length; i++) {
+    if (data.rows[i]!.length !== data.columns.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Row ${i} has ${data.rows[i]!.length} cells but expected ${data.columns.length} to match columns`,
+        path: ["rows", i],
+      });
+    }
+  }
 });
 
 export const insightBannerComponentSchema = z.object({

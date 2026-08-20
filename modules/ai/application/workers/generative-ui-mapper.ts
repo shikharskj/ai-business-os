@@ -57,6 +57,7 @@ export function runGenerativeUiMapper(input: {
     overview.revenue.amountMinor === 0n &&
     overview.expenses.amountMinor === 0n &&
     overview.receivables.amountMinor === 0n &&
+    overview.payables.amountMinor === 0n &&
     overview.recentInvoices.length === 0 &&
     overview.alerts.length === 0;
 
@@ -187,6 +188,18 @@ export function runGenerativeUiMapper(input: {
               factId: "fact.receivables",
             },
             caption: "Open customer balances",
+          },
+          {
+            type: "MetricCard",
+            id: "kpi.payables",
+            title: "Payables",
+            value: {
+              amountMinor: overview.payables.amountMinor.toString(),
+              currency: overview.payables.currency,
+              scale: overview.payables.scale,
+              factId: "fact.payables",
+            },
+            caption: "Open supplier balances",
           },
         ],
       },

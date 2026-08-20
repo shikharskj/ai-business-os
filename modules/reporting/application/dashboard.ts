@@ -57,12 +57,12 @@ function eachDateInclusive(from: BusinessDate, to: BusinessDate): BusinessDate[]
   const cursor = new Date(`${from}T00:00:00.000Z`);
   const end = new Date(`${to}T00:00:00.000Z`);
   while (cursor <= end) {
+    if (dates.length >= SERIES_DAY_CAP) {
+      break;
+    }
     const iso = cursor.toISOString().slice(0, 10) as BusinessDate;
     dates.push(iso);
     cursor.setUTCDate(cursor.getUTCDate() + 1);
-    if (dates.length > SERIES_DAY_CAP) {
-      break;
-    }
   }
   return dates;
 }

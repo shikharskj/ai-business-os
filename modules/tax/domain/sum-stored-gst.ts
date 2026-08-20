@@ -35,11 +35,17 @@ export function addStoredGst(
   };
 }
 
-export function sumStoredGst(rows: readonly StoredGstAmounts[]): StoredGstAmounts {
+export function sumStoredGst(
+  rows: readonly StoredGstAmounts[],
+  currency?: string,
+  scale?: number
+): StoredGstAmounts {
   if (rows.length === 0) {
-    return zeroStoredGst();
+    return zeroStoredGst(currency, scale);
   }
-  return rows.reduce(addStoredGst, zeroStoredGst(rows[0]!.taxableAmount.currency));
+  const seedCurrency = currency ?? rows[0]!.taxableAmount.currency;
+  const seedScale = scale ?? rows[0]!.taxableAmount.scale;
+  return rows.reduce(addStoredGst, zeroStoredGst(seedCurrency, seedScale));
 }
 
 /**

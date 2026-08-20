@@ -3,6 +3,11 @@ import { toMajorString } from "@/modules/shared-kernel/money";
 import type { GstTransactionRow } from "@/modules/reporting/domain/gst-types";
 
 function csvEscape(value: string): string {
+  // Prefix single quote for formula injection prevention
+  if (/^[=+\-@\t\r]/.test(value)) {
+    value = `'${value}`;
+  }
+  // Apply RFC 4180 quoting and quote-doubling
   if (/[",\n\r]/.test(value)) {
     return `"${value.replace(/"/g, '""')}"`;
   }

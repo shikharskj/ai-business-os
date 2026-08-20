@@ -6,7 +6,6 @@ import { prismaPurchasesRepository } from "@/modules/purchases/infrastructure/pr
 import {
   exportGstCsv,
   gstSummarySearchSchema,
-  InvalidGstReportPeriodError,
   ReportingError,
 } from "@/modules/reporting";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
@@ -57,9 +56,6 @@ export async function GET(request: Request) {
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-    if (error instanceof InvalidGstReportPeriodError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
     }
     if (error instanceof ReportingError) {
       return NextResponse.json({ error: error.message }, { status: 400 });

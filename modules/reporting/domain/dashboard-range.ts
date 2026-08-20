@@ -7,6 +7,8 @@ import { periodDateRange } from "@/modules/reporting/domain/period";
 import { periodKeyFromDate } from "@/modules/accounting/domain/period";
 import { ReportingError } from "@/modules/reporting/domain/errors";
 
+const MAX_CUSTOM_RANGE_DAYS = 365;
+
 export type DashboardDatePreset =
   | "this_month"
   | "custom"
@@ -58,7 +60,12 @@ function inclusiveDayWindow(
 
 function monthsBackFromToday(today: BusinessDate, months: number): BusinessDate {
   const [year, month, day] = today.split("-").map(Number) as [number, number, number];
-  const utc = new Date(Date.UTC(year, month - 1 - months, day));
+  const targetYear = year;
+  const targetMonth = month - months;
+  // Compute the last valid day in the target month
+  const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate();
+  const clampedDay = Math.min(day, lastDayOfTargetMonth);
+  const utc = new Date(Date.UTC(targetYear, targetMonth - 1, clampedDay));
   const y = utc.getUTCFullYear();
   const m = String(utc.getUTCMonth() + 1).padStart(2, "0");
   const d = String(utc.getUTCDate()).padStart(2, "0");
@@ -82,6 +89,15 @@ export function resolveDashboardDateRange(input: {
     const toDate = businessDate(input.to);
     if (fromDate > toDate) {
       throw new ReportingError("From date must be on or before to date.");
+    }
+    // Validate maximum span
+    const fromMs = new Date(`${fromDate}T00:00:00.000Z`).getTime();
+    const toMs = new Date(`${toDate}T00:00:00.000Z`).getTime();
+    const daySpan = Math.ceil((toMs - fromMs) / (1000 * 60 * 60 * 24)) + 1;
+    if (daySpan > MAX_CUSTOM_RANGE_DAYS) {
+      throw new ReportingError(
+        `Custom range span of ${daySpan} days exceeds maximum allowed ${MAX_CUSTOM_RANGE_DAYS} days.`
+      );
     }
     return {
       preset: "custom",

@@ -1423,7 +1423,7 @@ Notes:
 
 ---
 
-## 2026-08-21 — Dashboard chart, KPI, tabs, and overflow polish
+## 2026-08-20 — Dashboard chart, KPI, tabs, and overflow polish
 
 Status: Complete
 

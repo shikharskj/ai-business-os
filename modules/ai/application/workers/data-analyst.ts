@@ -35,13 +35,16 @@ export function runDataAnalyst(facts: FactsBundle): InsightsBundle {
       relatedFactIds: ["fact.profit", "fact.expenses"],
     });
   } else if (revenue.amountMinor > 0n && expenses.amountMinor > 0n) {
-    const ratio = Number(expenses.amountMinor) / Number(revenue.amountMinor);
-    if (ratio > 0.85) {
+    // Use bigint arithmetic: expenses * 100 vs revenue * 85
+    if (expenses.amountMinor * 100n > revenue.amountMinor * 85n) {
+      // Compute rounded percentage with integer arithmetic
+      const percentageTimes100 = (expenses.amountMinor * 10000n) / revenue.amountMinor;
+      const roundedPercentage = Number((percentageTimes100 + 50n) / 100n);
       insights.push({
         id: "insight.high-expense-ratio",
         kind: "recommendation",
         title: "High expense ratio",
-        detail: `Expenses are ${Math.round(ratio * 100)}% of taxable sales this period.`,
+        detail: `Expenses are ${roundedPercentage}% of taxable sales this period.`,
         relatedFactIds: ["fact.revenue", "fact.expenses"],
       });
     }

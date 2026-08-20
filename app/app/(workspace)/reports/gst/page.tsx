@@ -30,7 +30,7 @@ function documentKindLabel(kind: string): string {
 export default async function GstSummaryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ period?: string | string[] | undefined }>;
 }) {
   const tenant = await authorize("report:read");
   const params = await searchParams;
@@ -82,7 +82,11 @@ export default async function GstSummaryPage({
       />
 
       {validationError ? (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-base text-destructive">
+        <div
+          id="period-error"
+          role="alert"
+          className="rounded-md border border-destructive bg-destructive/10 p-3 text-base text-destructive"
+        >
           {validationError}
         </div>
       ) : null}
@@ -92,7 +96,14 @@ export default async function GstSummaryPage({
           <label htmlFor="period" className="text-base font-medium">
             Period
           </label>
-          <Input id="period" name="period" defaultValue={period} placeholder="YYYY-MM" />
+          <Input
+            id="period"
+            name="period"
+            defaultValue={period}
+            placeholder="YYYY-MM"
+            aria-describedby={validationError ? "period-error" : undefined}
+            aria-invalid={validationError ? true : undefined}
+          />
         </div>
         <Button type="submit" variant="outline">
           Show

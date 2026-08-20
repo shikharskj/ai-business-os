@@ -2,7 +2,6 @@ import { subtractMoney, isZero } from "@/modules/shared-kernel/money";
 import type { BusinessDate } from "@/modules/shared-kernel/dates";
 import {
   sumStoredGst,
-  zeroStoredGst,
   type StoredGstAmounts,
 } from "@/modules/tax/domain/sum-stored-gst";
 import type { SalesRepository } from "@/modules/sales/infrastructure/repositories";
@@ -141,14 +140,14 @@ export async function getGstSummary(input: GstReportDeps): Promise<GstPeriodSumm
   const outputRows = rows.filter((row) => row.taxFlow === "OUTPUT");
   const inputRows = rows.filter((row) => row.taxFlow === "INPUT");
 
-  const output =
-    outputRows.length > 0
-      ? sumStoredGst(outputRows.map(toStored))
-      : zeroStoredGst();
-  const inputTax =
-    inputRows.length > 0
-      ? sumStoredGst(inputRows.map(toStored))
-      : zeroStoredGst();
+  // Derive period currency and scale from tenant settings or first available row
+  // For now, default to INR/2; in production this would come from tenant.business.currency
+  const firstRow = rows[0];
+  const currency = firstRow?.taxableAmount.currency ?? "INR";
+  const scale = firstRow?.taxableAmount.scale ?? 2;
+
+  const output = sumStoredGst(outputRows.map(toStored), currency, scale);
+  const inputTax = sumStoredGst(inputRows.map(toStored), currency, scale);
 
   return {
     tenantId: input.tenantId,

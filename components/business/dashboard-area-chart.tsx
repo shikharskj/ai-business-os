@@ -3,6 +3,8 @@
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   XAxis,
 } from "recharts";
@@ -52,6 +54,36 @@ export function DashboardAreaChartPanel({
   }
 
   const gradientIds = keys.map((key) => `fill-${key}`);
+
+  if (component.type === "BarChart") {
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="sr-only">{component.summary}</p>
+        <ChartContainer config={chartConfig} className="aspect-2/1 w-full">
+          <BarChart accessibilityLayer data={data} margin={{ left: 12, right: 12, top: 8 }}>
+            <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.6} />
+            <XAxis
+              dataKey="label"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              minTickGap={28}
+              tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+            />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            {keys.map((key) => (
+              <Bar
+                key={key}
+                dataKey={key}
+                fill={`var(--color-${key})`}
+                radius={4}
+              />
+            ))}
+          </BarChart>
+        </ChartContainer>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
