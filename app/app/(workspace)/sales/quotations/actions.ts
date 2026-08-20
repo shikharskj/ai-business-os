@@ -47,7 +47,16 @@ function formatZodErrors(error: ZodError): Record<string, string> {
 
 function readQuotationFields(formData: FormData) {
   const lineCount = Number(formData.get("lineCount") ?? 0);
-  const lines = Array.from({ length: Number.isFinite(lineCount) ? lineCount : 0 }, (_, index) => ({
+  if (!Number.isSafeInteger(lineCount) || lineCount < 0 || lineCount > 1000) {
+    throw new ZodError([
+      {
+        code: "custom",
+        path: ["lines"],
+        message: "Invalid line count",
+      },
+    ]);
+  }
+  const lines = Array.from({ length: lineCount }, (_, index) => ({
     productId: formData.get(`line-${index}-productId`),
     quantity: formData.get(`line-${index}-quantity`),
     unitPrice: formData.get(`line-${index}-unitPrice`),

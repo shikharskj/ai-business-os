@@ -301,6 +301,7 @@ export function QuotationForm({
                     ))}
                   </SelectContent>
                 </Select>
+                <FieldError name={`lines.${index}.productId`} fieldErrors={state.fieldErrors} />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-base font-medium" htmlFor={`line-${index}-quantity`}>
@@ -316,6 +317,7 @@ export function QuotationForm({
                     updateLine(index, { quantity: event.target.value })
                   }
                 />
+                <FieldError name={`lines.${index}.quantity`} fieldErrors={state.fieldErrors} />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-base font-medium" htmlFor={`line-${index}-unitPrice`}>
@@ -331,6 +333,7 @@ export function QuotationForm({
                     updateLine(index, { unitPrice: event.target.value })
                   }
                 />
+                <FieldError name={`lines.${index}.unitPrice`} fieldErrors={state.fieldErrors} />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-base font-medium" htmlFor={`line-${index}-discount`}>
@@ -345,6 +348,7 @@ export function QuotationForm({
                     updateLine(index, { discount: event.target.value })
                   }
                 />
+                <FieldError name={`lines.${index}.discount`} fieldErrors={state.fieldErrors} />
               </div>
               <div className="flex items-end">
                 <Button

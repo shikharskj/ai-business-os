@@ -88,7 +88,7 @@ CREATE UNIQUE INDEX "quotation_lines_id_tenantId_key" ON "quotation_lines"("id",
 CREATE INDEX "quotation_lines_tenantId_quotationId_idx" ON "quotation_lines"("tenantId", "quotationId");
 
 -- CreateIndex
-CREATE INDEX "quotation_lines_quotationId_sortOrder_idx" ON "quotation_lines"("quotationId", "sortOrder");
+CREATE UNIQUE INDEX "quotation_lines_quotationId_sortOrder_idx" ON "quotation_lines"("quotationId", "sortOrder");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "quotation_number_series_tenantId_financialYearKey_key" ON "quotation_number_series"("tenantId", "financialYearKey");

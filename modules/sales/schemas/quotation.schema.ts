@@ -27,10 +27,16 @@ const optionalMoney = z
   .optional()
   .transform((value) => (value && value.length > 0 ? value : "0"));
 
+const optionalUnitPrice = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value) => (value && value.length > 0 ? value : undefined));
+
 export const quotationLineInputSchema = z.object({
   productId: z.string().uuid("Select a product or service"),
   quantity: positiveQuantityInputSchema,
-  unitPrice: optionalMoney.pipe(moneyInputSchema),
+  unitPrice: optionalUnitPrice.pipe(moneyInputSchema.optional()),
   discount: optionalMoney.pipe(moneyInputSchema),
 });
 
@@ -59,7 +65,7 @@ export function toQuotationFields(input: QuotationFormInput) {
     lines: input.lines.map((line) => ({
       productId: line.productId,
       quantity: quantityFromMajor(line.quantity),
-      unitPrice: moneyFromMajor(line.unitPrice),
+      unitPrice: line.unitPrice !== undefined ? moneyFromMajor(line.unitPrice) : undefined,
       discount: moneyFromMajor(line.discount),
     })),
   };

@@ -9,21 +9,37 @@ import type { PreparedQuotation } from "@/modules/sales/domain/types";
 
 describe("prisma sales repository createQuotation", () => {
   it("creates quotation and nested lines without tenantId on line payload", async () => {
-    const business = await prisma.business.findFirst({
-      include: {
-        parties: { where: { kind: "CUSTOMER" }, take: 1 },
-        products: { take: 1 },
+    let business = await prisma.business.findFirst();
+    if (!business) {
+      throw new Error("No business found for test");
+    }
+
+    const customer = await prisma.party.create({
+      data: {
+        tenantId: business.id,
+        kind: "CUSTOMER",
+        name: "Test Customer",
+        state: "Maharashtra",
       },
     });
 
-    if (!business?.parties[0] || !business.products[0]) {
-      expect(true).toBe(true);
-      return;
-    }
+    const product = await prisma.product.create({
+      data: {
+        tenantId: business.id,
+        kind: "PRODUCT",
+        name: "Test Product",
+        sku: `TEST-${Date.now()}`,
+        unitOfMeasurement: "PCS",
+        hsnSac: "1234",
+        taxRateBps: 1800,
+        sellingPrice: 1000,
+        purchasePrice: 800,
+      },
+    });
 
     const prepared: PreparedQuotation = {
-      customerId: business.parties[0].id,
-      customerName: business.parties[0].name,
+      customerId: customer.id,
+      customerName: customer.name,
       issuedOn: businessDate("2026-04-02"),
       validUntil: null,
       notes: null,
@@ -40,12 +56,12 @@ describe("prisma sales repository createQuotation", () => {
       lines: [
         {
           sortOrder: 0,
-          productId: business.products[0].id,
-          productName: business.products[0].name,
-          sku: business.products[0].sku,
-          unitOfMeasurement: business.products[0].unitOfMeasurement,
-          hsnSac: business.products[0].hsnSac,
-          taxRateBps: business.products[0].taxRateBps,
+          productId: product.id,
+          productName: product.name,
+          sku: product.sku,
+          unitOfMeasurement: product.unitOfMeasurement,
+          hsnSac: product.hsnSac,
+          taxRateBps: product.taxRateBps,
           quantity: quantityFromMajor("1"),
           unitPrice: money(1000_00n),
           discount: money(0n),
@@ -65,14 +81,22 @@ describe("prisma sales repository createQuotation", () => {
     const sales = createPrismaSalesRepository(prisma);
     const number = `QT/DEBUG/${Date.now()}`;
 
-    const quotation = await sales.createQuotation({
-      tenantId: business.id,
-      number,
-      prepared,
-    });
-    expect(quotation.lines).toHaveLength(1);
-    expect(quotation.lines[0]?.tenantId).toBe(business.id);
-    await prisma.quotationLine.deleteMany({ where: { quotationId: quotation.id } });
-    await prisma.quotation.delete({ where: { id: quotation.id } });
+    let quotation;
+    try {
+      quotation = await sales.createQuotation({
+        tenantId: business.id,
+        number,
+        prepared,
+      });
+      expect(quotation.lines).toHaveLength(1);
+      expect(quotation.lines[0]?.tenantId).toBe(business.id);
+    } finally {
+      if (quotation) {
+        await prisma.quotationLine.deleteMany({ where: { quotationId: quotation.id } });
+        await prisma.quotation.delete({ where: { id: quotation.id } });
+      }
+      await prisma.product.delete({ where: { id: product.id } });
+      await prisma.party.delete({ where: { id: customer.id } });
+    }
   });
 });

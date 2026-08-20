@@ -53,6 +53,7 @@ describe("roleHasPermission", () => {
   });
 
   it("STAFF cannot post accounting, adjust inventory, or change settings", () => {
+    expect(roleHasPermission("STAFF", "customer:create")).toBe(true);
     expect(roleHasPermission("STAFF", "quotation:create")).toBe(true);
     expect(roleHasPermission("STAFF", "quotation:cancel")).toBe(false);
     expect(roleHasPermission("STAFF", "customer:read")).toBe(true);

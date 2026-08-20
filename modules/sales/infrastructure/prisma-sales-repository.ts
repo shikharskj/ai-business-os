@@ -221,14 +221,28 @@ function mapQuotation(record: {
 export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRepository {
   return {
     async allocateNextQuotationNumber(tenantId, financialYearKey) {
-      const series = await client.quotationNumberSeries.upsert({
-        where: {
-          tenantId_financialYearKey: { tenantId, financialYearKey },
-        },
-        create: { tenantId, financialYearKey, lastNumber: 1 },
-        update: { lastNumber: { increment: 1 } },
-      });
-      return series.lastNumber;
+      try {
+        const series = await client.quotationNumberSeries.upsert({
+          where: {
+            tenantId_financialYearKey: { tenantId, financialYearKey },
+          },
+          create: { tenantId, financialYearKey, lastNumber: 1 },
+          update: { lastNumber: { increment: 1 } },
+        });
+        return series.lastNumber;
+      } catch (error: unknown) {
+        if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+          const series = await client.quotationNumberSeries.upsert({
+            where: {
+              tenantId_financialYearKey: { tenantId, financialYearKey },
+            },
+            create: { tenantId, financialYearKey, lastNumber: 1 },
+            update: { lastNumber: { increment: 1 } },
+          });
+          return series.lastNumber;
+        }
+        throw error;
+      }
     },
 
     async createQuotation(input) {

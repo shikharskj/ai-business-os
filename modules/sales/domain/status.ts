@@ -4,7 +4,7 @@ import type { QuotationStatus } from "@/modules/sales/domain/types";
 const TRANSITIONS: Record<QuotationStatus, readonly QuotationStatus[]> = {
   DRAFT: ["SENT", "CANCELLED"],
   SENT: ["ACCEPTED", "CANCELLED"],
-  ACCEPTED: ["CANCELLED"],
+  ACCEPTED: ["CONVERTED", "CANCELLED"],
   CANCELLED: [],
   CONVERTED: [],
 };
