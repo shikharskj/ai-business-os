@@ -25,3 +25,26 @@ export function buildCustomerReceiptJournalLines(input: {
     },
   ];
 }
+
+export function buildSupplierPaymentJournalLines(input: {
+  paymentNumber: string;
+  method: PaymentMethod;
+  amount: Money;
+}): JournalLineDraft[] {
+  const zero = money(0n, input.amount.currency, input.amount.scale);
+  const description = `Payment ${input.paymentNumber}`;
+  return [
+    {
+      accountCode: ACCOUNT_CODES.PAYABLE,
+      description,
+      debit: input.amount,
+      credit: zero,
+    },
+    {
+      accountCode: cashAccountCodeForMethod(input.method),
+      description,
+      debit: zero,
+      credit: input.amount,
+    },
+  ];
+}

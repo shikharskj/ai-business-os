@@ -25,12 +25,19 @@ import { roleHasPermission } from "@/lib/security/permissions";
 import { formatQuantity } from "@/modules/inventory";
 import { GST_STATE_CODES } from "@/modules/tax/domain/gstin";
 import {
+  getPurchaseOutstanding,
+  listPaymentsForPurchase,
+  PAYMENT_METHOD_LABELS,
+} from "@/modules/payments";
+import { prismaSupplierPaymentRepository } from "@/modules/payments/infrastructure/prisma-supplier-payments-repository";
+import {
   getPurchase,
   isPayablePurchaseStatus,
   PurchaseNotFoundError,
   purchasePaymentStatusLabel,
 } from "@/modules/purchases";
 import { prismaPurchasesRepository } from "@/modules/purchases/infrastructure/prisma-purchases-repository";
+import { money } from "@/modules/shared-kernel/money";
 
 export default async function BillDetailPage({
   params,
@@ -44,6 +51,8 @@ export default async function BillDetailPage({
   const query = await searchParams;
   const canUpdate = roleHasPermission(tenant.membership.role, "purchase:update");
   const canCancel = roleHasPermission(tenant.membership.role, "purchase:cancel");
+  const canCreatePayment = roleHasPermission(tenant.membership.role, "payment:create");
+  const canReadPayments = roleHasPermission(tenant.membership.role, "payment:read");
 
   let purchase;
   try {
@@ -61,6 +70,23 @@ export default async function BillDetailPage({
 
   const placeOfSupply =
     GST_STATE_CODES[purchase.placeOfSupplyStateCode] ?? purchase.placeOfSupplyStateCode;
+  const outstanding = await getPurchaseOutstanding({
+    tenantId: tenant.tenantId,
+    purchaseId: purchase.id,
+    purchases: prismaPurchasesRepository,
+    supplierPayments: prismaSupplierPaymentRepository,
+  });
+  const payments = canReadPayments
+    ? await listPaymentsForPurchase({
+        tenantId: tenant.tenantId,
+        purchaseId: purchase.id,
+        supplierPayments: prismaSupplierPaymentRepository,
+      })
+    : [];
+  const canRecordPayment =
+    canCreatePayment &&
+    isPayablePurchaseStatus(purchase.status) &&
+    (outstanding?.outstanding.amountMinor ?? 0n) > 0n;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6">
@@ -86,6 +112,18 @@ export default async function BillDetailPage({
                 render={<Link href={`/app/purchases/bills/${purchase.id}/edit`} />}
               >
                 Edit
+              </Button>
+            ) : null}
+            {canRecordPayment ? (
+              <Button
+                nativeButton={false}
+                render={
+                  <Link
+                    href={`/app/purchases/payments/new?supplierId=${purchase.supplierId}&purchaseId=${purchase.id}`}
+                  />
+                }
+              >
+                Record payment
               </Button>
             ) : null}
             <BillStatusActions
@@ -179,11 +217,10 @@ export default async function BillDetailPage({
                 <span className="text-muted-foreground">Payment </span>
                 {purchasePaymentStatusLabel(purchase.status)}
               </p>
-              {isPayablePurchaseStatus(purchase.status) &&
-              purchase.status !== "PARTIALLY_PAID" ? (
+              {outstanding && isPayablePurchaseStatus(purchase.status) ? (
                 <p>
                   <span className="text-muted-foreground">Outstanding </span>
-                  <MoneyDisplay value={purchase.grandTotal} className="font-medium" />
+                  <MoneyDisplay value={outstanding.outstanding} className="font-medium" />
                 </p>
               ) : null}
               <p>
@@ -218,6 +255,50 @@ export default async function BillDetailPage({
               {purchase.notes ? <p>{purchase.notes}</p> : null}
             </CardContent>
           </Card>
+          {canReadPayments && payments.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Payments</CardTitle>
+              </CardHeader>
+              <CardContent className="px-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Payment</TableHead>
+                      <TableHead>Method</TableHead>
+                      <TableHead className="text-right">Allocated</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payments.map((payment) => {
+                      const matchingAllocation = payment.allocations.find(
+                        (row) => row.purchaseId === purchase.id
+                      );
+                      const allocated = matchingAllocation
+                        ? matchingAllocation.amount
+                        : money(0n, purchase.grandTotal.currency);
+                      return (
+                        <TableRow key={payment.id}>
+                          <TableCell>
+                            <Link
+                              href={`/app/purchases/payments/${payment.id}`}
+                              className="font-mono text-sm font-medium hover:underline"
+                            >
+                              {payment.number}
+                            </Link>
+                          </TableCell>
+                          <TableCell>{PAYMENT_METHOD_LABELS[payment.method]}</TableCell>
+                          <TableCell className="text-right">
+                            <MoneyDisplay value={allocated} />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       </div>
     </div>

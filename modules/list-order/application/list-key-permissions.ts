@@ -6,6 +6,7 @@ export const LIST_KEY_PERMISSIONS: Record<ListKey, Permission> = {
   quotations: "quotation:read",
   customers: "customer:read",
   payments: "payment:read",
+  "supplier-payments": "payment:read",
   suppliers: "supplier:read",
   products: "product:read",
   stock: "product:read",

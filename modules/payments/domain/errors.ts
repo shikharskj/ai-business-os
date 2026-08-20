@@ -21,7 +21,7 @@ export class PaymentValidationError extends PaymentError {
 
 export class AllocationExceedsOutstandingError extends PaymentError {
   constructor() {
-    super("Allocation cannot exceed the invoice outstanding amount.");
+    super("Allocation cannot exceed the outstanding amount.");
     this.name = "AllocationExceedsOutstandingError";
   }
 }

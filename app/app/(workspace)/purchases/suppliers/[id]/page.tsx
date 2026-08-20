@@ -15,7 +15,8 @@ import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
 import { getSupplier, PartyNotFoundError } from "@/modules/party";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
-import { getSupplierOutstanding } from "@/modules/purchases";
+import { getSupplierOutstanding } from "@/modules/payments";
+import { prismaSupplierPaymentRepository } from "@/modules/payments/infrastructure/prisma-supplier-payments-repository";
 import { prismaPurchasesRepository } from "@/modules/purchases/infrastructure/prisma-purchases-repository";
 
 function gstLabel(status: string): string {
@@ -64,6 +65,7 @@ export default async function SupplierDetailPage({
     tenantId: tenant.tenantId,
     supplierId: supplier.id,
     purchases: prismaPurchasesRepository,
+    supplierPayments: prismaSupplierPaymentRepository,
   });
 
   return (

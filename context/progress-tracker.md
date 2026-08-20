@@ -113,11 +113,17 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 # Completed
 
+* Supplier payments (`20-supplier-payments.md`):
+  * `modules/payments/` supplier payments + allocation lines (same module/allocation rules as customer receipts). Record against unpaid/partial purchase bills. Partial and full payment. Over-allocation rejected.
+  * Purchase payment status and supplier outstanding derived from allocations. Atomic payment + allocations + balanced journal (Dr Payable, Cr Cash/Bank) + audit + outbox (`PaymentMade`). Number series `PAY/{FY}/{seq}`.
+  * Methods: Cash, UPI, Bank Transfer, Card, Cheque (labels only; no gateway). Permissions `payment:*`. Purchases → Payments UI plus bill detail “Record payment”.
+  * Tests: `tests/payments/supplier-payments.test.ts` (partial/full, over-allocation, journal balance, outstanding, cross-tenant rejection).
+
 * Purchases (`19-purchases.md`):
   * `modules/purchases/` purchase bills + lines. Create/edit (draft only)/view/list/search. Supplier + catalog lines, quantity, purchase price, line discount, GST via `modules/tax` only (`transactionType: PURCHASE`).
   * Per-tenant number series `BILL/{FY}/{seq}`. Status: draft / posted / unpaid / partially paid / paid / cancelled. Draft-only edits; posted amounts immutable (cancel draft only).
   * `postPurchase` in one transaction: validate lines, inventory stock-in (`PURCHASE`/`IN` via `recordInventoryMovement` for tracked items), balanced journal (Dr Inventory / Operating expense, Dr Input GST, Cr Payable), audit + outbox (`PurchaseCreated` / `PurchasePosted`).
-  * Supplier outstanding from unpaid posted bills (full amount until spec `20` payments). Permissions `purchase:*`. Purchases → Bills UI.
+  * Supplier outstanding from unpaid posted bills (reduced by allocations from spec `20`). Permissions `purchase:*`. Purchases → Bills UI.
   * Tests: `tests/purchases/purchases.test.ts` (posting, journal balance, inventory IN, outstanding, double-post, cross-tenant rejection, posted immutability).
 
 * Expenses (`18-expenses.md`):
@@ -299,7 +305,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Current implementable spec:** `context/feature-specs/20-supplier-payments.md`
+**Current implementable spec:** `context/feature-specs/21-accounting-workspace.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -1347,6 +1353,47 @@ Verification:
 
 Notes:
 - Next implementation unit is `20-supplier-payments.md`.
+
+---
+
+## 2026-08-20 — Supplier payments
+
+Status: Complete
+
+Implemented:
+- Extended `modules/payments/` with supplier payments and allocation lines (reused shared document-allocation rules; no second money/allocation library). Record a payment against one or more unpaid/partial purchase bills in the same tenant. Partial and full payment. Over-allocation is rejected.
+- Purchase payment status and supplier outstanding are derived from allocations, not a stored balance. Posted purchase line amounts are not mutated.
+- Atomic transaction: payment + allocations + balanced journal (Dr Accounts Payable, Cr Cash or Bank by method) + audit (`payment.made`) + outbox (`PaymentMade`). Number series `PAY/{FY}/{seq}`.
+- Methods: Cash, UPI, Bank Transfer, Card, Cheque (labels only; no gateway). Permissions `payment:create` / `payment:read`. Purchases → Payments list/detail/record UI. Bill detail “Record payment” plus payment history. Supplier outstanding from bill remainders.
+- Prisma `SupplierPayment`, `SupplierPaymentAllocation`, `SupplierPaymentNumberSeries`. Migration `20260820110000_add_supplier_payments`. List key `supplier-payments`.
+
+Files / Areas:
+- `modules/payments/` (allocation shared core, supplier record/queries/repos/schemas)
+- `prisma/schema.prisma`
+- `prisma/migrations/20260820110000_add_supplier_payments/`
+- `app/app/(workspace)/purchases/payments/`
+- `app/app/(workspace)/purchases/bills/[id]/page.tsx`
+- `app/app/(workspace)/purchases/suppliers/[id]/page.tsx`
+- `components/business/record-supplier-payment-form.tsx`
+- `components/business/supplier-payments-data-table.tsx`
+- `modules/list-order/`
+- `tests/payments/supplier-payments.test.ts`
+- `tests/purchases/purchases.test.ts`
+
+Tests:
+- `npx vitest run tests/payments/supplier-payments.test.ts tests/payments/payments.test.ts tests/purchases/purchases.test.ts`
+- `npm run typecheck`
+- `npm run lint`
+
+Verification:
+- Partial/full supplier payment updates payable correctly.
+- Over-allocation is rejected (unit + workflow tests).
+- Journal balances (Dr Payable / Cr Cash or Bank).
+- Cross-tenant access is rejected.
+- Typecheck succeeds.
+
+Notes:
+- Next implementation unit is `21-accounting-workspace.md`.
 
 ---
 
