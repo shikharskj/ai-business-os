@@ -6,8 +6,7 @@ export function buildPrefixTsQuery(raw: string): string | null {
   const tokens = raw
     .trim()
     .toLowerCase()
-    .split(/[^a-z0-9]+/i)
-    .map((token) => token.replace(/[^a-z0-9]/gi, ""))
+    .split(/[^\p{L}\p{M}\p{N}]+/u)
     .filter((token) => token.length > 0)
     .slice(0, 8);
 

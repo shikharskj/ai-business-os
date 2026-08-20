@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import {
   SEARCH_ENTITY_LABEL,
+  type SearchResponse,
   type SearchResult,
 } from "@/modules/search/domain/types";
 
@@ -31,12 +32,6 @@ const ROUTES = [
   { label: "Settings", href: "/app/settings", keywords: "business profile" },
   { label: "AI Assistant", href: "/app/assistant", keywords: "chat help" },
 ] as const;
-
-type SearchApiResponse = {
-  query: string;
-  results: SearchResult[];
-  total: number;
-};
 
 export function WorkspaceCommandMenu() {
   const router = useRouter();
@@ -75,7 +70,11 @@ export function WorkspaceCommandMenu() {
           setRecordResults([]);
           return;
         }
-        const data = (await response.json()) as SearchApiResponse;
+        const data = (await response.json()) as SearchResponse;
+        if (!data.results || !Array.isArray(data.results)) {
+          setRecordResults([]);
+          return;
+        }
         setRecordResults(data.results);
       } catch (error) {
         if ((error as Error).name !== "AbortError") {

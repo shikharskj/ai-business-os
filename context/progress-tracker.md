@@ -1434,7 +1434,7 @@ Notes:
 
 ---
 
-## 2026-08-21 — Search
+## 2026-08-20 — Search
 
 Status: Complete
 
@@ -1461,7 +1461,7 @@ Notes:
 
 ---
 
-## 2026-08-21 — Reports
+## 2026-08-20 — Reports
 
 Status: Complete
 

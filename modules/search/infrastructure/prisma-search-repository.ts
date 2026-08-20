@@ -1,6 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import type { PrismaClient } from "@/generated/prisma/client";
 
+import type { SearchRepository } from "@/modules/search/domain/search-repository";
 import { buildPrefixTsQuery } from "@/modules/search/domain/tsquery";
 import type {
   SearchEntityType,
@@ -8,10 +9,6 @@ import type {
   SearchResult,
 } from "@/modules/search/domain/types";
 import { businessDate } from "@/modules/shared-kernel/dates";
-
-export type SearchRepository = {
-  search(filter: SearchFilter): Promise<SearchResult[]>;
-};
 
 type RawHit = {
   id: string;
@@ -90,7 +87,7 @@ export function createPrismaSearchRepository(
         if (filter.status) {
           conditions.push(Prisma.sql`p.status::text = ${filter.status}`);
         }
-        parts.push(Prisma.sql`
+        parts.push(Prisma.sql`(
           SELECT
             p.id,
             'customer'::text AS entity_type,
@@ -113,7 +110,9 @@ export function createPrismaSearchRepository(
             ) AS rank
           FROM parties p
           WHERE ${Prisma.join(conditions, " AND ")}
-        `);
+          ORDER BY rank DESC, title ASC
+          LIMIT ${limit}
+        )`);
       }
 
       if (types.includes("supplier")) {
@@ -131,7 +130,7 @@ export function createPrismaSearchRepository(
         if (filter.status) {
           conditions.push(Prisma.sql`p.status::text = ${filter.status}`);
         }
-        parts.push(Prisma.sql`
+        parts.push(Prisma.sql`(
           SELECT
             p.id,
             'supplier'::text AS entity_type,
@@ -154,7 +153,9 @@ export function createPrismaSearchRepository(
             ) AS rank
           FROM parties p
           WHERE ${Prisma.join(conditions, " AND ")}
-        `);
+          ORDER BY rank DESC, title ASC
+          LIMIT ${limit}
+        )`);
       }
 
       if (types.includes("product")) {
@@ -171,7 +172,7 @@ export function createPrismaSearchRepository(
         if (filter.status) {
           conditions.push(Prisma.sql`p.kind::text = ${filter.status}`);
         }
-        parts.push(Prisma.sql`
+        parts.push(Prisma.sql`(
           SELECT
             p.id,
             'product'::text AS entity_type,
@@ -194,7 +195,9 @@ export function createPrismaSearchRepository(
             ) AS rank
           FROM products p
           WHERE ${Prisma.join(conditions, " AND ")}
-        `);
+          ORDER BY rank DESC, title ASC
+          LIMIT ${limit}
+        )`);
       }
 
       if (types.includes("invoice")) {
@@ -214,7 +217,7 @@ export function createPrismaSearchRepository(
         if (filter.toDate) {
           conditions.push(Prisma.sql`i."issuedOn" <= ${filter.toDate}`);
         }
-        parts.push(Prisma.sql`
+        parts.push(Prisma.sql`(
           SELECT
             i.id,
             'invoice'::text AS entity_type,
@@ -234,7 +237,9 @@ export function createPrismaSearchRepository(
             ) AS rank
           FROM sales_invoices i
           WHERE ${Prisma.join(conditions, " AND ")}
-        `);
+          ORDER BY rank DESC, title ASC
+          LIMIT ${limit}
+        )`);
       }
 
       if (types.includes("purchase")) {
@@ -254,7 +259,7 @@ export function createPrismaSearchRepository(
         if (filter.toDate) {
           conditions.push(Prisma.sql`p."issuedOn" <= ${filter.toDate}`);
         }
-        parts.push(Prisma.sql`
+        parts.push(Prisma.sql`(
           SELECT
             p.id,
             'purchase'::text AS entity_type,
@@ -274,10 +279,12 @@ export function createPrismaSearchRepository(
             ) AS rank
           FROM purchases p
           WHERE ${Prisma.join(conditions, " AND ")}
-        `);
+          ORDER BY rank DESC, title ASC
+          LIMIT ${limit}
+        )`);
       }
 
-      if (types.includes("payment")) {
+      if (types.includes("payment") && !filter.status) {
         const conditions: Prisma.Sql[] = [
           Prisma.sql`cp."tenantId" = ${filter.tenantId}`,
           Prisma.sql`to_tsvector(
@@ -293,7 +300,7 @@ export function createPrismaSearchRepository(
         if (filter.toDate) {
           conditions.push(Prisma.sql`cp."receivedOn" <= ${filter.toDate}`);
         }
-        parts.push(Prisma.sql`
+        parts.push(Prisma.sql`(
           SELECT
             cp.id,
             'payment'::text AS entity_type,
@@ -315,10 +322,12 @@ export function createPrismaSearchRepository(
             ) AS rank
           FROM customer_payments cp
           WHERE ${Prisma.join(conditions, " AND ")}
-        `);
+          ORDER BY rank DESC, title ASC
+          LIMIT ${limit}
+        )`);
       }
 
-      if (types.includes("supplier_payment")) {
+      if (types.includes("supplier_payment") && !filter.status) {
         const conditions: Prisma.Sql[] = [
           Prisma.sql`sp."tenantId" = ${filter.tenantId}`,
           Prisma.sql`to_tsvector(
@@ -334,7 +343,7 @@ export function createPrismaSearchRepository(
         if (filter.toDate) {
           conditions.push(Prisma.sql`sp."paidOn" <= ${filter.toDate}`);
         }
-        parts.push(Prisma.sql`
+        parts.push(Prisma.sql`(
           SELECT
             sp.id,
             'supplier_payment'::text AS entity_type,
@@ -356,7 +365,9 @@ export function createPrismaSearchRepository(
             ) AS rank
           FROM supplier_payments sp
           WHERE ${Prisma.join(conditions, " AND ")}
-        `);
+          ORDER BY rank DESC, title ASC
+          LIMIT ${limit}
+        )`);
       }
 
       if (types.includes("expense")) {
@@ -379,7 +390,7 @@ export function createPrismaSearchRepository(
         if (filter.toDate) {
           conditions.push(Prisma.sql`e."incurredOn" <= ${filter.toDate}`);
         }
-        parts.push(Prisma.sql`
+        parts.push(Prisma.sql`(
           SELECT
             e.id,
             'expense'::text AS entity_type,
@@ -402,7 +413,9 @@ export function createPrismaSearchRepository(
             ) AS rank
           FROM expenses e
           WHERE ${Prisma.join(conditions, " AND ")}
-        `);
+          ORDER BY rank DESC, title ASC
+          LIMIT ${limit}
+        )`);
       }
 
       if (parts.length === 0) {

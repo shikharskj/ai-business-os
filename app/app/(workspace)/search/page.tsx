@@ -48,22 +48,31 @@ export default async function SearchPage({
   });
 
   const hasQuery = Boolean(params.q?.trim());
-  const result =
-    hasQuery && parsed.success
-      ? await searchBusinessRecords({
-          tenantId: tenant.tenantId,
-          role: tenant.membership.role,
-          query: parsed.data.q,
-          type: parsed.data.type,
-          status: parsed.data.status,
-          fromDate: parsed.data.from
-            ? businessDate(parsed.data.from)
-            : undefined,
-          toDate: parsed.data.to ? businessDate(parsed.data.to) : undefined,
-          limit: parsed.data.limit,
-          search: createPrismaSearchRepository(prisma),
-        })
-      : null;
+  let result = null;
+  let dateValidationError: string | null = null;
+
+  if (hasQuery && parsed.success) {
+    const fromDate = parsed.data.from
+      ? businessDate(parsed.data.from)
+      : undefined;
+    const toDate = parsed.data.to ? businessDate(parsed.data.to) : undefined;
+
+    if (fromDate && toDate && fromDate > toDate) {
+      dateValidationError = "From date must be on or before to date.";
+    } else {
+      result = await searchBusinessRecords({
+        tenantId: tenant.tenantId,
+        role: tenant.membership.role,
+        query: parsed.data.q,
+        type: parsed.data.type,
+        status: parsed.data.status,
+        fromDate,
+        toDate,
+        limit: parsed.data.limit,
+        search: createPrismaSearchRepository(prisma),
+      });
+    }
+  }
 
   const typeItems = Object.fromEntries(
     SEARCH_ENTITY_TYPES.map((type) => [type, SEARCH_ENTITY_LABEL[type]])
@@ -144,6 +153,12 @@ export default async function SearchPage({
       {hasQuery && !parsed.success ? (
         <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-base text-destructive">
           Enter a search query (1–200 characters).
+        </div>
+      ) : null}
+
+      {dateValidationError ? (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-base text-destructive">
+          {dateValidationError}
         </div>
       ) : null}
 

@@ -1,13 +1,13 @@
 import type { MembershipRole } from "@/modules/tenant/domain/types";
 import { roleHasPermission } from "@/lib/security/permissions";
 import { SearchError } from "@/modules/search/domain/errors";
+import type { SearchRepository } from "@/modules/search/domain/search-repository";
 import {
   SEARCH_ENTITY_PERMISSION,
   SEARCH_ENTITY_TYPES,
   type SearchEntityType,
   type SearchResponse,
 } from "@/modules/search/domain/types";
-import type { SearchRepository } from "@/modules/search/infrastructure/prisma-search-repository";
 import type { BusinessDate } from "@/modules/shared-kernel/dates";
 
 function allowedTypesForRole(role: MembershipRole): SearchEntityType[] {

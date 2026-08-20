@@ -107,9 +107,11 @@ export async function getExpenseReport(
 
   let total = zero();
   let totalTax = zero();
+  let totalTaxable = zero();
   const rows = expenses.map((expense) => {
     total = addMoney(total, expense.grandTotal);
     totalTax = addMoney(totalTax, expense.totalTax);
+    totalTaxable = addMoney(totalTaxable, expense.taxableAmount);
     return {
       id: expense.id,
       number: expense.number,
@@ -130,6 +132,7 @@ export async function getExpenseReport(
     },
     total,
     totalTax,
+    totalTaxable,
     expenseCount: rows.length,
     rows,
   };
@@ -145,8 +148,8 @@ export async function getProfitReport(
   return {
     range: sales.range,
     sales: sales.totalTaxable,
-    expenses: expenses.total,
-    profit: subtractMoney(sales.totalTaxable, expenses.total),
+    expenses: expenses.totalTaxable,
+    profit: subtractMoney(sales.totalTaxable, expenses.totalTaxable),
   };
 }
 

@@ -42,6 +42,7 @@ export type ExpenseReport = {
   range: ReportDateRange;
   total: Money;
   totalTax: Money;
+  totalTaxable: Money;
   expenseCount: number;
   rows: ExpenseReportRow[];
 };

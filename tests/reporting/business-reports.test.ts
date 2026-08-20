@@ -180,7 +180,9 @@ describe("business reports (24)", () => {
         id: "exp-1",
         tenantId: "tenant-a",
         number: "EXP-1",
-        grandTotal: money(250_00n),
+        taxableAmount: money(250_00n),
+        totalTax: money(45_00n),
+        grandTotal: money(295_00n),
       }),
     ]);
 
@@ -197,7 +199,9 @@ describe("business reports (24)", () => {
     });
 
     expect(toMajorString(profit.sales)).toBe("1000.00");
-    expect(toMajorString(expenseReport.total)).toBe("250.00");
+    expect(toMajorString(expenseReport.total)).toBe("295.00");
+    expect(toMajorString(expenseReport.totalTaxable)).toBe("250.00");
+    expect(toMajorString(profit.expenses)).toBe("250.00");
     expect(toMajorString(profit.profit)).toBe("750.00");
   });
 

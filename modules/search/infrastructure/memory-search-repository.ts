@@ -1,10 +1,10 @@
+import type { SearchRepository } from "@/modules/search/domain/search-repository";
 import { buildPrefixTsQuery } from "@/modules/search/domain/tsquery";
 import type {
   SearchEntityType,
   SearchFilter,
   SearchResult,
 } from "@/modules/search/domain/types";
-import type { SearchRepository } from "@/modules/search/infrastructure/prisma-search-repository";
 import { businessDate } from "@/modules/shared-kernel/dates";
 
 type MemoryDoc = {
