@@ -36,6 +36,7 @@ function mapBusiness(record: {
   timezone: string;
   currency: string;
   defaultGstRateBps: number;
+  lowStockThreshold: { toString(): string } | string;
 }): BusinessProfile {
   return {
     id: record.id,
@@ -57,6 +58,7 @@ function mapBusiness(record: {
     timezone: record.timezone,
     currency: record.currency,
     defaultGstRateBps: record.defaultGstRateBps,
+    lowStockThreshold: record.lowStockThreshold.toString(),
   };
 }
 
@@ -96,6 +98,7 @@ function toBusinessData(input: BusinessProfileInput | CreateBusinessRecordInput)
     timezone: input.timezone,
     currency: input.currency.toUpperCase(),
     defaultGstRateBps: input.defaultGstRateBps ?? 1800,
+    lowStockThreshold: input.lowStockThreshold ?? "5",
   };
 }
 

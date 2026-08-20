@@ -30,6 +30,7 @@ describe("createBusinessWithOrganization", () => {
         timezone: "Asia/Kolkata",
         currency: "INR",
         defaultGstRateBps: 1800,
+        lowStockThreshold: "5",
       },
       idempotencyKey: "alpha-key",
       businessRepository,
@@ -80,6 +81,7 @@ describe("createBusinessWithOrganization", () => {
       timezone: "Asia/Kolkata",
       currency: "INR",
       defaultGstRateBps: 1800,
+      lowStockThreshold: "5",
     };
     const gateway = {
       async createOrganization() {

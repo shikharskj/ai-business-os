@@ -10,6 +10,13 @@ import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
 import { CatalogNotFoundError, getProduct } from "@/modules/catalog";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
+import { prismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";
+import {
+  formatQuantity,
+  getStockPosition,
+  parseLowStockThreshold,
+} from "@/modules/inventory";
+import { StockStatusBadge } from "@/components/business/stock-status-badge";
 
 function gstRateLabel(bps: number): string {
   return `${bps / 100}%`;
@@ -41,6 +48,14 @@ export default async function ProductDetailPage({
     throw error;
   }
 
+  const stock = await getStockPosition({
+    tenantId: tenant.tenantId,
+    productId: product.id,
+    lowStockThreshold: parseLowStockThreshold(tenant.business.lowStockThreshold),
+    catalog: prismaCatalogRepository,
+    inventory: prismaInventoryRepository,
+  });
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6">
       <PageHeader
@@ -62,6 +77,15 @@ export default async function ProductDetailPage({
                 render={<Link href={`/app/inventory/products/${product.id}/edit`} />}
               >
                 Edit
+              </Button>
+            ) : null}
+            {product.tracksInventory ? (
+              <Button
+                nativeButton={false}
+                variant="outline"
+                render={<Link href={`/app/inventory/stock/${product.id}`} />}
+              >
+                Stock
               </Button>
             ) : null}
           </div>
@@ -87,14 +111,26 @@ export default async function ProductDetailPage({
         <CardHeader>
           <CardTitle>Stock</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-1">
-          {product.tracksInventory ? (
+        <CardContent className="flex flex-col gap-2">
+          {product.tracksInventory && stock.quantity !== null ? (
             <>
-              <p className="text-2xl font-semibold tabular-nums">0</p>
-              <p className="text-base text-muted-foreground">
-                No stock movements yet
+              <p className="text-2xl font-semibold tabular-nums tracking-tight">
+                {formatQuantity(stock.quantity)} {product.unitOfMeasurement}
               </p>
+              <StockStatusBadge
+                isLowStock={stock.isLowStock}
+                hasMovements={stock.hasMovements}
+              />
+              {!stock.hasMovements ? (
+                <p className="text-base text-muted-foreground">
+                  No stock movements yet
+                </p>
+              ) : null}
             </>
+          ) : product.tracksInventory ? (
+            <p className="text-base text-muted-foreground">
+              Stock is not tracked for this item.
+            </p>
           ) : (
             <p className="text-base text-muted-foreground">
               Stock is not tracked for this item.

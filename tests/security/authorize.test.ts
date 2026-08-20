@@ -28,6 +28,7 @@ function makeTenant(
       timezone: "Asia/Kolkata",
       currency: "INR",
       defaultGstRateBps: 1800,
+      lowStockThreshold: "5",
     },
     membership: {
       id: "mem_1",

@@ -66,6 +66,7 @@ model Business {
   timezone              String                @default("Asia/Kolkata")
   currency              String                @default("INR")
   defaultGstRateBps     Int                   @default(1800)
+  lowStockThreshold     Decimal               @default(5.0000) @db.Decimal(18, 4)
   closedThroughPeriodKey String?
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
@@ -81,6 +82,7 @@ model Business {
   documents    Document[]
   parties      Party[]
   products     Product[]
+  inventoryMovements InventoryMovement[]
 
   @@map("businesses")
 }
@@ -326,11 +328,50 @@ model Product {
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
-  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  business  Business             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  movements InventoryMovement[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, sku])
   @@index([tenantId, kind])
   @@index([tenantId, name])
   @@map("products")
+}
+
+enum InventoryMovementCause {
+  OPENING
+  ADJUSTMENT
+  SALE
+  PURCHASE
+  RETURN
+}
+
+enum InventoryMovementDirection {
+  IN
+  OUT
+}
+
+model InventoryMovement {
+  id             String                      @id @default(uuid())
+  tenantId       String
+  productId      String
+  cause          InventoryMovementCause
+  direction      InventoryMovementDirection
+  quantity       Decimal                     @db.Decimal(18, 4)
+  occurredOn     String
+  sourceType     String
+  sourceId       String
+  idempotencyKey String
+  reason         String?
+  actorUserId    String
+  createdAt      DateTime                    @default(now())
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Restrict)
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, productId, occurredOn])
+  @@index([tenantId, cause])
+  @@map("inventory_movements")
 }
