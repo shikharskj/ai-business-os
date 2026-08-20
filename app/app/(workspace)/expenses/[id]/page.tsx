@@ -130,9 +130,7 @@ export default async function ExpenseDetailPage({
             documents={documents}
             canDelete={canDelete}
             emptyMessage="No supporting files yet. Attach a receipt or invoice scan for this expense."
-            onDelete={(documentId) =>
-              deleteExpenseDocumentAction(expense.id, documentId)
-            }
+            onDelete={deleteExpenseDocumentAction.bind(null, expense.id)}
           />
         </CardContent>
       </Card>
