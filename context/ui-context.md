@@ -434,6 +434,7 @@ Business / Workspace
 Dashboard
 
 Sales
+  Quotations
   Invoices
   Customers
   Payments

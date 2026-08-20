@@ -50,6 +50,7 @@ const salesNav: NavItem[] = [
     href: "/app/sales",
     icon: Receipt,
     children: [
+      { label: "Quotations", href: "/app/sales/quotations" },
       { label: "Invoices", href: "/app/sales/invoices" },
       { label: "Customers", href: "/app/sales/customers" },
       { label: "Payments", href: "/app/sales/payments" },

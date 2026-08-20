@@ -21,13 +21,15 @@ function hasCurrentDelegates(client: PrismaClient | undefined): boolean {
         party?: { findMany?: unknown };
         product?: { findMany?: unknown };
         inventoryMovement?: { findMany?: unknown };
+        quotation?: { findMany?: unknown };
       }
     | undefined;
   return (
     typeof candidate?.document?.findMany === "function" &&
     typeof candidate?.party?.findMany === "function" &&
     typeof candidate?.product?.findMany === "function" &&
-    typeof candidate?.inventoryMovement?.findMany === "function"
+    typeof candidate?.inventoryMovement?.findMany === "function" &&
+    typeof candidate?.quotation?.findMany === "function"
   );
 }
 

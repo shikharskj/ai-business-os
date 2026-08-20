@@ -93,7 +93,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Customers             | Complete    |
 | Products              | Complete    |
 | Inventory             | Complete    |
-| Sales                 | Not Started |
+| Sales                 | In Progress |
 | Invoices              | Not Started |
 | Payments              | Not Started |
 | Expenses              | Not Started |
@@ -112,6 +112,13 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Quotations (`15-quotations.md`):
+  * `modules/sales/` quotations and lines. Create/edit (draft only)/view/list/search. Customer + catalog product/service lines, quantity, line discount, GST via `modules/tax` only (stored per line and header).
+  * Money primitives for amounts; quantity primitives for line qty. Per-tenant number series `QT/{FY}/{seq}`.
+  * Status: draft / sent / accepted / cancelled / converted. Convert is stubbed until spec `16` (`QuotationConversionNotReadyError`). No inventory movements or accounting journals.
+  * Permissions `quotation:*` (staff can create/read/update; cancel is owner/admin; accountant read-only). Audit + outbox on create/update/status changes.
+  * Sales → Quotations UI with GST preview on the detail page. Cross-tenant get-by-id rejected.
 
 * Inventory (`14-inventory.md`):
   * `modules/inventory/` movement-based stock. Current quantity is the signed sum of movements (no public balance UPDATE).
@@ -258,7 +265,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Current implementable spec:** `context/feature-specs/15-quotations.md`
+**Current implementable spec:** `context/feature-specs/16-sales-invoices.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -490,16 +497,19 @@ Tenant resolution must happen from trusted authenticated context and application
 
 ## Sales
 
-* Sales workflow
-* Invoice creation
-* Invoice numbering
-* Customer selection
-* Product selection
-* Quantity
-* Discount
-* Tax calculation
-* Invoice total
-* Invoice status
+* Sales workflow — Quotations complete; invoices start in spec `16`
+* Quotation create/edit/view/list — Complete
+* Quotation numbering — Complete (per tenant, FY series)
+* Customer selection — Complete
+* Product selection — Complete
+* Quantity — Complete
+* Discount — Complete (line discount)
+* Tax calculation — Complete (tax engine preview/stored breakdown)
+* Invoice creation — Not started (`16-sales-invoices.md`)
+* Invoice numbering — Not started
+* Invoice total — Not started
+* Invoice status — Not started
+* Convert quotation → invoice — Stubbed until spec `16`
 
 ---
 
@@ -768,7 +778,7 @@ Do not introduce multiple communication providers until the core notification ab
 * Tax calculations
 * GST calculations
 * Invoice totals
-* Discount calculations
+* Discount calculations — Complete (quotation line discount + GST on taxable amount)
 * Payment allocation
 * Inventory calculations — Complete (movement-derived quantity, opening, adjustment, low-stock, tenant isolation)
 * Accounting posting
@@ -1099,6 +1109,46 @@ The first objective is to deliver a complete, reliable business workflow for sma
 ---
 
 # Implementation Unit Log
+
+## 2026-08-20 — Sales quotations
+
+Status: Complete
+
+Implemented:
+- Added `modules/sales/` quotations: domain types/status transitions, money×quantity pricing, tax-engine GST per line, memory + Prisma repositories, and use cases (create, update draft, get, list/search, send, accept, cancel).
+- Per-tenant quotation numbers `QT/FY2026-27/0001` via `quotation_number_series`. Amounts are money primitives; quantities use inventory quantity scale.
+- Prisma `Quotation`, `QuotationLine`, `QuotationNumberSeries`. Migration `20260820040000_add_quotations`.
+- Permissions `quotation:create` / `read` / `update` / `cancel`. Audit + outbox (`QuotationCreated` / `Updated` / `Sent` / `Accepted` / `Cancelled`).
+- Sales → Quotations UI: list with “New quotation”, create/edit forms, detail with stored GST preview. Convert-to-invoice is stubbed until spec `16`. Quotations do not move stock or post journals.
+
+Files / Areas:
+- `modules/sales/`
+- `prisma/schema.prisma`
+- `prisma/migrations/20260820040000_add_quotations/`
+- `app/app/(workspace)/sales/quotations/`
+- `components/business/quotation-form.tsx`
+- `components/business/gst-breakdown.tsx`
+- `components/shell/app-sidebar.tsx`
+- `lib/security/permissions.ts`
+- `tests/sales/quotations.test.ts`
+
+Tests:
+- `npm test` (155 tests)
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+
+Verification:
+- Owner can create a quotation with lines, line discount, and GST matching `calculateGst`.
+- Creating a quotation does not append inventory movements.
+- Cross-tenant get-by-id is rejected (`QuotationNotFoundError`).
+- Production build succeeds.
+
+Notes:
+- Conversion to invoice is spec `16` only.
+- Next implementation unit is `16-sales-invoices.md`.
+
+---
 
 ## 2026-08-20 — Inventory movements
 

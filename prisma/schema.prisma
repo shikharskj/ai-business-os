@@ -83,6 +83,9 @@ model Business {
   parties      Party[]
   products     Product[]
   inventoryMovements InventoryMovement[]
+  quotations   Quotation[]
+  quotationLines QuotationLine[]
+  quotationNumberSeries QuotationNumberSeries[]
 
   @@map("businesses")
 }
@@ -299,7 +302,8 @@ model Party {
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
-  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  business    Business     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  quotations  Quotation[]
 
   @@unique([id, tenantId])
   @@index([tenantId, kind, status])
@@ -328,8 +332,9 @@ model Product {
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
-  business  Business             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  movements InventoryMovement[]
+  business        Business             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  movements       InventoryMovement[]
+  quotationLines  QuotationLine[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, sku])
@@ -374,4 +379,93 @@ model InventoryMovement {
   @@index([tenantId, productId, occurredOn])
   @@index([tenantId, cause])
   @@map("inventory_movements")
+}
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  CANCELLED
+  CONVERTED
+}
+
+model Quotation {
+  id                       String          @id @default(uuid())
+  tenantId                 String
+  number                   String
+  customerId               String
+  customerName             String
+  status                   QuotationStatus @default(DRAFT)
+  issuedOn                 String
+  validUntil               String?
+  notes                    String?
+  placeOfSupplyStateCode   String
+  subtotal                 Decimal         @db.Decimal(18, 2)
+  discountTotal            Decimal         @db.Decimal(18, 2)
+  taxableAmount            Decimal         @db.Decimal(18, 2)
+  cgst                     Decimal         @db.Decimal(18, 2)
+  sgst                     Decimal         @db.Decimal(18, 2)
+  igst                     Decimal         @db.Decimal(18, 2)
+  totalTax                 Decimal         @db.Decimal(18, 2)
+  grandTotal               Decimal         @db.Decimal(18, 2)
+  supplyType               String
+  createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @updatedAt
+
+  business Business       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Party          @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  lines    QuotationLine[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([tenantId, customerId])
+  @@index([tenantId, issuedOn])
+  @@map("quotations")
+}
+
+model QuotationLine {
+  id                 String  @id @default(uuid())
+  tenantId           String
+  quotationId        String
+  sortOrder          Int
+  productId          String
+  productName        String
+  sku                String
+  unitOfMeasurement  String
+  hsnSac             String?
+  taxRateBps         Int
+  quantity           Decimal @db.Decimal(18, 4)
+  unitPrice          Decimal @db.Decimal(18, 2)
+  discount           Decimal @db.Decimal(18, 2)
+  lineSubtotal       Decimal @db.Decimal(18, 2)
+  taxableAmount      Decimal @db.Decimal(18, 2)
+  cgst               Decimal @db.Decimal(18, 2)
+  sgst               Decimal @db.Decimal(18, 2)
+  igst               Decimal @db.Decimal(18, 2)
+  totalTax           Decimal @db.Decimal(18, 2)
+  lineTotal          Decimal @db.Decimal(18, 2)
+  supplyType         String
+  treatment          String
+
+  quotation Quotation @relation(fields: [quotationId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  product   Product   @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  business  Business  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, quotationId])
+  @@index([quotationId, sortOrder])
+  @@map("quotation_lines")
+}
+
+model QuotationNumberSeries {
+  id                String @id @default(uuid())
+  tenantId          String
+  financialYearKey  String
+  lastNumber        Int
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, financialYearKey])
+  @@map("quotation_number_series")
 }
