@@ -13,6 +13,10 @@ export type Permission =
   | "payment:read"
   | "expense:create"
   | "expense:read"
+  | "purchase:create"
+  | "purchase:read"
+  | "purchase:update"
+  | "purchase:cancel"
   | "inventory:adjust"
   | "report:read"
   | "accounting:post"
@@ -45,6 +49,10 @@ const OWNER_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "payment:read",
   "expense:create",
   "expense:read",
+  "purchase:create",
+  "purchase:read",
+  "purchase:update",
+  "purchase:cancel",
   "inventory:adjust",
   "report:read",
   "accounting:post",
@@ -78,6 +86,10 @@ const ADMIN_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "payment:read",
   "expense:create",
   "expense:read",
+  "purchase:create",
+  "purchase:read",
+  "purchase:update",
+  "purchase:cancel",
   "inventory:adjust",
   "report:read",
   "accounting:post",
@@ -108,6 +120,9 @@ const STAFF_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "payment:read",
   "expense:create",
   "expense:read",
+  "purchase:create",
+  "purchase:read",
+  "purchase:update",
   "customer:create",
   "customer:read",
   "customer:update",
@@ -123,6 +138,7 @@ const ACCOUNTANT_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "quotation:read",
   "payment:read",
   "expense:read",
+  "purchase:read",
   "report:read",
   "accounting:post",
   "customer:read",
@@ -131,7 +147,6 @@ const ACCOUNTANT_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "settings:read",
   "document:read",
 ]);
-
 const ROLE_PERMISSIONS: Record<MembershipRole, ReadonlySet<Permission>> = {
   OWNER: OWNER_PERMISSIONS,
   ADMIN: ADMIN_PERMISSIONS,

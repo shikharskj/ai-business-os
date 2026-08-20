@@ -10,4 +10,5 @@ export const LIST_KEY_PERMISSIONS: Record<ListKey, Permission> = {
   products: "product:read",
   stock: "product:read",
   expenses: "expense:read",
+  bills: "purchase:read",
 };

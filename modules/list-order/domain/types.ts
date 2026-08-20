@@ -7,6 +7,7 @@ export const LIST_KEYS = [
   "products",
   "stock",
   "expenses",
+  "bills",
 ] as const;
 
 export type ListKey = (typeof LIST_KEYS)[number];

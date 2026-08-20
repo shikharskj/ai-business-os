@@ -24,6 +24,7 @@ const LIST_KEY_PATHS: Record<ListKey, string> = {
   products: "/app/inventory/products",
   stock: "/app/inventory/stock",
   expenses: "/app/expenses",
+  bills: "/app/purchases/bills",
 };
 
 const saveListOrderInputSchema = z.object({

@@ -98,7 +98,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Payments              | Complete    |
 | Expenses              | Complete    |
 | Suppliers             | Complete    |
-| Purchases             | Not Started |
+| Purchases             | Complete    |
 | Accounting            | In Progress |
 | GST                   | In Progress |
 | Dashboard             | Not Started |
@@ -112,6 +112,13 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Purchases (`19-purchases.md`):
+  * `modules/purchases/` purchase bills + lines. Create/edit (draft only)/view/list/search. Supplier + catalog lines, quantity, purchase price, line discount, GST via `modules/tax` only (`transactionType: PURCHASE`).
+  * Per-tenant number series `BILL/{FY}/{seq}`. Status: draft / posted / unpaid / partially paid / paid / cancelled. Draft-only edits; posted amounts immutable (cancel draft only).
+  * `postPurchase` in one transaction: validate lines, inventory stock-in (`PURCHASE`/`IN` via `recordInventoryMovement` for tracked items), balanced journal (Dr Inventory / Operating expense, Dr Input GST, Cr Payable), audit + outbox (`PurchaseCreated` / `PurchasePosted`).
+  * Supplier outstanding from unpaid posted bills (full amount until spec `20` payments). Permissions `purchase:*`. Purchases → Bills UI.
+  * Tests: `tests/purchases/purchases.test.ts` (posting, journal balance, inventory IN, outstanding, double-post, cross-tenant rejection, posted immutability).
 
 * Expenses (`18-expenses.md`):
   * `modules/expenses/` record/list/detail. Category, business date, money amount, optional GST via tax engine, payment methods matching spec 17 (Cash, UPI, Bank Transfer, Card, Cheque), notes.
@@ -292,7 +299,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Current implementable spec:** `context/feature-specs/19-purchases.md`
+**Current implementable spec:** `context/feature-specs/20-supplier-payments.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -572,21 +579,21 @@ Tenant resolution must happen from trusted authenticated context and application
 * Edit supplier — Complete
 * Supplier list — Complete
 * Supplier detail — Complete
-* Outstanding payable — Placeholder until spec `20` (`₹0` / “No bills yet”; not stored)
+* Outstanding payable — Complete for unpaid posted bills (derived; full unpaid until spec `20` payments)
 
 ---
 
 ## Purchases
 
-* Purchase record
-* Supplier selection
-* Product selection
-* Quantity
-* Purchase price
-* Tax
-* Purchase total
-* Inventory update
-* Supplier payable
+* Purchase record — Complete (`modules/purchases/`)
+* Supplier selection — Complete
+* Product selection — Complete
+* Quantity — Complete
+* Purchase price — Complete
+* Tax — Complete (tax engine, `PURCHASE`)
+* Purchase total — Complete (money primitives)
+* Inventory update — Complete (stock-in on post for tracked items)
+* Supplier payable — Complete (Cr Payable on post; outstanding derived until payments in `20`)
 
 ---
 
@@ -1299,6 +1306,47 @@ Verification:
 
 Notes:
 - Next implementation unit is `19-purchases.md`.
+
+---
+
+## 2026-08-20 — Purchases
+
+Status: Complete
+
+Implemented:
+- Added `modules/purchases/` purchase/supplier bills with lines: supplier selection, catalog products/services, quantity, purchase price, line discount, GST via the tax engine only (`PURCHASE`), and tenant numbering `BILL/{FY}/{seq}`.
+- Draft create/update; post is atomic: purchase rows, inventory stock-in for tracked items (`PURCHASE`/`IN` via inventory module), balanced journal (Dr Inventory and/or Operating expense, Dr Input GST, Cr Accounts Payable), audit, and outbox (`PurchaseCreated` / `PurchasePosted` / `PurchaseCancelled`).
+- Status set: draft / posted / unpaid / partially paid / paid / cancelled. Posted amounts cannot be silently edited (draft cancel only). Supplier payable outstanding is derived from unpaid posted bills (full unpaid before spec `20` payments).
+- Permissions `purchase:create` / `purchase:read` / `purchase:update` / `purchase:cancel`. List key `bills`. Purchases → Bills UI (list/create/detail/edit) plus supplier detail outstanding from bills.
+- Prisma `Purchase`, `PurchaseLine`, `PurchaseNumberSeries`. Migration `20260820100000_add_purchases`. No warehouse/MRP; no supplier payment recording (spec `20`).
+
+Files / Areas:
+- `modules/purchases/`
+- `prisma/schema.prisma`
+- `prisma/migrations/20260820100000_add_purchases/`
+- `app/app/(workspace)/purchases/bills/`
+- `app/app/(workspace)/purchases/suppliers/[id]/page.tsx`
+- `components/business/bill-form.tsx`
+- `components/business/bill-status-actions.tsx`
+- `components/business/bills-data-table.tsx`
+- `lib/security/permissions.ts`
+- `modules/list-order/`
+- `tests/purchases/purchases.test.ts`
+
+Tests:
+- `npm test -- tests/purchases/purchases.test.ts tests/security/permissions.test.ts`
+- `npm run typecheck`
+- `npm run build`
+
+Verification:
+- Posted purchase increases inventory via movements and creates a balanced journal.
+- Supplier payable outstanding reflects unpaid posted purchases (full unpaid before payments).
+- Posted amounts cannot be silently edited.
+- Cross-tenant access is rejected.
+- Production build succeeds.
+
+Notes:
+- Next implementation unit is `20-supplier-payments.md`.
 
 ---
 

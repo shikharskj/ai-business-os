@@ -13,9 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
-import { money } from "@/modules/shared-kernel/money";
 import { getSupplier, PartyNotFoundError } from "@/modules/party";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
+import { getSupplierOutstanding } from "@/modules/purchases";
+import { prismaPurchasesRepository } from "@/modules/purchases/infrastructure/prisma-purchases-repository";
 
 function gstLabel(status: string): string {
   if (status === "REGISTERED") return "Registered";
@@ -58,6 +59,12 @@ export default async function SupplierDetailPage({
   ]
     .filter(Boolean)
     .join("\n");
+
+  const outstanding = await getSupplierOutstanding({
+    tenantId: tenant.tenantId,
+    supplierId: supplier.id,
+    purchases: prismaPurchasesRepository,
+  });
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6">
@@ -109,8 +116,17 @@ export default async function SupplierDetailPage({
           <CardTitle>Outstanding payable</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-1">
-          <MoneyDisplay value={money(0n)} className="text-2xl font-semibold" />
-          <p className="text-base text-muted-foreground">No bills yet</p>
+          <MoneyDisplay
+            value={outstanding.outstanding}
+            className="text-2xl font-semibold"
+          />
+          <p className="text-base text-muted-foreground">
+            {!outstanding.hasPostedPurchases
+              ? "No bills yet"
+              : outstanding.openBillCount === 0
+                ? "No unpaid bills"
+                : `${outstanding.openBillCount} unpaid bill${outstanding.openBillCount === 1 ? "" : "s"}`}
+          </p>
         </CardContent>
       </Card>
 
