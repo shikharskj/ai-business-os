@@ -62,7 +62,7 @@ export function createPrismaSearchRepository(
   client: Pick<PrismaClient, "$queryRaw">
 ): SearchRepository {
   return {
-    async search(filter) {
+    async search(filter: SearchFilter): Promise<SearchResult[]> {
       const tsQuery = buildPrefixTsQuery(filter.query);
       if (!tsQuery) {
         return [];
