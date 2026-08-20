@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 
 import { prisma } from "@/lib/db/client";
 import { env } from "@/lib/env";
@@ -18,7 +19,17 @@ export async function POST(request: Request) {
   const configured = env.CRON_SECRET;
   if (configured) {
     const header = request.headers.get("authorization");
-    if (header !== `Bearer ${configured}`) {
+    const expected = `Bearer ${configured}`;
+
+    // Use timing-safe comparison to prevent timing attacks
+    if (!header || header.length !== expected.length) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const headerBuf = Buffer.from(header);
+    const expectedBuf = Buffer.from(expected);
+
+    if (!timingSafeEqual(headerBuf, expectedBuf)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   } else if (env.NODE_ENV === "production") {
@@ -30,7 +41,24 @@ export async function POST(request: Request) {
 
   const notifications = createPrismaNotificationRepository(prisma);
   const context = createPrismaNotificationContextRepository(prisma);
-  const overdueTenantIds = await context.listAllTenantIds();
+
+  // Accept explicit tenant batch from request body to page through tenants,
+  // or use a bounded default sample to prevent unbounded work
+  let overdueTenantIds: string[] = [];
+  try {
+    const body = await request.json();
+    if (Array.isArray(body.tenantIds)) {
+      overdueTenantIds = body.tenantIds;
+    }
+  } catch {
+    // No body or invalid JSON, fall back to bounded default
+  }
+
+  // If no explicit batch provided, fetch a bounded page of tenant IDs
+  if (overdueTenantIds.length === 0) {
+    const allTenantIds = await context.listAllTenantIds();
+    overdueTenantIds = allTenantIds.slice(0, 50); // Bounded to 50 tenants per cron invocation
+  }
 
   const result = await processOutboxNotifications({
     outbox: createPrismaOutboxConsumerRepository(prisma),

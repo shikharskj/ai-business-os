@@ -23,6 +23,7 @@ export function NotificationInbox() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [items, setItems] = useState<NotificationListItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (opts?: { quiet?: boolean }) => {
     if (!opts?.quiet) {
@@ -33,17 +34,26 @@ export function NotificationInbox() {
         cache: "no-store",
       });
       if (!response.ok) {
+        if (open) {
+          setError("Failed to load notifications");
+        }
         return;
       }
       const data = (await response.json()) as NotificationListResponse;
       setUnreadCount(data.unreadCount);
       setItems(data.notifications);
+      setError(null);
+    } catch (err) {
+      if (open) {
+        setError("Failed to load notifications");
+      }
+      console.error("Notification load failed:", err);
     } finally {
       if (!opts?.quiet) {
         setLoading(false);
       }
     }
-  }, []);
+  }, [open]);
 
   useEffect(() => {
     const boot = window.setTimeout(() => {
@@ -59,23 +69,39 @@ export function NotificationInbox() {
   }, [load]);
 
   async function markAllRead() {
-    const response = await fetch("/api/notifications/mark-read", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ markAll: true }),
-    });
-    if (response.ok) {
-      await load();
+    try {
+      const response = await fetch("/api/notifications/mark-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAll: true }),
+      });
+      if (response.ok) {
+        await load();
+      } else {
+        if (open) {
+          setError("Failed to mark notifications as read");
+        }
+      }
+    } catch (err) {
+      if (open) {
+        setError("Failed to mark notifications as read");
+      }
+      console.error("Mark all read failed:", err);
     }
   }
 
   async function markOneRead(notificationId: string) {
-    await fetch("/api/notifications/mark-read", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notificationId }),
-    });
-    await load({ quiet: true });
+    try {
+      await fetch("/api/notifications/mark-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationId }),
+      });
+      await load({ quiet: true });
+    } catch (err) {
+      // Silent failure for quiet mark-as-read
+      console.error("Mark one read failed:", err);
+    }
   }
 
   return (
@@ -128,7 +154,11 @@ export function NotificationInbox() {
           ) : null}
         </div>
         <div className="max-h-80 overflow-y-auto">
-          {loading && items.length === 0 ? (
+          {error ? (
+            <p className="px-3 py-6 text-center text-sm text-destructive">
+              {error}
+            </p>
+          ) : loading && items.length === 0 ? (
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">
               Loading…
             </p>

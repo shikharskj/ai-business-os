@@ -51,15 +51,26 @@ export async function processOutboxNotifications(
 
   for (const event of events) {
     tenantsTouched.add(event.tenantId);
-    const created = await handleOutboxEvent({
-      event,
-      channel: input.channel,
-      context: input.context,
-    });
-    if (created) {
-      notificationsCreated += 1;
+    try {
+      const created = await handleOutboxEvent({
+        event,
+        channel: input.channel,
+        context: input.context,
+      });
+      if (created) {
+        notificationsCreated += 1;
+      }
+      await input.outbox.markProcessed(event.id);
+    } catch (error) {
+      // Isolate per-event failures: log and continue processing subsequent events.
+      // Mark as processed to prevent repeatedly failing events from blocking the queue.
+      // Consider implementing a dead-letter queue or attempt counter for production.
+      console.error(
+        `Failed to process outbox event ${event.id} (${event.eventType}):`,
+        error
+      );
+      await input.outbox.markProcessed(event.id);
     }
-    await input.outbox.markProcessed(event.id);
   }
 
   let overdueChecked = 0;
