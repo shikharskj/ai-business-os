@@ -95,7 +95,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Inventory             | Complete    |
 | Sales                 | Complete    |
 | Invoices              | Complete    |
-| Payments              | Not Started |
+| Payments              | Complete    |
 | Expenses              | Not Started |
 | Suppliers             | Complete    |
 | Purchases             | Not Started |
@@ -112,6 +112,12 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Customer payments (`17-customer-payments.md`):
+  * `modules/payments/` customer receipts + allocation lines. Record against one or more unpaid/partial invoices in-tenant. Partial and full payment. Over-allocation rejected.
+  * Invoice payment status and customer outstanding derived from allocations (not a stored balance). Atomic payment + allocations + balanced journal (Dr Cash/Bank, Cr Receivable) + audit + outbox (`PaymentReceived`).
+  * Methods: Cash, UPI, Bank Transfer, Card, Cheque (labels only; no gateway). Permissions `payment:*`. Sales → Payments UI plus invoice detail “Record payment”.
+  * Tests: `tests/payments/payments.test.ts` (partial/full, over-allocation unit + workflow, journal balance, outstanding, cross-tenant rejection).
 
 * Unified status badges (UI):
   * Single `StatusBadge` in `components/business/status-badge.tsx` with semantic tones (`success` / `warning` / `danger` / `info` / `neutral`) mapped to `--state-*` CSS tokens (not Tailwind hue palettes). Sizes: `sm` (previous default), `md` (new default), `lg`.
@@ -279,7 +285,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Current implementable spec:** `context/feature-specs/17-customer-payments.md`
+**Current implementable spec:** `context/feature-specs/18-expenses.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -477,7 +483,7 @@ Tenant resolution must happen from trusted authenticated context and application
 * Search customers — Complete
 * Customer detail — Complete
 * Customer transaction history — Not started (after invoices)
-* Outstanding balance — Placeholder until spec `17` (`₹0` / “No invoices yet”; not stored)
+* Outstanding balance — Complete (derived from posted invoice remainders minus allocations)
 
 ---
 
@@ -520,22 +526,22 @@ Tenant resolution must happen from trusted authenticated context and application
 * Discount — Complete (line discount)
 * Tax calculation — Complete (tax engine preview/stored breakdown)
 * Invoice creation — Complete (`16-sales-invoices.md`)
-* Invoice numbering — Not started
-* Invoice total — Not started
-* Invoice status — Not started
+* Invoice numbering — Complete
+* Invoice total — Complete
+* Invoice payment status — Complete
 * Convert quotation → invoice — Stubbed until spec `16`
 
 ---
 
 ## Payments
 
-* Record payment
-* Payment against invoice
-* Partial payment
-* Full payment
-* Outstanding balance
-* Payment history
-* Payment status
+* Record payment — Complete (customer receipts)
+* Payment against invoice — Complete (one or more invoices)
+* Partial payment — Complete
+* Full payment — Complete
+* Outstanding balance — Complete (from allocations)
+* Payment history — Complete
+* Payment status — Complete (invoice unpaid / partial / paid)
 
 ---
 
@@ -585,7 +591,7 @@ The MVP accounting system should remain intentionally simple while maintaining f
 * Journal entry model
 * Debit/credit representation
 * Automatic posting from invoices
-* Automatic posting from payments
+* Automatic posting from payments — Complete (customer receipts; Dr Cash/Bank, Cr Receivable)
 * Automatic posting from expenses
 * Automatic posting from purchases
 * Ledger queries
@@ -793,7 +799,7 @@ Do not introduce multiple communication providers until the core notification ab
 * GST calculations
 * Invoice totals
 * Discount calculations — Complete (quotation line discount + GST on taxable amount)
-* Payment allocation
+* Payment allocation — Complete (cannot exceed outstanding or payment amount; full amount must be allocated)
 * Inventory calculations — Complete (movement-derived quantity, opening, adjustment, low-stock, tenant isolation)
 * Accounting posting
 * Permission rules
@@ -803,7 +809,7 @@ Do not introduce multiple communication providers until the core notification ab
 * Database repositories
 * Transactions
 * Invoice workflow
-* Payment workflow
+* Payment workflow — Complete (memory-repo workflow + over-allocation + tenant isolation)
 * Inventory workflow
 * Accounting workflow
 * Tenant isolation
@@ -1123,6 +1129,48 @@ The first objective is to deliver a complete, reliable business workflow for sma
 ---
 
 # Implementation Unit Log
+
+## 2026-08-20 — Customer payments
+
+Status: Complete
+
+Implemented:
+- Added `modules/payments/` customer receipts and allocation lines. Record a payment against one or more unpaid/partial invoices in the same tenant. Partial and full payment. Over-allocation is rejected.
+- Invoice payment status and customer outstanding are derived from allocations, not a stored balance. Posted invoice line amounts are not mutated.
+- Atomic use case: payment + allocations + balanced journal (Dr Cash for cash, Dr Bank for UPI/bank transfer/card/cheque, Cr Receivable) + audit + outbox (`PaymentReceived`).
+- Methods: Cash, UPI, Bank Transfer, Card, Cheque as labels only. No payment gateway. Unallocated remainder is not recorded (full payment amount must be allocated).
+- Prisma `CustomerPayment`, `CustomerPaymentAllocation`, `CustomerPaymentNumberSeries`. Migration `20260820060000_add_customer_payments`. Number series `RCP/{FY}/{seq}`.
+- Permissions `payment:create` / `payment:read`. Sales → Payments list/detail/record UI. Invoice detail “Record payment” plus payment history. Customer outstanding from remainders.
+
+Files / Areas:
+- `modules/payments/`
+- `modules/sales/` (receivable status, invoice list filters, row lock for allocation)
+- `prisma/schema.prisma`
+- `prisma/migrations/20260820060000_add_customer_payments/`
+- `app/app/(workspace)/sales/payments/`
+- `app/app/(workspace)/sales/invoices/[id]/page.tsx`
+- `app/app/(workspace)/sales/customers/[id]/page.tsx`
+- `components/business/record-payment-form.tsx`
+- `tests/payments/payments.test.ts`
+
+Tests:
+- `npm test` (173 tests)
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+
+Verification:
+- Partial payment leaves remaining outstanding and marks the invoice partially paid.
+- Full payment marks the invoice paid; customer outstanding matches unpaid remainders.
+- Over-allocation is rejected (unit + workflow tests).
+- Receipt journal balances.
+- Cross-tenant payment get-by-id and allocation are rejected.
+- Production build succeeds.
+
+Notes:
+- Next implementation unit is `18-expenses.md`.
+
+---
 
 ## 2026-08-20 — Sales invoices UI
 

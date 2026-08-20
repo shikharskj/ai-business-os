@@ -23,8 +23,20 @@ import {
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
 import { formatQuantity } from "@/modules/inventory";
+import {
+  getInvoiceOutstanding,
+  listPaymentsForInvoice,
+  PAYMENT_METHOD_LABELS,
+} from "@/modules/payments";
+import { prismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
+import { money } from "@/modules/shared-kernel/money";
 import { GST_STATE_CODES } from "@/modules/tax/domain/gstin";
-import { getInvoice, InvoiceNotFoundError, paymentStatusLabel } from "@/modules/sales";
+import {
+  getInvoice,
+  InvoiceNotFoundError,
+  isReceivableInvoiceStatus,
+  paymentStatusLabel,
+} from "@/modules/sales";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
 
 export default async function InvoiceDetailPage({
@@ -40,6 +52,8 @@ export default async function InvoiceDetailPage({
   const canUpdate = roleHasPermission(tenant.membership.role, "invoice:update");
   const canCancel = roleHasPermission(tenant.membership.role, "invoice:cancel");
   const canRead = roleHasPermission(tenant.membership.role, "invoice:read");
+  const canCreatePayment = roleHasPermission(tenant.membership.role, "payment:create");
+  const canReadPayments = roleHasPermission(tenant.membership.role, "payment:read");
 
   let invoice;
   try {
@@ -57,6 +71,23 @@ export default async function InvoiceDetailPage({
 
   const placeOfSupply =
     GST_STATE_CODES[invoice.placeOfSupplyStateCode] ?? invoice.placeOfSupplyStateCode;
+  const outstanding = await getInvoiceOutstanding({
+    tenantId: tenant.tenantId,
+    invoiceId: invoice.id,
+    sales: prismaSalesRepository,
+    payments: prismaPaymentRepository,
+  });
+  const payments = canReadPayments
+    ? await listPaymentsForInvoice({
+        tenantId: tenant.tenantId,
+        invoiceId: invoice.id,
+        payments: prismaPaymentRepository,
+      })
+    : [];
+  const canRecordPayment =
+    canCreatePayment &&
+    isReceivableInvoiceStatus(invoice.status) &&
+    (outstanding?.outstanding.amountMinor ?? 0n) > 0n;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6">
@@ -82,6 +113,18 @@ export default async function InvoiceDetailPage({
                 render={<Link href={`/app/sales/invoices/${invoice.id}/edit`} />}
               >
                 Edit
+              </Button>
+            ) : null}
+            {canRecordPayment ? (
+              <Button
+                nativeButton={false}
+                render={
+                  <Link
+                    href={`/app/sales/payments/new?customerId=${invoice.customerId}&invoiceId=${invoice.id}`}
+                  />
+                }
+              >
+                Record payment
               </Button>
             ) : null}
             <InvoiceStatusActions
@@ -176,6 +219,12 @@ export default async function InvoiceDetailPage({
                 <span className="text-muted-foreground">Payment </span>
                 {paymentStatusLabel(invoice.status)}
               </p>
+              {outstanding && isReceivableInvoiceStatus(invoice.status) ? (
+                <p>
+                  <span className="text-muted-foreground">Outstanding </span>
+                  <MoneyDisplay value={outstanding.outstanding} className="font-medium" />
+                </p>
+              ) : null}
               <p>
                 <span className="text-muted-foreground">Date </span>
                 {invoice.issuedOn}
@@ -210,6 +259,47 @@ export default async function InvoiceDetailPage({
               {invoice.notes ? <p>{invoice.notes}</p> : null}
             </CardContent>
           </Card>
+          {canReadPayments && payments.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Payments</CardTitle>
+              </CardHeader>
+              <CardContent className="px-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Receipt</TableHead>
+                      <TableHead>Method</TableHead>
+                      <TableHead className="text-right">Allocated</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payments.map((payment) => {
+                      const allocated =
+                        payment.allocations.find((row) => row.invoiceId === invoice.id)
+                          ?.amount ?? money(0n, payment.amount.currency);
+                      return (
+                        <TableRow key={payment.id}>
+                          <TableCell>
+                            <Link
+                              href={`/app/sales/payments/${payment.id}`}
+                              className="font-mono text-sm font-medium hover:underline"
+                            >
+                              {payment.number}
+                            </Link>
+                          </TableCell>
+                          <TableCell>{PAYMENT_METHOD_LABELS[payment.method]}</TableCell>
+                          <TableCell className="text-right">
+                            <MoneyDisplay value={allocated} />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       </div>
     </div>

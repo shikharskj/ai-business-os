@@ -66,6 +66,10 @@ export type SalesRepository = {
     invoiceId: string;
     status: SalesInvoiceStatus;
   }): Promise<SalesInvoice | null>;
+  lockInvoiceForUpdate(
+    tenantId: string,
+    invoiceId: string
+  ): Promise<SalesInvoice | null>;
   findInvoiceById(tenantId: string, invoiceId: string): Promise<SalesInvoice | null>;
   findInvoiceByQuotationId(
     tenantId: string,
@@ -346,6 +350,12 @@ export function createMemorySalesRepository(
       invoices[index] = updated;
       return cloneInvoice(updated);
     },
+    async lockInvoiceForUpdate(tenantId, invoiceId) {
+      const record = invoices.find(
+        (item) => item.tenantId === tenantId && item.id === invoiceId
+      );
+      return record ? cloneInvoice(record) : null;
+    },
     async findInvoiceById(tenantId, invoiceId) {
       const record = invoices.find(
         (item) => item.tenantId === tenantId && item.id === invoiceId
@@ -360,9 +370,16 @@ export function createMemorySalesRepository(
     },
     async listInvoices(filter) {
       const query = filter.query?.trim().toLowerCase() ?? "";
+      const statuses = filter.statuses;
       return invoices
         .filter((record) => record.tenantId === filter.tenantId)
         .filter((record) => {
+          if (filter.customerId && record.customerId !== filter.customerId) {
+            return false;
+          }
+          if (statuses && statuses.length > 0) {
+            return statuses.includes(record.status);
+          }
           if (!filter.status || filter.status === "ALL") {
             return true;
           }

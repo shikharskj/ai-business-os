@@ -31,6 +31,7 @@ type PrismaSalesClient = Pick<
   | "salesInvoice"
   | "salesInvoiceLine"
   | "invoiceNumberSeries"
+  | "$queryRaw"
 >;
 
 const QUOTATION_STATUSES = new Set<QuotationStatus>([
@@ -563,6 +564,26 @@ export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRep
       return mapInvoice(record);
     },
 
+    async lockInvoiceForUpdate(tenantId, invoiceId) {
+      if (client === prisma) {
+        throw new Error(
+          "lockInvoiceForUpdate requires a transaction-bound Prisma client. " +
+          "The row lock must remain held through findFirst and mapInvoice. " +
+          "Use prisma.$transaction() and pass the transaction client to createPrismaSalesRepository()."
+        );
+      }
+      await client.$queryRaw`
+        SELECT id FROM sales_invoices
+        WHERE id = ${invoiceId} AND "tenantId" = ${tenantId}
+        FOR UPDATE
+      `;
+      const record = await client.salesInvoice.findFirst({
+        where: { id: invoiceId, tenantId },
+        include: { lines: true },
+      });
+      return record ? mapInvoice(record) : null;
+    },
+
     async findInvoiceById(tenantId, invoiceId) {
       const record = await client.salesInvoice.findFirst({
         where: { id: invoiceId, tenantId },
@@ -581,12 +602,17 @@ export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRep
 
     async listInvoices(filter) {
       const query = filter.query?.trim();
-      const statusFilter =
-        !filter.status || filter.status === "ALL" ? undefined : filter.status;
+      const statuses =
+        filter.statuses && filter.statuses.length > 0
+          ? [...filter.statuses]
+          : !filter.status || filter.status === "ALL"
+            ? undefined
+            : [filter.status];
 
       const where: Prisma.SalesInvoiceWhereInput = {
         tenantId: filter.tenantId,
-        status: statusFilter,
+        customerId: filter.customerId,
+        status: statuses ? { in: statuses } : undefined,
         ...(query
           ? {
               OR: [

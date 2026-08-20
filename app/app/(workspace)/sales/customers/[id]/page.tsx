@@ -13,9 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
-import { money } from "@/modules/shared-kernel/money";
 import { getCustomer, PartyNotFoundError } from "@/modules/party";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
+import { getCustomerOutstanding } from "@/modules/payments";
+import { prismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
+import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
 
 function gstLabel(status: string): string {
   if (status === "REGISTERED") return "Registered";
@@ -58,6 +60,13 @@ export default async function CustomerDetailPage({
   ]
     .filter(Boolean)
     .join("\n");
+
+  const outstanding = await getCustomerOutstanding({
+    tenantId: tenant.tenantId,
+    customerId: customer.id,
+    sales: prismaSalesRepository,
+    payments: prismaPaymentRepository,
+  });
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6">
@@ -107,8 +116,19 @@ export default async function CustomerDetailPage({
           <CardTitle>Outstanding</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-1">
-          <MoneyDisplay value={money(0n)} className="text-2xl font-semibold" />
-          <p className="text-base text-muted-foreground">No invoices yet</p>
+          <MoneyDisplay
+            value={outstanding.outstanding}
+            className="text-2xl font-semibold"
+          />
+          <p className="text-base text-muted-foreground">
+            {!outstanding.hasPostedInvoices
+              ? "No invoices yet"
+              : outstanding.outstanding.amountMinor === 0n
+                ? "Settled"
+                : outstanding.openInvoiceCount === 1
+                  ? "1 unpaid invoice"
+                  : `${outstanding.openInvoiceCount} unpaid invoices`}
+          </p>
         </CardContent>
       </Card>
 

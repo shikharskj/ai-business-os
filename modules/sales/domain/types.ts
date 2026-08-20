@@ -197,6 +197,8 @@ export type InvoiceListFilter = {
   tenantId: string;
   query?: string;
   status?: SalesInvoiceStatus | "ALL";
+  customerId?: string;
+  statuses?: readonly SalesInvoiceStatus[];
 };
 
 export type PreparedInvoiceLine = PreparedQuotationLine;

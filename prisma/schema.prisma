@@ -89,6 +89,9 @@ model Business {
   salesInvoices SalesInvoice[]
   salesInvoiceLines SalesInvoiceLine[]
   invoiceNumberSeries InvoiceNumberSeries[]
+  customerPayments CustomerPayment[]
+  customerPaymentAllocations CustomerPaymentAllocation[]
+  customerPaymentNumberSeries CustomerPaymentNumberSeries[]
 
   @@map("businesses")
 }
@@ -230,6 +233,7 @@ model Journal {
   business Business     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   lines    JournalLine[]
   salesInvoices SalesInvoice[]
+  customerPayments CustomerPayment[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, reversalOfJournalId])
@@ -309,6 +313,7 @@ model Party {
   business    Business     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   quotations  Quotation[]
   salesInvoices SalesInvoice[]
+  customerPayments CustomerPayment[]
 
   @@unique([id, tenantId])
   @@index([tenantId, kind, status])
@@ -517,6 +522,7 @@ model SalesInvoice {
   quotation Quotation?        @relation(fields: [quotationId, tenantId], references: [id, tenantId], onDelete: Restrict)
   journal   Journal?          @relation(fields: [journalId, tenantId], references: [id, tenantId], onDelete: Restrict)
   lines     SalesInvoiceLine[]
+  paymentAllocations CustomerPaymentAllocation[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, number])
@@ -572,4 +578,69 @@ model InvoiceNumberSeries {
 
   @@unique([tenantId, financialYearKey])
   @@map("invoice_number_series")
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  BANK_TRANSFER
+  CARD
+  CHEQUE
+}
+
+model CustomerPayment {
+  id           String        @id @default(uuid())
+  tenantId     String
+  number       String
+  customerId   String
+  customerName String
+  receivedOn   String
+  method       PaymentMethod
+  amount       Decimal       @db.Decimal(18, 2)
+  reference    String?
+  notes        String?
+  journalId    String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  business     Business                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer     Party                       @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  journal      Journal                     @relation(fields: [journalId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  allocations  CustomerPaymentAllocation[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, number])
+  @@unique([journalId, tenantId])
+  @@index([tenantId, customerId])
+  @@index([tenantId, receivedOn])
+  @@map("customer_payments")
+}
+
+model CustomerPaymentAllocation {
+  id         String  @id @default(uuid())
+  tenantId   String
+  paymentId  String
+  invoiceId  String
+  amount     Decimal @db.Decimal(18, 2)
+
+  payment  CustomerPayment @relation(fields: [paymentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  invoice  SalesInvoice    @relation(fields: [invoiceId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  business Business        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([id, tenantId])
+  @@unique([paymentId, invoiceId])
+  @@index([tenantId, invoiceId])
+  @@map("customer_payment_allocations")
+}
+
+model CustomerPaymentNumberSeries {
+  id               String @id @default(uuid())
+  tenantId         String
+  financialYearKey String
+  lastNumber       Int
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, financialYearKey])
+  @@map("customer_payment_number_series")
 }
