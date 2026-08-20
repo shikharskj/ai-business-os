@@ -33,6 +33,7 @@ import {
   InvoiceAlreadyPostedError,
   InvoiceNotFoundError,
   InvoiceValidationError,
+  InvoiceStatusError,
   QuotationAlreadyConvertedError,
   QuotationNotFoundError,
   QuotationStatusError,
@@ -40,6 +41,7 @@ import {
 import {
   assertInvoiceEditable,
   assertInvoiceTransition,
+  isPostedInvoiceStatus,
 } from "@/modules/sales/domain/invoice-status";
 import {
   formatInvoiceNumber,
@@ -409,8 +411,13 @@ export async function postInvoice(input: {
   if (!existing) {
     throw new InvoiceNotFoundError();
   }
-  if (existing.status !== "DRAFT") {
+  if (isPostedInvoiceStatus(existing.status)) {
     throw new InvoiceAlreadyPostedError();
+  }
+  if (existing.status !== "DRAFT") {
+    throw new InvoiceStatusError(
+      `A ${existing.status.toLowerCase()} invoice cannot be posted.`
+    );
   }
 
   await ensureChartOfAccounts({
@@ -439,19 +446,6 @@ export async function postInvoice(input: {
   const cogsLines = computeInvoiceCogsLines(existing, productMap);
   const journalLines = buildSalesInvoiceJournalLines(existing, cogsLines);
 
-  const journal = await postJournal({
-    tenantId: input.tenantId,
-    accountingDate: existing.issuedOn,
-    financialYearStartMonth: input.taxContext.financialYearStartMonth,
-    closedThroughPeriodKey: input.closedThroughPeriodKey,
-    sourceType: "SalesInvoice",
-    sourceId: existing.id,
-    memo: `Invoice ${existing.number}`,
-    lines: journalLines,
-    accountRepository: input.accounts,
-    journalRepository: input.journals,
-  });
-
   for (const line of existing.lines) {
     const product = productMap.get(line.productId)!;
     if (!product.tracksInventory) {
@@ -477,6 +471,19 @@ export async function postInvoice(input: {
       },
     });
   }
+
+  const journal = await postJournal({
+    tenantId: input.tenantId,
+    accountingDate: existing.issuedOn,
+    financialYearStartMonth: input.taxContext.financialYearStartMonth,
+    closedThroughPeriodKey: input.closedThroughPeriodKey,
+    sourceType: "SalesInvoice",
+    sourceId: existing.id,
+    memo: `Invoice ${existing.number}`,
+    lines: journalLines,
+    accountRepository: input.accounts,
+    journalRepository: input.journals,
+  });
 
   const invoice = await input.sales.markInvoicePosted({
     tenantId: input.tenantId,

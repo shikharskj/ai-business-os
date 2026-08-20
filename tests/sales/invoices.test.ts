@@ -332,4 +332,57 @@ describe("sales invoices", () => {
       })
     ).rejects.toBeInstanceOf(InvoiceStatusError);
   });
+
+  it("rolls back posting if inventory movement fails", async () => {
+    const d = deps();
+    const accounts = createMemoryAccountRepository();
+    const journals = createMemoryJournalRepository();
+    const inventory = createMemoryInventoryRepository();
+    await ensureChartOfAccounts({ tenantId: "tenant-a", accountRepository: accounts });
+    const customer = await seedCustomer(d.parties);
+    const product = await seedProduct(d.catalog, "tenant-a", true);
+    await recordOpeningStock({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      productId: product.id,
+      quantity: quantityFromMajor("10"),
+      occurredOn: businessDate("2026-04-01"),
+      catalog: d.catalog,
+      inventory,
+      audit: createMemoryAuditRepository(),
+      outbox: createMemoryOutboxRepository(),
+    });
+    const draft = await createInvoice({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      fields: invoiceFields(customer.id, product.id),
+      taxContext: taxContext(),
+      ...d,
+    });
+
+    const brokenInventory = createMemoryInventoryRepository();
+    brokenInventory.appendMovement = async () => {
+      throw new Error("Simulated inventory failure");
+    };
+
+    await expect(
+      postInvoice({
+        tenantId: "tenant-a",
+        actorUserId: "user-1",
+        invoiceId: draft.id,
+        taxContext: taxContext(),
+        closedThroughPeriodKey: null,
+        accounts,
+        journals,
+        inventory: brokenInventory,
+        ...d,
+      })
+    ).rejects.toThrow("Simulated inventory failure");
+
+    const invoice = await d.sales.findInvoiceById("tenant-a", draft.id);
+    expect(invoice?.status).toBe("DRAFT");
+    expect(invoice?.journalId).toBeNull();
+    expect(journals.listPosted()).toHaveLength(0);
+    expect(d.outbox.events.filter((e) => e.eventType === "SalesInvoicePosted")).toHaveLength(0);
+  });
 });
