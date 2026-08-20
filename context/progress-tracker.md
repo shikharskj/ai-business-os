@@ -1208,6 +1208,22 @@ Files / Areas:
 
 ---
 
+## 2026-08-20 — Calendar month/year shadcn Select dropdowns
+
+Status: Complete
+
+Implemented:
+- Replaced DayPicker’s native `<select>` month/year dropdowns with shadcn `Select` via `components.Dropdown` in `Calendar`, so menus use design-system popover tokens instead of OS chrome.
+- DatePicker keeps the calendar open when interacting with nested Select (`outside-press` / `focus-out` cancel when the event hits select content).
+- Nav overlay no longer steals clicks (`pointer-events-none` on nav, `pointer-events-auto` on prev/next).
+- DatePicker controlled `month` stays in sync with the selected value; changing month/year via dropdowns moves the selected day into that month (clamped).
+
+Files / Areas:
+- `components/ui/calendar.tsx`
+- `components/date-picker.tsx`
+
+---
+
 ## 2026-08-20 — Reusable server-paginated DataTable
 
 Status: Complete

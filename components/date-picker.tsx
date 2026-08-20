@@ -36,6 +36,12 @@ function isoFromCalendarDate(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
+function moveDateToMonth(date: Date, month: Date): Date {
+  const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
+  const day = Math.min(date.getDate(), lastDay)
+  return new Date(month.getFullYear(), month.getMonth(), day)
+}
+
 interface DatePickerProps {
   id?: string
   name?: string
@@ -63,20 +69,81 @@ export function DatePicker({
   )
   const selectedDate = date ?? internalDate
   const isoValue = selectedDate ? isoFromCalendarDate(selectedDate) : ""
+  const [visibleMonth, setVisibleMonth] = React.useState<Date>(
+    () => selectedDate ?? new Date()
+  )
 
-  const handleSelect = (nextDate: Date | undefined) => {
+  const commitDate = (nextDate: Date | undefined, close: boolean) => {
     if (date === undefined) {
       setInternalDate(nextDate)
     }
-
+    if (nextDate) {
+      setVisibleMonth(nextDate)
+    }
     onSelect?.(nextDate)
-    setOpen(false)
+    if (close) {
+      setOpen(false)
+    }
+  }
+
+  const handleMonthChange = (nextMonth: Date) => {
+    setVisibleMonth(nextMonth)
+    if (!selectedDate) {
+      return
+    }
+    commitDate(moveDateToMonth(selectedDate, nextMonth), false)
+  }
+
+  const handleOpenChange = (
+    nextOpen: boolean,
+    details: {
+      reason: string
+      event: Event
+      cancel: () => void
+    }
+  ) => {
+    let cancelled = false
+    if (!nextOpen) {
+      const candidates: Element[] = []
+      if (details.event.target instanceof Element) {
+        candidates.push(details.event.target)
+      }
+      if (
+        "relatedTarget" in details.event &&
+        details.event.relatedTarget instanceof Element
+      ) {
+        candidates.push(details.event.relatedTarget)
+      }
+
+      const hitsSelect = candidates.some((el) =>
+        el.closest('[data-slot="select-content"], [data-slot="select-trigger"]')
+      )
+      const selectMenuOpen = Boolean(
+        document.querySelector('[data-slot="select-content"]')
+      )
+
+      if (
+        hitsSelect ||
+        (selectMenuOpen &&
+          (details.reason === "outside-press" || details.reason === "focus-out"))
+      ) {
+        details.cancel()
+        cancelled = true
+      }
+    }
+
+    if (!cancelled) {
+      if (nextOpen) {
+        setVisibleMonth(selectedDate ?? new Date())
+      }
+      setOpen(nextOpen)
+    }
   }
 
   return (
     <div className="w-full">
       {name ? <input type="hidden" name={name} value={isoValue} /> : null}
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger
           disabled={disabled}
           render={
@@ -103,8 +170,11 @@ export function DatePicker({
           <Calendar
             mode="single"
             captionLayout="dropdown"
+            month={visibleMonth}
+            onMonthChange={handleMonthChange}
             selected={selectedDate}
-            onSelect={handleSelect}
+            onSelect={(nextDate) => commitDate(nextDate, true)}
+            defaultMonth={selectedDate}
           />
         </PopoverContent>
       </Popover>

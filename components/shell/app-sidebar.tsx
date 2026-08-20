@@ -191,7 +191,7 @@ export function AppSidebar({ businessName }: { businessName: string }) {
   const pathname = usePathname();
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="shadow-[0_0_10px_0_rgba(0,0,0,0.1)] dark:shadow-[0_0_10px_0_rgba(255,255,255,0.1)]">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
