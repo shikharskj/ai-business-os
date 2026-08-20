@@ -96,7 +96,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Sales                 | Complete    |
 | Invoices              | Complete    |
 | Payments              | Complete    |
-| Expenses              | Not Started |
+| Expenses              | Complete    |
 | Suppliers             | Complete    |
 | Purchases             | Not Started |
 | Accounting            | In Progress |
@@ -112,6 +112,13 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Expenses (`18-expenses.md`):
+  * `modules/expenses/` record/list/detail. Category, business date, money amount, optional GST via tax engine, payment methods matching spec 17 (Cash, UPI, Bank Transfer, Card, Cheque), notes.
+  * Attachments through `modules/documents/` (`ownerRecordType: EXPENSE`); document upload/read/delete permissions are still required.
+  * Atomic record: balanced journal (Dr Operating expense, Dr Input GST when taxed, Cr Cash/Bank) + audit + outbox (`ExpenseRecorded`). Number series `EXP/{FY}/{seq}`.
+  * Permissions `expense:create` / `expense:read`. Expenses UI with category and date filters.
+  * Tests: `tests/expenses/expenses.test.ts` (untaxed/taxed journals, filters, attachments, cross-tenant rejection).
 
 * Customer payments (`17-customer-payments.md`):
   * `modules/payments/` customer receipts + allocation lines. Record against one or more unpaid/partial invoices in-tenant. Partial and full payment. Over-allocation rejected.
@@ -285,7 +292,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Current implementable spec:** `context/feature-specs/18-expenses.md`
+**Current implementable spec:** `context/feature-specs/19-purchases.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -1129,6 +1136,44 @@ The first objective is to deliver a complete, reliable business workflow for sma
 ---
 
 # Implementation Unit Log
+
+## 2026-08-20 — Expenses
+
+Status: Complete
+
+Implemented:
+- Added `modules/expenses/` to record business spend: category, business date, money amount, optional GST via the tax engine, payment method (same labels as spec 17), and notes.
+- Recording is posted immediately in one transaction: numbered expense, balanced journal (Dr Operating expense, Dr Input GST when tax applies, Cr Cash or Bank), audit, and outbox (`ExpenseRecorded`).
+- List/filter by category and date. Detail shows GST breakdown and attachments via the documents module (`EXPENSE` owner). Document upload/read/delete permissions are not bypassed.
+- Prisma `Expense` + `ExpenseNumberSeries`. Migration `20260820070000_add_expenses`. Number series `EXP/{FY}/{seq}`. Permissions `expense:create` / `expense:read`.
+- Expenses UI under `/app/expenses`. No payroll, reimbursements, corporate cards, or payment gateway.
+
+Files / Areas:
+- `modules/expenses/`
+- `prisma/schema.prisma`
+- `prisma/migrations/20260820070000_add_expenses/`
+- `app/app/(workspace)/expenses/`
+- `components/business/record-expense-form.tsx`
+- `components/business/document-attachment-list.tsx`
+- `components/business/upload-document-form.tsx`
+- `tests/expenses/expenses.test.ts`
+
+Tests:
+- `npm test` (182 tests)
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+
+Verification:
+- Owner can record, list, filter, and attach evidence in-tenant.
+- Posted expense creates a balanced journal.
+- Cross-tenant get-by-id and attachment are rejected.
+- Production build succeeds.
+
+Notes:
+- Next implementation unit is `19-purchases.md`.
+
+---
 
 ## 2026-08-20 — Customer payments
 
