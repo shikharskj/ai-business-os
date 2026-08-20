@@ -10,6 +10,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       enableSystem
       disableTransitionOnChange
       themes={["light", "dark", "system"]}
+      scriptProps={
+        typeof window === "undefined"
+          ? undefined
+          : { type: "application/json" }
+      }
     >
       {children}
     </NextThemesProvider>

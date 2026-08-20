@@ -34,6 +34,7 @@ export type BusinessProfile = {
   timezone: string;
   currency: string;
   defaultGstRateBps: number;
+  lowStockThreshold: string;
 };
 
 export type TenantMembership = {

@@ -131,6 +131,7 @@ async function applyOrganizationEvent(
       timezone: business.timezone,
       currency: business.currency,
       defaultGstRateBps: business.defaultGstRateBps,
+      lowStockThreshold: business.lowStockThreshold,
     });
   }
 }

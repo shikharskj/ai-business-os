@@ -61,6 +61,7 @@ describe("requireTenantForTrustedResource", () => {
         timezone: "Asia/Kolkata",
         currency: "INR",
         defaultGstRateBps: 1800,
+        lowStockThreshold: "5",
       },
     ]);
     const membershipRepository = createMemoryMembershipRepository([

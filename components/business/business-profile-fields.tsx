@@ -325,6 +325,23 @@ export function BusinessProfileFields({
           </Select>
         </Field>
         <Field
+          label="Low-stock alert quantity"
+          name="lowStockThreshold"
+          fieldErrors={fieldErrors}
+        >
+          <Input
+            id="lowStockThreshold"
+            name="lowStockThreshold"
+            inputMode="decimal"
+            defaultValue={defaultValues?.lowStockThreshold ?? "5"}
+            placeholder="5"
+          />
+          <p className="text-xs text-muted-foreground">
+            Inventory-tracked products at or below this quantity are marked
+            low stock.
+          </p>
+        </Field>
+        <Field
           label="Financial year starts in"
           name="financialYearStartMonth"
           fieldErrors={fieldErrors}

@@ -62,6 +62,20 @@ export const businessProfileInputSchema = z
       .max(10000, "Default GST rate must be between 0% and 100%")
       .optional()
       .default(1800),
+    lowStockThreshold: z
+      .string()
+      .trim()
+      .transform((value) => value.replace(/,/g, ""))
+      .pipe(
+        z
+          .string()
+          .regex(
+            /^\d{1,14}(\.\d{1,4})?$/,
+            "Enter a valid low-stock quantity (up to 4 decimal places)"
+          )
+      )
+      .optional()
+      .default("5"),
   })
   .superRefine((value, ctx) => {
     if (value.gstRegistrationStatus === "NOT_REGISTERED" && value.gstin) {

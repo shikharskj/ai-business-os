@@ -92,7 +92,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Database              | In Progress |
 | Customers             | Complete    |
 | Products              | Complete    |
-| Inventory             | Not Started |
+| Inventory             | Complete    |
 | Sales                 | Not Started |
 | Invoices              | Not Started |
 | Payments              | Not Started |
@@ -112,6 +112,14 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Inventory (`14-inventory.md`):
+  * `modules/inventory/` movement-based stock. Current quantity is the signed sum of movements (no public balance UPDATE).
+  * Opening stock (once per product), manual adjustments (`inventory:adjust`), and `recordInventoryMovement` for later sale stock-out / purchase stock-in.
+  * Low-stock detection from tenant `Business.lowStockThreshold` (default 5; editable in business settings). Only inventory-tracked products participate.
+  * Inventory → Stock list, low-stock alert, product stock detail with movement history. Product detail shows derived quantity.
+  * Audit + outbox (`InventoryOpened` / `InventoryAdjusted` / `InventoryMoved`). Cross-tenant stock access rejected.
+  * Opening-stock accounting journals deferred to specs `16`/`19` (no silent skip of the debit=credit invariant).
 
 * Design system — shadcn blocks + dark mode:
   * Neutral zinc tokens (black primary in light, white primary in dark). First-class dark mode via `next-themes` (`.dark` on `html`, persisted).
@@ -250,7 +258,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Current implementable spec:** `context/feature-specs/14-inventory.md`
+**Current implementable spec:** `context/feature-specs/15-quotations.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -470,13 +478,13 @@ Tenant resolution must happen from trusted authenticated context and application
 
 ## Inventory
 
-* Opening stock
-* Stock-in
-* Stock-out
-* Inventory adjustment
-* Current stock
-* Low-stock detection
-* Inventory movement history
+* Opening stock — Complete (one opening movement per product)
+* Stock-in — Interface ready (`recordInventoryMovement` cause `PURCHASE`; wired in spec `19`)
+* Stock-out — Interface ready (`recordInventoryMovement` cause `SALE`; wired in spec `16`)
+* Inventory adjustment — Complete (`inventory:adjust`)
+* Current stock — Complete (derived from movements)
+* Low-stock detection — Complete (tenant `lowStockThreshold`, default 5)
+* Inventory movement history — Complete
 
 ---
 
@@ -762,7 +770,7 @@ Do not introduce multiple communication providers until the core notification ab
 * Invoice totals
 * Discount calculations
 * Payment allocation
-* Inventory calculations
+* Inventory calculations — Complete (movement-derived quantity, opening, adjustment, low-stock, tenant isolation)
 * Accounting posting
 * Permission rules
 
@@ -1091,6 +1099,48 @@ The first objective is to deliver a complete, reliable business workflow for sma
 ---
 
 # Implementation Unit Log
+
+## 2026-08-20 — Inventory movements
+
+Status: Complete
+
+Implemented:
+- Added `modules/inventory/` with quantity primitives (scale 4, integer minor units), movement types, memory + Prisma repositories, and use cases for opening stock, adjustments, derived current stock, low-stock listing, and movement history.
+- Public `recordInventoryMovement` interface for later sale stock-out and purchase stock-in. Only inventory-tracked products participate. Direct balance mutation is not part of the public API.
+- Prisma `InventoryMovement` (append-only) plus `Business.lowStockThreshold` (`DECIMAL(18,4)`, default 5). Migration `20260820030000_add_inventory_movements`.
+- Inventory → Stock UI: list with low-stock alert/filter, product stock page with opening/adjust forms (`inventory:adjust`) and movement history. Product detail shows derived quantity.
+- Audit + outbox `InventoryOpened` / `InventoryAdjusted` / `InventoryMoved`. Cross-tenant get-by-id is rejected.
+
+Files / Areas:
+- `modules/inventory/`
+- `prisma/schema.prisma`
+- `prisma/migrations/20260820030000_add_inventory_movements/`
+- `app/app/(workspace)/inventory/stock/`
+- `app/app/(workspace)/inventory/products/[id]/page.tsx`
+- `components/business/opening-stock-form.tsx`
+- `components/business/adjust-stock-form.tsx`
+- `components/business/low-stock-alert.tsx`
+- `modules/tenant/` (low-stock threshold)
+- `tests/inventory/inventory.test.ts`
+
+Tests:
+- `npm test` (147 tests)
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
+
+Verification:
+- Opening stock and adjustments change derived quantity through movements only.
+- No public `setStock` / `updateStockBalance` use case.
+- Low-stock products can be listed against the tenant threshold.
+- Cross-tenant stock access is rejected (`InventoryProductNotFoundError`).
+- Production build succeeds.
+
+Notes:
+- Opening-stock accounting journals are deferred to specs `16`/`19` so inventory valuation posts with those documents rather than inventing a standalone opening journal here.
+- Next implementation unit is `15-quotations.md`.
+
+---
 
 ## 2026-08-20 — Products catalog
 

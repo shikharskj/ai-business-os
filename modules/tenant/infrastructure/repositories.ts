@@ -102,6 +102,7 @@ export function createMemoryBusinessRepository(
         timezone: input.timezone,
         currency: input.currency,
         defaultGstRateBps: input.defaultGstRateBps ?? 1800,
+        lowStockThreshold: input.lowStockThreshold ?? "5",
       };
 
       businesses.set(created.id, created);
@@ -134,6 +135,7 @@ export function createMemoryBusinessRepository(
         timezone: input.timezone,
         currency: input.currency,
         defaultGstRateBps: input.defaultGstRateBps ?? existing.defaultGstRateBps,
+        lowStockThreshold: input.lowStockThreshold ?? existing.lowStockThreshold,
       };
 
       businesses.set(tenantId, updated);

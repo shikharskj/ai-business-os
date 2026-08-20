@@ -34,6 +34,7 @@ describe("tenant org lifecycle", () => {
       timezone: "Asia/Kolkata",
       currency: "INR",
       defaultGstRateBps: 1800,
+      lowStockThreshold: "5",
     },
   ]);
 
