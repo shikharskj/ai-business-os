@@ -20,6 +20,7 @@ import {
   compareQuantity,
   DEFAULT_LOW_STOCK_THRESHOLD,
   isPositiveQuantity,
+  quantity,
   quantityFromMajor,
   type Quantity,
   ZERO_QUANTITY,
