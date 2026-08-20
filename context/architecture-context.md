@@ -1893,6 +1893,18 @@ This provides:
 
 ---
 
+## ADR-008a — Supervisor-Led Dashboard Generative UI
+
+**Status:** Accepted
+
+The business dashboard is composed by a Supervisor agent that delegates to specialized workers (Data Fetcher, Data Analyst, Anomaly Scout, Generative UI Mapper). The UI renders a Zod-validated `DashboardView` JSON mapped to registered shadcn components. Financial figures must cite Data Fetcher fact ids; the LLM must not invent KPIs. If orchestration fails, the canvas falls back to the same mapper driven by `getDashboardOverview`.
+
+**Reason:**
+
+Keeps Dashboard-01 UX flexibility while preserving tenant isolation, auditability, and deterministic financial truth.
+
+---
+
 ## ADR-009 — MVP Before Platform Complexity
 
 **Status:** Accepted

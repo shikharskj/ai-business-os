@@ -30,6 +30,13 @@ export {
   type TaxRateRecord,
   type TaxTransactionType,
 } from "@/modules/tax/domain/types";
+export {
+  addStoredGst,
+  storedHeaderMatchesLines,
+  sumStoredGst,
+  zeroStoredGst,
+  type StoredGstAmounts,
+} from "@/modules/tax/domain/sum-stored-gst";
 export { calculateTax, type CalculateTaxInput } from "@/modules/tax/application/calculate-tax";
 export {
   createMemoryHsnSacRepository,

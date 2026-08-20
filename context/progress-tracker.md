@@ -100,8 +100,8 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Suppliers             | Complete    |
 | Purchases             | Complete    |
 | Accounting            | Complete    |
-| GST                   | In Progress |
-| Dashboard             | Not Started |
+| GST                   | Complete    |
+| Dashboard             | Complete    |
 | Reports               | Not Started |
 | AI Assistant          | Not Started |
 | Notifications         | Not Started |
@@ -112,6 +112,26 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Supervisor-led dashboard Generative UI (UX overhaul on top of `23-dashboard.md`):
+  * `modules/ai/` Supervisor orchestrates Data Fetcher → Analyst → Anomaly Scout → Generative UI Mapper. KPIs cite fact ids only (Zod `DashboardViewSchema` + quality gate).
+  * `DashboardCanvas` renders MetricCard / AreaChart / ActivityList / InsightBanner from validated JSON; AI-down uses `source: "fallback"`.
+  * App top bar: Clerk `OrganizationSwitcher` + ⌘K route command palette (constrained to avoid horizontal overflow). Chart header period filters (7d / 30d / 3m); KPI card gradients; no Overview/Reports/Accounting tabs on `/app`.
+  * Tests: `tests/ai/dashboard-supervisor.test.ts`.
+
+* Dashboard chart / KPI polish:
+  * Monochrome gradient area chart (`--chart-1` / `--chart-3`); URL `?range=` presets `last_7_days` | `last_30_days` | `last_3_months` (default 3 months).
+  * `DashboardMetricCard` vertical gradient only; `SidebarInset` / `AppTopBar` `min-w-0` overflow fixes.
+
+* Dashboard (`23-dashboard.md`):
+  * `modules/reporting/` `getDashboardOverview` — sales, expenses, profit, receivables/payables, receipts/payments-out, overdue, low-stock, recent lists, daily series. Date range: this month (tenant timezone) or custom.
+  * `/app` dashboard UI with metric cards, Chart primitive (sales vs expenses via `--chart-*`), attention alerts, empty state. AI insights slot deferred (not rendered until `28`). Permission `report:read`.
+  * Tests: `tests/reporting/dashboard.test.ts` (empty business, KPI match, tenant isolation, this-month range).
+
+* GST reporting (`22-gst-reporting.md`):
+  * `modules/reporting/` GST period summary + CSV export from stored sales/purchase/expense tax fields. `modules/tax` `sumStoredGst` / header↔line integrity check (no tax recalculation).
+  * Reports hub + GST summary UI (`/app/reports`, `/app/reports/gst`); export via `/api/reports/gst/export`. Permission `report:read`. Nested Reports → GST in sidebar.
+  * Tests: `tests/reporting/gst-reporting.test.ts` (period totals match stored breakdowns, tenant-scoped export, draft/untaxed excluded).
 
 * Accounting workspace (`21-accounting-workspace.md`):
   * Ledger query (account + date/period), trial balance for a period, period status + close (`Business.closedThroughPeriodKey`), reversal and manual adjustment journals via posting service (never UPDATE posted lines).
@@ -311,7 +331,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Current implementable spec:** `context/feature-specs/22-gst-reporting.md`
+**Current implementable spec:** `context/feature-specs/24-reports.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -1400,6 +1420,126 @@ Verification:
 
 Notes:
 - Next implementation unit is `21-accounting-workspace.md`.
+
+---
+
+## 2026-08-21 — Dashboard chart, KPI, tabs, and overflow polish
+
+Status: Complete
+
+Implemented:
+- Monochrome stacked-area chart with SVG linear gradients (`--chart-1` / `--chart-3`), hidden Y-axis, chart-header segmented filters for Last 7 days / 30 days / 3 months via `?range=`.
+- Extended `resolveDashboardDateRange` with those presets; default when omitted is `last_3_months` (`this_month` / `custom` retained).
+- KPI cards: top-to-bottom gradient on `DashboardMetricCard` only (shared `Card` unchanged).
+- Removed Overview / Reports / Accounting tabs and From/To period form from `/app`; sidebar nav unchanged.
+- Constrained `AppTopBar` (min-w-0, org switcher max-width) and `SidebarInset` (`min-w-0 overflow-x-hidden`) to stop horizontal page scroll.
+
+Files / Areas:
+- `modules/reporting/domain/dashboard-range.ts`, `schemas/dashboard.schema.ts`
+- `components/business/dashboard-area-chart.tsx`, `dashboard-canvas.tsx`, `dashboard-chart-range-filters.tsx`, `dashboard-metric-card.tsx`
+- `components/shell/app-top-bar.tsx`
+- `app/app/(workspace)/page.tsx`, `layout.tsx`
+- Removed `components/business/dashboard-period-toolbar.tsx`
+- `tests/reporting/dashboard.test.ts`
+
+Tests:
+- `npx vitest run tests/reporting/dashboard.test.ts tests/ai/dashboard-supervisor.test.ts`
+- `npm run typecheck`
+
+Notes:
+- Reports / Accounting / GST modules untouched beyond shared date-range type expansion.
+
+---
+
+## 2026-08-20 — Supervisor-led dashboard Generative UI
+
+Status: Complete
+
+Implemented:
+- Introduced `modules/ai/` Supervisor + four workers (Data Fetcher, Data Analyst, Anomaly Scout, Generative UI Mapper). Facts come from `getDashboardOverview` only; schema + citation quality gate block invented amounts.
+- Generative UI: Zod `DashboardViewSchema` → `DashboardCanvas` maps to shadcn Cards/Charts/lists/insight banners (Dashboard-01 structure). Fallback path when orchestration fails.
+- Shell: `OrganizationSwitcher` + workspace command menu (⌘K). Dashboard period toolbar with Overview / Reports / Accounting tabs.
+- Stub `lib/ai/adapter.ts` for future OpenAI gateway (spec 27).
+
+Files / Areas:
+- `modules/ai/`
+- `lib/ai/adapter.ts`
+- `components/business/dashboard-*.tsx`
+- `components/shell/app-top-bar.tsx`, `workspace-command-menu.tsx`
+- `app/app/(workspace)/page.tsx`
+- `tests/ai/dashboard-supervisor.test.ts`
+
+Tests:
+- `npx vitest run tests/ai/`
+- `npm run typecheck`
+
+Notes:
+- Next feature spec remains `24-reports.md`. Specs `27`/`28` will deepen LLM tooling and assistant chat.
+
+---
+
+## 2026-08-20 — Dashboard
+
+Status: Complete
+
+Implemented:
+- Extended `modules/reporting/` with dashboard date-range resolution and `getDashboardOverview`: period sales (taxable), expenses, profit, point-in-time receivables/payables, receipts and supplier payments in period, overdue invoices, low-stock count, recent invoices/expenses, daily sales-vs-expenses series, and attention alerts.
+- Replaced the placeholder `/app` dashboard with KPI metric cards, date filter (this month / custom using tenant timezone), Chart primitive bar chart using `--chart-*` tokens, recent tables, and empty state for new businesses. AI insights intentionally not rendered until spec `28`.
+- Authorization via `report:read` (unauthenticated users cannot load dashboard data).
+
+Files / Areas:
+- `modules/reporting/` (dashboard application, range, types, schema)
+- `app/app/(workspace)/page.tsx`
+- `components/business/dashboard-sales-chart.tsx`, `dashboard-date-filter.tsx`
+- `tests/reporting/dashboard.test.ts`
+
+Tests:
+- `npx vitest run tests/reporting/dashboard.test.ts`
+- `npm run typecheck`
+- `npm run build`
+
+Verification:
+- KPIs match seeded invoices/expenses/outstanding for the selected period.
+- Empty state works with no data.
+- Tenant isolation on totals.
+- Production build succeeds.
+
+Notes:
+- Next implementation unit is `24-reports.md`.
+
+---
+
+## 2026-08-20 — GST reporting
+
+Status: Complete
+
+Implemented:
+- Added `modules/reporting/` GST period summary and CSV export. Totals come from stored CGST/SGST/IGST on posted sales invoices, posted purchases, and taxed expenses — no tax recalculation in the report layer.
+- Extended `modules/tax` with `sumStoredGst` / `storedHeaderMatchesLines` for summing and checking persisted breakdowns only.
+- Reports UI: hub at `/app/reports`, GST summary at `/app/reports/gst` (period filter, output/input metrics, transaction table). CSV via `/api/reports/gst/export`. Permission `report:read`. Nested Reports nav.
+- Draft/cancelled documents and untaxed expenses are excluded. Cross-tenant rows never appear in another tenant’s summary/export.
+
+Files / Areas:
+- `modules/reporting/`
+- `modules/tax/domain/sum-stored-gst.ts`
+- `app/app/(workspace)/reports/`
+- `app/api/reports/gst/export/route.ts`
+- `components/shell/app-sidebar.tsx`
+- `tests/reporting/gst-reporting.test.ts`
+
+Tests:
+- `npx vitest run tests/reporting/`
+- `npm run typecheck`
+- `npm run build`
+
+Verification:
+- GST summary for a period matches sum of posted document tax breakdowns.
+- Export is tenant-scoped.
+- No filing / e-invoice / GSTR integration.
+- Production build succeeds.
+
+Notes:
+- Next implementation unit is `23-dashboard.md`.
 
 ---
 

@@ -98,7 +98,12 @@ const operationsNav: NavItem[] = [
       { label: "Periods", href: "/app/accounting/periods" },
     ],
   },
-  { label: "Reports", href: "/app/reports", icon: BarChart3 },
+  {
+    label: "Reports",
+    href: "/app/reports",
+    icon: BarChart3,
+    children: [{ label: "GST summary", href: "/app/reports/gst" }],
+  },
 ];
 
 const footerNav: NavItem[] = [
