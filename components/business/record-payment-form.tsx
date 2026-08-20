@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -62,19 +62,30 @@ function parseAmount(value: string) {
   }
 }
 
-export function RecordPaymentForm({
-  customers,
-  invoices,
-  today,
-  selectedCustomerId,
-  selectedInvoiceId,
-}: {
+type RecordPaymentFormProps = {
   customers: PaymentCustomerOption[];
   invoices: InvoiceOutstanding[];
   today: string;
   selectedCustomerId: string;
   selectedInvoiceId?: string;
-}) {
+};
+
+export function RecordPaymentForm(props: RecordPaymentFormProps) {
+  return (
+    <RecordPaymentFormFields
+      key={`${props.selectedCustomerId}:${props.selectedInvoiceId ?? ""}`}
+      {...props}
+    />
+  );
+}
+
+function RecordPaymentFormFields({
+  customers,
+  invoices,
+  today,
+  selectedCustomerId,
+  selectedInvoiceId,
+}: RecordPaymentFormProps) {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(
     recordCustomerPaymentAction,
@@ -82,7 +93,7 @@ export function RecordPaymentForm({
   );
   const selectedInvoice = invoices.find((row) => row.invoiceId === selectedInvoiceId);
   const [method, setMethod] = useState<PaymentMethod>("CASH");
-  const [amount, setAmount] = useState(
+  const [amount, setAmount] = useState(() =>
     selectedInvoice ? toMajorString(selectedInvoice.outstanding) : ""
   );
   const [allocations, setAllocations] = useState<Record<string, string>>(() => {
@@ -91,16 +102,6 @@ export function RecordPaymentForm({
     }
     return { [selectedInvoice.invoiceId]: toMajorString(selectedInvoice.outstanding) };
   });
-
-  useEffect(() => {
-    if (selectedInvoice) {
-      setAmount(toMajorString(selectedInvoice.outstanding));
-      setAllocations({ [selectedInvoice.invoiceId]: toMajorString(selectedInvoice.outstanding) });
-    } else {
-      setAmount("");
-      setAllocations({});
-    }
-  }, [selectedCustomerId, selectedInvoice]);
 
   const methodItems = useMemo(
     () =>
