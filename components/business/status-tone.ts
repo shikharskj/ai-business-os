@@ -3,6 +3,7 @@ import type {
   QuotationStatus,
   SalesInvoiceStatus,
 } from "@/modules/sales/domain/types";
+import type { PurchaseStatus } from "@/modules/purchases/domain/types";
 
 export const QUOTATION_STATUS_LABELS: Record<QuotationStatus, string> = {
   DRAFT: "Draft",
@@ -30,6 +31,24 @@ export const INVOICE_STATUS_LABELS: Record<SalesInvoiceStatus, string> = {
 };
 
 export const INVOICE_STATUS_TONES: Record<SalesInvoiceStatus, BadgeTone> = {
+  DRAFT: "neutral",
+  POSTED: "info",
+  UNPAID: "warning",
+  PARTIALLY_PAID: "warning",
+  PAID: "success",
+  CANCELLED: "danger",
+};
+
+export const PURCHASE_STATUS_LABELS: Record<PurchaseStatus, string> = {
+  DRAFT: "Draft",
+  POSTED: "Posted",
+  UNPAID: "Unpaid",
+  PARTIALLY_PAID: "Partially paid",
+  PAID: "Paid",
+  CANCELLED: "Cancelled",
+};
+
+export const PURCHASE_STATUS_TONES: Record<PurchaseStatus, BadgeTone> = {
   DRAFT: "neutral",
   POSTED: "info",
   UNPAID: "warning",
