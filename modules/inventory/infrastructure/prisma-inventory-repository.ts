@@ -120,6 +120,39 @@ export function createPrismaInventoryRepository(
       });
       return records.map(mapMovement).sort(compareMovements);
     },
+    async sumQuantitiesByProduct(tenantId, productIds) {
+      const result = new Map<string, { quantity: bigint; hasMovements: boolean }>();
+      if (productIds.length === 0) {
+        return result;
+      }
+      const records = await client.inventoryMovement.findMany({
+        where: { tenantId, productId: { in: productIds } },
+        select: { productId: true, direction: true, quantity: true },
+      });
+      const byProduct = new Map<string, typeof records>();
+      for (const record of records) {
+        const list = byProduct.get(record.productId) ?? [];
+        list.push(record);
+        byProduct.set(record.productId, list);
+      }
+      for (const productId of productIds) {
+        const productRecords = byProduct.get(productId) ?? [];
+        let total = 0n;
+        for (const record of productRecords) {
+          const qty = quantityFromPrismaDecimal(record.quantity);
+          if (record.direction === "IN") {
+            total += qty.amountMinor;
+          } else {
+            total -= qty.amountMinor;
+          }
+        }
+        result.set(productId, {
+          quantity: total,
+          hasMovements: productRecords.length > 0,
+        });
+      }
+      return result;
+    },
   };
 }
 

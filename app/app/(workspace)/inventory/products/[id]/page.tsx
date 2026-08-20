@@ -112,7 +112,7 @@ export default async function ProductDetailPage({
           <CardTitle>Stock</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
-          {product.tracksInventory && stock.quantity ? (
+          {product.tracksInventory && stock.quantity !== null ? (
             <>
               <p className="text-2xl font-semibold tabular-nums tracking-tight">
                 {formatQuantity(stock.quantity)} {product.unitOfMeasurement}
@@ -128,14 +128,9 @@ export default async function ProductDetailPage({
               ) : null}
             </>
           ) : product.tracksInventory ? (
-            <>
-              <p className="text-2xl font-semibold tabular-nums tracking-tight">
-                0 {product.unitOfMeasurement}
-              </p>
-              <p className="text-base text-muted-foreground">
-                No stock movements yet
-              </p>
-            </>
+            <p className="text-base text-muted-foreground">
+              Stock is not tracked for this item.
+            </p>
           ) : (
             <p className="text-base text-muted-foreground">
               Stock is not tracked for this item.

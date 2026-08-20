@@ -21,13 +21,31 @@ export function quantity(amountMinor: bigint | number): Quantity {
 }
 
 export function quantityFromMajor(major: string): Quantity {
-  const parts = major.replace(/,/g, "").split(".");
+  const trimmed = major.trim();
+
+  if (trimmed === "" || trimmed === "-" || trimmed === "+") {
+    throw new Error(`Invalid quantity: "${major}".`);
+  }
+
+  const withoutCommas = trimmed.replace(/,/g, "");
+
+  const parts = withoutCommas.split(".");
+  if (parts.length > 2) {
+    throw new Error(`Invalid quantity: "${major}".`);
+  }
+
   const intPart = parts[0] ?? "0";
   let fracPart = parts[1] ?? "";
-  const negative = intPart.startsWith("-");
-  const absInt = negative ? intPart.slice(1) : intPart;
 
-  if (!/^\d*$/.test(absInt) || !/^\d*$/.test(fracPart)) {
+  if (intPart === "" || intPart === "-" || intPart === "+") {
+    throw new Error(`Invalid quantity: "${major}".`);
+  }
+
+  const negative = intPart.startsWith("-");
+  const positive = intPart.startsWith("+");
+  const absInt = negative || positive ? intPart.slice(1) : intPart;
+
+  if (!/^\d+$/.test(absInt) || (fracPart !== "" && !/^\d+$/.test(fracPart))) {
     throw new Error(`Invalid quantity: "${major}".`);
   }
 

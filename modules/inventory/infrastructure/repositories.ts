@@ -22,6 +22,10 @@ export type InventoryRepository = {
     productId: string
   ): Promise<InventoryMovement[]>;
   listMovementsForTenant(tenantId: string): Promise<InventoryMovement[]>;
+  sumQuantitiesByProduct(
+    tenantId: string,
+    productIds: string[]
+  ): Promise<Map<string, { quantity: bigint; hasMovements: boolean }>>;
 };
 
 export function createMemoryInventoryRepository(
@@ -82,6 +86,27 @@ export function createMemoryInventoryRepository(
         .filter((movement) => movement.tenantId === tenantId)
         .sort(compareMovements);
     },
+    async sumQuantitiesByProduct(tenantId, productIds) {
+      const result = new Map<string, { quantity: bigint; hasMovements: boolean }>();
+      const productSet = new Set(productIds);
+      const relevantMovements = movements.filter(
+        (m) => m.tenantId === tenantId && productSet.has(m.productId)
+      );
+      const byProduct = new Map<string, InventoryMovement[]>();
+      for (const movement of relevantMovements) {
+        const list = byProduct.get(movement.productId) ?? [];
+        list.push(movement);
+        byProduct.set(movement.productId, list);
+      }
+      for (const productId of productIds) {
+        const productMovements = byProduct.get(productId) ?? [];
+        result.set(productId, {
+          quantity: sumQuantitiesForProduct(productMovements),
+          hasMovements: productMovements.length > 0,
+        });
+      }
+      return result;
+    },
   };
 }
 
@@ -90,4 +115,16 @@ function compareMovements(a: InventoryMovement, b: InventoryMovement): number {
     return a.occurredOn < b.occurredOn ? -1 : 1;
   }
   return a.createdAt.getTime() - b.createdAt.getTime();
+}
+
+function sumQuantitiesForProduct(movements: InventoryMovement[]): bigint {
+  let total = 0n;
+  for (const movement of movements) {
+    if (movement.direction === "IN") {
+      total += movement.quantity.amountMinor;
+    } else {
+      total -= movement.quantity.amountMinor;
+    }
+  }
+  return total;
 }

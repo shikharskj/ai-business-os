@@ -109,6 +109,7 @@ export async function recordStockAdjustmentAction(
         : ("IN" as const),
   };
   const productId = String(formData.get("productId") ?? "");
+  const idempotencyKey = String(formData.get("idempotencyKey") ?? "");
 
   try {
     const tenant = await authorize("inventory:adjust");
@@ -128,6 +129,7 @@ export async function recordStockAdjustmentAction(
       quantity: quantityFromMajor(fields.quantity),
       occurredOn: businessDate(fields.occurredOn),
       reason: fields.reason,
+      idempotencyKey: idempotencyKey || `adjustment:${crypto.randomUUID()}`,
       catalog: prismaCatalogRepository,
       inventory: prismaInventoryRepository,
       audit,

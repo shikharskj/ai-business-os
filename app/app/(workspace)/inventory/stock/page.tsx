@@ -155,7 +155,7 @@ export default async function StockPage({
                   </TableCell>
                   <TableCell>{position.unitOfMeasurement}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {position.quantity
+                    {position.quantity !== null
                       ? formatQuantity(position.quantity)
                       : "—"}
                   </TableCell>

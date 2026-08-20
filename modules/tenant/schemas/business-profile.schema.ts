@@ -65,6 +65,20 @@ export const businessProfileInputSchema = z
     lowStockThreshold: z
       .string()
       .trim()
+      .refine(
+        (value) => {
+          const commaPattern = /,(\d+)/g;
+          let match;
+          while ((match = commaPattern.exec(value)) !== null) {
+            const group = match[1];
+            if (group && group.length !== 3 && commaPattern.lastIndex < value.length) {
+              return false;
+            }
+          }
+          return true;
+        },
+        { message: "Invalid comma placement in quantity" }
+      )
       .transform((value) => value.replace(/,/g, ""))
       .pipe(
         z

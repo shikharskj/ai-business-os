@@ -95,14 +95,36 @@ export async function recordInventoryMovement(input: {
     }
   }
 
-  const movement = await input.inventory.appendMovement({
-    tenantId: input.tenantId,
-    actorUserId: input.actorUserId,
-    movement: {
-      ...input.movement,
-      reason: input.movement.reason ?? null,
-    },
-  });
+  let movement;
+  try {
+    movement = await input.inventory.appendMovement({
+      tenantId: input.tenantId,
+      actorUserId: input.actorUserId,
+      movement: {
+        ...input.movement,
+        reason: input.movement.reason ?? null,
+      },
+    });
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
+      const retry = await input.inventory.findByIdempotencyKey(
+        input.tenantId,
+        input.movement.idempotencyKey
+      );
+      if (retry) {
+        return retry;
+      }
+      if (input.movement.cause === "OPENING") {
+        throw new InventoryOpeningExistsError();
+      }
+    }
+    throw error;
+  }
 
   await input.audit.append({
     tenantId: input.tenantId,
@@ -184,6 +206,7 @@ export async function recordStockAdjustment(input: {
   quantity: Quantity;
   occurredOn: BusinessDate;
   reason: string;
+  idempotencyKey: string;
   catalog: CatalogRepository;
   inventory: InventoryRepository;
   audit: AuditRepository;
@@ -209,7 +232,7 @@ export async function recordStockAdjustment(input: {
       occurredOn: input.occurredOn,
       sourceType: "ADJUSTMENT",
       sourceId: crypto.randomUUID(),
-      idempotencyKey: `adjustment:${crypto.randomUUID()}`,
+      idempotencyKey: input.idempotencyKey,
       reason,
     },
   });
@@ -254,16 +277,24 @@ export async function listStockPositions(input: {
     query: input.query,
   });
   const tracked = products.filter((product) => product.tracksInventory);
-  const movements = await input.inventory.listMovementsForTenant(input.tenantId);
-  const byProduct = groupMovements(movements);
-
-  const positions = tracked.map((product) =>
-    toStockPosition({
-      product,
-      movements: byProduct.get(product.id) ?? [],
-      threshold,
-    })
+  const trackedIds = tracked.map((p) => p.id);
+  const aggregates = await input.inventory.sumQuantitiesByProduct(
+    input.tenantId,
+    trackedIds
   );
+
+  const positions = tracked.map((product) => {
+    const aggregate = aggregates.get(product.id) ?? {
+      quantity: 0n,
+      hasMovements: false,
+    };
+    return toStockPositionFromAggregate({
+      product,
+      quantity: quantity(aggregate.quantity),
+      hasMovements: aggregate.hasMovements,
+      threshold,
+    });
+  });
 
   if (input.lowStockOnly) {
     return positions.filter((position) => position.isLowStock);
@@ -338,6 +369,39 @@ function toStockPosition(input: {
     quantity,
     hasMovements: input.movements.length > 0,
     isLowStock: isLowStock(quantity, input.threshold),
+  };
+}
+
+function toStockPositionFromAggregate(input: {
+  product: Product;
+  quantity: Quantity;
+  hasMovements: boolean;
+  threshold: Quantity;
+}): StockPosition {
+  if (!input.product.tracksInventory) {
+    return {
+      tenantId: input.product.tenantId,
+      productId: input.product.id,
+      productName: input.product.name,
+      sku: input.product.sku,
+      unitOfMeasurement: input.product.unitOfMeasurement,
+      tracksInventory: false,
+      quantity: null,
+      hasMovements: false,
+      isLowStock: false,
+    };
+  }
+
+  return {
+    tenantId: input.product.tenantId,
+    productId: input.product.id,
+    productName: input.product.name,
+    sku: input.product.sku,
+    unitOfMeasurement: input.product.unitOfMeasurement,
+    tracksInventory: true,
+    quantity: input.quantity,
+    hasMovements: input.hasMovements,
+    isLowStock: isLowStock(input.quantity, input.threshold),
   };
 }
 

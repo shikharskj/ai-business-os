@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo } from "react";
 
 import {
   recordStockAdjustmentAction,
@@ -33,9 +33,12 @@ export function AdjustStockForm({
     initialState
   );
 
+  const idempotencyKey = useMemo(() => crypto.randomUUID(), []);
+
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="productId" value={productId} />
+      <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       <div className="flex flex-col gap-2">
         <label htmlFor="adjust-direction" className="text-base font-medium">
           Adjustment
