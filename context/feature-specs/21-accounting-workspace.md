@@ -15,7 +15,7 @@ We're adding the accounting workspace UI and period handling on top of the posti
 
 ### Depends on
 
-- `20-supplier-payments.md`
+- `20-supplier-payments.md`  
 - `09-accounting-foundation.md`
 
 ### Scope

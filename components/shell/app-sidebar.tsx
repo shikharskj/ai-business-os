@@ -85,7 +85,19 @@ const inventoryNav: NavItem[] = [
 
 const operationsNav: NavItem[] = [
   { label: "Expenses", href: "/app/expenses", icon: Wallet },
-  { label: "Accounting", href: "/app/accounting", icon: FileText },
+  {
+    label: "Accounting",
+    href: "/app/accounting",
+    icon: FileText,
+    children: [
+      { label: "Overview", href: "/app/accounting" },
+      { label: "Chart of accounts", href: "/app/accounting/accounts" },
+      { label: "Journals", href: "/app/accounting/journals" },
+      { label: "Ledger", href: "/app/accounting/ledger" },
+      { label: "Trial balance", href: "/app/accounting/trial-balance" },
+      { label: "Periods", href: "/app/accounting/periods" },
+    ],
+  },
   { label: "Reports", href: "/app/reports", icon: BarChart3 },
 ];
 

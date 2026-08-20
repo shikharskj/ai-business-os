@@ -89,7 +89,7 @@ export async function recordExpenseAction(
         actorUserId: tenant.membership.userId,
         fields,
         taxContext: expenseTaxContextFromTenant(tenant),
-        closedThroughPeriodKey: null,
+        closedThroughPeriodKey: tenant.business.closedThroughPeriodKey,
         expenses: createPrismaExpenseRepository(tx),
         accounts: createPrismaAccountRepository(tx),
         journals: createPrismaJournalRepository(tx),

@@ -35,6 +35,7 @@ export type BusinessProfile = {
   currency: string;
   defaultGstRateBps: number;
   lowStockThreshold: string;
+  closedThroughPeriodKey: string | null;
 };
 
 export type TenantMembership = {

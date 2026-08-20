@@ -222,7 +222,7 @@ export async function postPurchaseAction(purchaseId: string): Promise<PurchaseAc
         actorUserId: tenant.membership.userId,
         purchaseId,
         taxContext: taxContextFromTenant(tenant),
-        closedThroughPeriodKey: null,
+        closedThroughPeriodKey: tenant.business.closedThroughPeriodKey,
         purchases: createPrismaPurchasesRepository(tx),
         parties: createPrismaPartyRepository(tx),
         catalog: createPrismaCatalogRepository(tx),

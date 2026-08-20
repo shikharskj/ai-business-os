@@ -221,7 +221,7 @@ export async function postInvoiceAction(invoiceId: string): Promise<InvoiceActio
         actorUserId: tenant.membership.userId,
         invoiceId,
         taxContext: taxContextFromTenant(tenant),
-        closedThroughPeriodKey: null,
+        closedThroughPeriodKey: tenant.business.closedThroughPeriodKey,
         sales: createPrismaSalesRepository(tx),
         parties: createPrismaPartyRepository(tx),
         catalog: createPrismaCatalogRepository(tx),

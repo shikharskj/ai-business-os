@@ -113,7 +113,7 @@ export async function recordCustomerPaymentAction(
         actorUserId: tenant.membership.userId,
         fields,
         financialYearStartMonth: tenant.business.financialYearStartMonth,
-        closedThroughPeriodKey: null,
+        closedThroughPeriodKey: tenant.business.closedThroughPeriodKey,
         payments: createPrismaPaymentRepository(tx),
         sales: createPrismaSalesRepository(tx),
         parties: createPrismaPartyRepository(tx),

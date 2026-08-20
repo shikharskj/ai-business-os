@@ -1,11 +1,14 @@
 import "server-only";
 
+import { Prisma } from "@/generated/prisma/client";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { businessDate } from "@/modules/shared-kernel/dates";
 import {
+  money,
   moneyFromPrismaDecimal,
   toDecimalForPrisma,
+  addMoney,
 } from "@/modules/shared-kernel/money";
 import type { Account, PostedJournal } from "@/modules/accounting/domain/types";
 import type {
@@ -13,6 +16,7 @@ import type {
   JournalInsert,
   JournalRepository,
 } from "@/modules/accounting/infrastructure/repositories";
+import type { JournalListFilter } from "@/modules/accounting/domain/workspace-types";
 
 function mapAccount(row: {
   id: string;
@@ -74,17 +78,30 @@ function mapJournal(row: {
   };
 }
 
+const journalInclude = {
+  lines: { include: { account: true } },
+} as const;
+
 export function createPrismaAccountRepository(
-  client: Pick<PrismaClient, "account">
+  client: Pick<PrismaClient, "account"> = prisma
 ): AccountRepository {
   return {
     async listForTenant(tenantId) {
-      const rows = await client.account.findMany({ where: { tenantId } });
+      const rows = await client.account.findMany({
+        where: { tenantId },
+        orderBy: { code: "asc" },
+      });
       return rows.map(mapAccount);
     },
     async findByCode(tenantId, code) {
       const row = await client.account.findUnique({
         where: { tenantId_code: { tenantId, code } },
+      });
+      return row ? mapAccount(row) : null;
+    },
+    async findById(tenantId, accountId) {
+      const row = await client.account.findFirst({
+        where: { id: accountId, tenantId },
       });
       return row ? mapAccount(row) : null;
     },
@@ -115,7 +132,7 @@ export function createPrismaAccountRepository(
 export const prismaAccountRepository = createPrismaAccountRepository(prisma);
 
 export function createPrismaJournalRepository(
-  client: Pick<PrismaClient, "journal">
+  client: Pick<PrismaClient, "journal" | "journalLine"> = prisma
 ): JournalRepository {
   return {
     async insertPosted(input: JournalInsert) {
@@ -131,6 +148,7 @@ export function createPrismaJournalRepository(
           reversalOfJournalId: input.reversalOfJournalId,
           lines: {
             create: input.lines.map((line) => ({
+              tenantId: input.tenantId,
               accountId: line.accountId,
               description: line.description ?? null,
               debit: toDecimalForPrisma(line.debit),
@@ -138,14 +156,133 @@ export function createPrismaJournalRepository(
             })),
           },
         },
-        include: { lines: { include: { account: true } } },
+        include: journalInclude,
       });
       return mapJournal(journal);
     },
     async findById(tenantId, journalId) {
       const row = await client.journal.findFirst({
         where: { id: journalId, tenantId },
-        include: { lines: { include: { account: true } } },
+        include: journalInclude,
+      });
+      return row ? mapJournal(row) : null;
+    },
+    async listJournals(filter: JournalListFilter) {
+      const query = filter.query?.trim();
+      const where: Prisma.JournalWhereInput = {
+        tenantId: filter.tenantId,
+        ...(filter.periodKey ? { periodKey: filter.periodKey } : {}),
+        ...(filter.fromDate || filter.toDate
+          ? {
+              accountingDate: {
+                ...(filter.fromDate ? { gte: filter.fromDate } : {}),
+                ...(filter.toDate ? { lte: filter.toDate } : {}),
+              },
+            }
+          : {}),
+        ...(query
+          ? {
+              OR: [
+                { memo: { contains: query, mode: "insensitive" } },
+                { sourceType: { contains: query, mode: "insensitive" } },
+                { id: { contains: query, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      };
+      const rows = await client.journal.findMany({
+        where,
+        include: journalInclude,
+        orderBy: [{ accountingDate: "desc" }, { postedAt: "desc" }],
+      });
+      return rows.map((row) => {
+        const journal = mapJournal(row);
+        const totals = journal.lines.reduce(
+          (sum, line) => ({
+            debit: addMoney(sum.debit, line.debit),
+            credit: addMoney(sum.credit, line.credit),
+          }),
+          { debit: money(0n), credit: money(0n) }
+        );
+        return {
+          id: journal.id,
+          tenantId: journal.tenantId,
+          accountingDate: journal.accountingDate,
+          periodKey: journal.periodKey,
+          financialYearKey: journal.financialYearKey,
+          sourceType: journal.sourceType,
+          sourceId: journal.sourceId,
+          memo: journal.memo,
+          reversalOfJournalId: journal.reversalOfJournalId,
+          postedAt: journal.postedAt,
+          totalDebits: totals.debit,
+          totalCredits: totals.credit,
+          lineCount: journal.lines.length,
+        };
+      });
+    },
+    async listLedgerLines(query) {
+      const rows = await client.journalLine.findMany({
+        where: {
+          tenantId: query.tenantId,
+          accountId: query.accountId,
+          journal: {
+            tenantId: query.tenantId,
+            ...(query.periodKey ? { periodKey: query.periodKey } : {}),
+            ...(query.fromDate || query.toDate
+              ? {
+                  accountingDate: {
+                    ...(query.fromDate ? { gte: query.fromDate } : {}),
+                    ...(query.toDate ? { lte: query.toDate } : {}),
+                  },
+                }
+              : {}),
+          },
+        },
+        include: {
+          journal: true,
+        },
+        orderBy: [
+          { journal: { accountingDate: "asc" } },
+          { journalId: "asc" },
+        ],
+      });
+      return rows.map((row) => ({
+        journalId: row.journalId,
+        journalLineId: row.id,
+        accountingDate: businessDate(row.journal.accountingDate),
+        periodKey: row.journal.periodKey,
+        accountId: row.accountId,
+        memo: row.journal.memo,
+        description: row.description,
+        sourceType: row.journal.sourceType,
+        debit: moneyFromPrismaDecimal(row.debit),
+        credit: moneyFromPrismaDecimal(row.credit),
+      }));
+    },
+    async trialBalanceForPeriod(tenantId, periodKey) {
+      const grouped = await client.journalLine.groupBy({
+        by: ["accountId"],
+        where: {
+          tenantId,
+          journal: { tenantId, periodKey },
+        },
+        _sum: { debit: true, credit: true },
+      });
+      return grouped.map((row) => ({
+        accountId: row.accountId,
+        debitTotal: row._sum.debit
+          ? moneyFromPrismaDecimal(row._sum.debit)
+          : money(0n),
+        creditTotal: row._sum.credit
+          ? moneyFromPrismaDecimal(row._sum.credit)
+          : money(0n),
+      }));
+    },
+    async findReversalOf(tenantId, originalJournalId) {
+      const row = await client.journal.findFirst({
+        where: { tenantId, reversalOfJournalId: originalJournalId },
+        include: journalInclude,
       });
       return row ? mapJournal(row) : null;
     },

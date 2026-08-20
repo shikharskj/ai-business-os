@@ -1,12 +1,22 @@
 import type { BusinessDate } from "@/modules/shared-kernel/dates";
+import { money, addMoney, type Money } from "@/modules/shared-kernel/money";
 
 import { DuplicateReversalError } from "@/modules/accounting/domain/errors";
 import type { Account, PostedJournal } from "@/modules/accounting/domain/types";
 import type { JournalLineDraft } from "@/modules/accounting/domain/types";
+import type {
+  JournalListFilter,
+  JournalSummary,
+  LedgerLine,
+  LedgerQuery,
+  TrialBalance,
+  TrialBalanceRow,
+} from "@/modules/accounting/domain/workspace-types";
 
 export type AccountRepository = {
   listForTenant(tenantId: string): Promise<Account[]>;
   findByCode(tenantId: string, code: string): Promise<Account | null>;
+  findById(tenantId: string, accountId: string): Promise<Account | null>;
   ensureChartAccounts(accounts: Omit<Account, "id">[]): Promise<Account[]>;
 };
 
@@ -25,6 +35,18 @@ export type JournalInsert = {
 export type JournalRepository = {
   insertPosted(input: JournalInsert): Promise<PostedJournal>;
   findById(tenantId: string, journalId: string): Promise<PostedJournal | null>;
+  listJournals(filter: JournalListFilter): Promise<JournalSummary[]>;
+  listLedgerLines(query: LedgerQuery): Promise<
+    Array<Omit<LedgerLine, "balance" | "accountCode" | "accountName">>
+  >;
+  trialBalanceForPeriod(
+    tenantId: string,
+    periodKey: string
+  ): Promise<Array<Omit<TrialBalanceRow, "accountCode" | "accountName" | "accountType" | "normalBalance"> & { accountId: string }>>;
+  findReversalOf(
+    tenantId: string,
+    originalJournalId: string
+  ): Promise<PostedJournal | null>;
 };
 
 export function createMemoryAccountRepository(
@@ -34,12 +56,22 @@ export function createMemoryAccountRepository(
   return {
     accounts,
     async listForTenant(tenantId) {
-      return accounts.filter((account) => account.tenantId === tenantId);
+      return accounts
+        .filter((account) => account.tenantId === tenantId)
+        .slice()
+        .sort((a, b) => a.code.localeCompare(b.code));
     },
     async findByCode(tenantId, code) {
       return (
         accounts.find(
           (account) => account.tenantId === tenantId && account.code === code
+        ) ?? null
+      );
+    },
+    async findById(tenantId, accountId) {
+      return (
+        accounts.find(
+          (account) => account.tenantId === tenantId && account.id === accountId
         ) ?? null
       );
     },
@@ -60,6 +92,35 @@ export function createMemoryAccountRepository(
       }
       return created;
     },
+  };
+}
+
+function journalTotals(journal: PostedJournal): { debit: Money; credit: Money } {
+  return journal.lines.reduce(
+    (totals, line) => ({
+      debit: addMoney(totals.debit, line.debit),
+      credit: addMoney(totals.credit, line.credit),
+    }),
+    { debit: money(0n), credit: money(0n) }
+  );
+}
+
+function toSummary(journal: PostedJournal): JournalSummary {
+  const totals = journalTotals(journal);
+  return {
+    id: journal.id,
+    tenantId: journal.tenantId,
+    accountingDate: journal.accountingDate,
+    periodKey: journal.periodKey,
+    financialYearKey: journal.financialYearKey,
+    sourceType: journal.sourceType,
+    sourceId: journal.sourceId,
+    memo: journal.memo,
+    reversalOfJournalId: journal.reversalOfJournalId,
+    postedAt: journal.postedAt,
+    totalDebits: totals.debit,
+    totalCredits: totals.credit,
+    lineCount: journal.lines.length,
   };
 }
 
@@ -109,6 +170,108 @@ export function createMemoryJournalRepository(): JournalRepository & {
       );
       return match ? cloneJournal(match) : null;
     },
+    async listJournals(filter) {
+      const query = filter.query?.trim().toLowerCase() ?? "";
+      return journals
+        .filter((journal) => journal.tenantId === filter.tenantId)
+        .filter((journal) => {
+          if (filter.periodKey && journal.periodKey !== filter.periodKey) {
+            return false;
+          }
+          if (filter.fromDate && journal.accountingDate < filter.fromDate) {
+            return false;
+          }
+          if (filter.toDate && journal.accountingDate > filter.toDate) {
+            return false;
+          }
+          if (!query) {
+            return true;
+          }
+          return (
+            journal.memo?.toLowerCase().includes(query) ||
+            journal.sourceType.toLowerCase().includes(query) ||
+            journal.id.toLowerCase().includes(query)
+          );
+        })
+        .sort(
+          (a, b) =>
+            b.accountingDate.localeCompare(a.accountingDate) ||
+            b.postedAt.getTime() - a.postedAt.getTime()
+        )
+        .map((journal) => toSummary(cloneJournal(journal)));
+    },
+    async listLedgerLines(query) {
+      const rows: Array<
+        Omit<LedgerLine, "balance" | "accountCode" | "accountName">
+      > = [];
+      for (const journal of journals) {
+        if (journal.tenantId !== query.tenantId) {
+          continue;
+        }
+        if (query.periodKey && journal.periodKey !== query.periodKey) {
+          continue;
+        }
+        if (query.fromDate && journal.accountingDate < query.fromDate) {
+          continue;
+        }
+        if (query.toDate && journal.accountingDate > query.toDate) {
+          continue;
+        }
+        for (const line of journal.lines) {
+          if (line.accountId !== query.accountId) {
+            continue;
+          }
+          rows.push({
+            journalId: journal.id,
+            journalLineId: line.id,
+            accountingDate: journal.accountingDate,
+            periodKey: journal.periodKey,
+            accountId: line.accountId,
+            memo: journal.memo,
+            description: line.description ?? null,
+            sourceType: journal.sourceType,
+            debit: line.debit,
+            credit: line.credit,
+          });
+        }
+      }
+      return rows.sort(
+        (a, b) =>
+          a.accountingDate.localeCompare(b.accountingDate) ||
+          a.journalId.localeCompare(b.journalId)
+      );
+    },
+    async trialBalanceForPeriod(tenantId, periodKey) {
+      const byAccount = new Map<string, { debit: Money; credit: Money }>();
+      for (const journal of journals) {
+        if (journal.tenantId !== tenantId || journal.periodKey !== periodKey) {
+          continue;
+        }
+        for (const line of journal.lines) {
+          const current = byAccount.get(line.accountId) ?? {
+            debit: money(0n),
+            credit: money(0n),
+          };
+          byAccount.set(line.accountId, {
+            debit: addMoney(current.debit, line.debit),
+            credit: addMoney(current.credit, line.credit),
+          });
+        }
+      }
+      return [...byAccount.entries()].map(([accountId, totals]) => ({
+        accountId,
+        debitTotal: totals.debit,
+        creditTotal: totals.credit,
+      }));
+    },
+    async findReversalOf(tenantId, originalJournalId) {
+      const match = journals.find(
+        (journal) =>
+          journal.tenantId === tenantId &&
+          journal.reversalOfJournalId === originalJournalId
+      );
+      return match ? cloneJournal(match) : null;
+    },
   };
 }
 
@@ -134,3 +297,5 @@ function freezeJournal(journal: PostedJournal): PostedJournal {
   Object.freeze(frozen.lines);
   return Object.freeze(frozen);
 }
+
+export type { TrialBalance };
