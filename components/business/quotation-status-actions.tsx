@@ -66,8 +66,9 @@ export function QuotationStatusActions({
           <Button
             type="button"
             variant="outline"
-            disabled={isPending}
+            disabled={true}
             onClick={() => run(null, convertQuotationAction)}
+            title="Invoice conversion is not yet implemented"
           >
             Convert to invoice
           </Button>
