@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Package,
   Receipt,
+  Search,
   Settings,
   ShoppingCart,
   Wallet,
@@ -42,6 +43,7 @@ type NavItem = {
 
 const mainNav: NavItem[] = [
   { label: "Dashboard", href: "/app", icon: LayoutDashboard },
+  { label: "Search", href: "/app/search", icon: Search },
 ];
 
 const salesNav: NavItem[] = [
@@ -102,7 +104,17 @@ const operationsNav: NavItem[] = [
     label: "Reports",
     href: "/app/reports",
     icon: BarChart3,
-    children: [{ label: "GST summary", href: "/app/reports/gst" }],
+    children: [
+      { label: "Sales", href: "/app/reports/sales" },
+      { label: "Expenses", href: "/app/reports/expenses" },
+      { label: "Profit", href: "/app/reports/profit" },
+      { label: "Receivables", href: "/app/reports/receivables" },
+      { label: "Payables", href: "/app/reports/payables" },
+      { label: "Inventory", href: "/app/reports/inventory" },
+      { label: "GST summary", href: "/app/reports/gst" },
+      { label: "Ledger", href: "/app/reports/ledger" },
+      { label: "Trial balance", href: "/app/reports/trial-balance" },
+    ],
   },
 ];
 
