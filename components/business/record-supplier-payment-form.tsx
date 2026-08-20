@@ -1,0 +1,313 @@
+"use client";
+
+import { useActionState, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+
+import {
+  recordSupplierPaymentAction,
+  type SupplierPaymentActionState,
+} from "@/app/app/(workspace)/purchases/payments/actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { MoneyDisplay } from "@/components/business/money-display";
+import { formatINR } from "@/modules/shared-kernel/format-money";
+import { money, moneyFromMajor, toMajorString } from "@/modules/shared-kernel/money";
+import {
+  PAYMENT_METHOD_LABELS,
+  PAYMENT_METHODS,
+  type PaymentMethod,
+  type PurchaseOutstanding,
+} from "@/modules/payments/domain/types";
+
+export type PaymentSupplierOption = {
+  id: string;
+  name: string;
+};
+
+function FieldError({
+  name,
+  fieldErrors,
+}: {
+  name: string;
+  fieldErrors?: Record<string, string>;
+}) {
+  const message = fieldErrors?.[name];
+  if (!message) {
+    return null;
+  }
+  return (
+    <p className="text-base text-destructive" role="alert">
+      {message}
+    </p>
+  );
+}
+
+function parseAmount(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === ".") {
+    return 0n;
+  }
+  try {
+    return moneyFromMajor(trimmed).amountMinor;
+  } catch {
+    return 0n;
+  }
+}
+
+type RecordSupplierPaymentFormProps = {
+  suppliers: PaymentSupplierOption[];
+  purchases: PurchaseOutstanding[];
+  today: string;
+  selectedSupplierId: string;
+  selectedPurchaseId?: string;
+};
+
+export function RecordSupplierPaymentForm(props: RecordSupplierPaymentFormProps) {
+  return (
+    <RecordSupplierPaymentFormFields
+      key={`${props.selectedSupplierId}:${props.selectedPurchaseId ?? ""}`}
+      {...props}
+    />
+  );
+}
+
+function RecordSupplierPaymentFormFields({
+  suppliers,
+  purchases,
+  today,
+  selectedSupplierId,
+  selectedPurchaseId,
+}: RecordSupplierPaymentFormProps) {
+  const router = useRouter();
+  const [state, formAction, isPending] = useActionState(
+    recordSupplierPaymentAction,
+    {} as SupplierPaymentActionState
+  );
+  const selectedPurchase = purchases.find(
+    (row) => row.purchaseId === selectedPurchaseId
+  );
+  const [method, setMethod] = useState<PaymentMethod>("CASH");
+  const [amount, setAmount] = useState(() =>
+    selectedPurchase ? toMajorString(selectedPurchase.outstanding) : ""
+  );
+  const [allocations, setAllocations] = useState<Record<string, string>>(() => {
+    if (!selectedPurchase) {
+      return {};
+    }
+    return { [selectedPurchase.purchaseId]: toMajorString(selectedPurchase.outstanding) };
+  });
+
+  const methodItems = useMemo(
+    () =>
+      Object.fromEntries(
+        PAYMENT_METHODS.map((method) => [method, PAYMENT_METHOD_LABELS[method]])
+      ),
+    []
+  );
+  const supplierItems = useMemo(
+    () => Object.fromEntries(suppliers.map((supplier) => [supplier.id, supplier.name])),
+    [suppliers]
+  );
+
+  const allocatedMinor = purchases.reduce((sum, purchase) => {
+    return sum + parseAmount(allocations[purchase.purchaseId] ?? "");
+  }, 0n);
+  const paymentMinor = parseAmount(amount);
+  const selectedSupplier = suppliers.find(
+    (supplier) => supplier.id === selectedSupplierId
+  );
+
+  return (
+    <form action={formAction} className="flex flex-col gap-6">
+      <input type="hidden" name="supplierId" value={selectedSupplierId} />
+      <input type="hidden" name="allocationCount" value={String(purchases.length)} />
+
+      <section className="grid gap-4 md:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="supplierId" className="text-base font-medium">
+            Supplier
+          </label>
+          <Select
+            value={selectedSupplierId}
+            onValueChange={(value) => {
+              const next = String(value ?? "");
+              router.push(`/app/purchases/payments/new?supplierId=${next}`);
+            }}
+            items={supplierItems}
+          >
+            <SelectTrigger id="supplierId" className="w-full">
+              <SelectValue placeholder="Select a supplier" />
+            </SelectTrigger>
+            <SelectContent>
+              {suppliers.map((supplier) => (
+                <SelectItem key={supplier.id} value={supplier.id}>
+                  {supplier.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <FieldError name="supplierId" fieldErrors={state.fieldErrors} />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="paidOn" className="text-base font-medium">
+            Paid on
+          </label>
+          <Input id="paidOn" name="paidOn" type="date" required defaultValue={today} />
+          <FieldError name="paidOn" fieldErrors={state.fieldErrors} />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="method" className="text-base font-medium">
+            Method
+          </label>
+          <Select
+            value={method}
+            onValueChange={(value) => {
+              const next = String(value ?? "");
+              if (PAYMENT_METHODS.includes(next as PaymentMethod)) {
+                setMethod(next as PaymentMethod);
+              }
+            }}
+            items={methodItems}
+          >
+            <SelectTrigger id="method" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAYMENT_METHODS.map((paymentMethod) => (
+                <SelectItem key={paymentMethod} value={paymentMethod}>
+                  {PAYMENT_METHOD_LABELS[paymentMethod]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <input type="hidden" name="method" value={method} />
+          <FieldError name="method" fieldErrors={state.fieldErrors} />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="amount" className="text-base font-medium">
+            Amount paid
+          </label>
+          <Input
+            id="amount"
+            name="amount"
+            inputMode="decimal"
+            required
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            placeholder="0.00"
+          />
+          <FieldError name="amount" fieldErrors={state.fieldErrors} />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="reference" className="text-base font-medium">
+            Reference
+          </label>
+          <Input
+            id="reference"
+            name="reference"
+            placeholder="UPI ref, cheque no., or transfer note"
+          />
+          <FieldError name="reference" fieldErrors={state.fieldErrors} />
+        </div>
+      </section>
+
+      <div className="flex flex-col gap-2">
+        <label htmlFor="notes" className="text-base font-medium">
+          Notes
+        </label>
+        <Textarea id="notes" name="notes" rows={3} />
+        <FieldError name="notes" fieldErrors={state.fieldErrors} />
+      </div>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-base font-medium">Allocate to purchase bills</h2>
+        <p className="text-xs text-muted-foreground">
+          Allocation cannot exceed a bill’s outstanding or the payment amount. Allocate the
+          full amount paid.
+        </p>
+        <FieldError name="allocations" fieldErrors={state.fieldErrors} />
+
+        {purchases.length === 0 ? (
+          <p className="text-base text-muted-foreground">
+            This supplier has no unpaid purchase bills.
+          </p>
+        ) : (
+          <div className="overflow-hidden rounded-md border border-border">
+            <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 border-b border-border bg-muted/40 px-4 py-3 text-sm font-medium">
+              <span>Bill</span>
+              <span className="text-right">Outstanding</span>
+              <span className="text-right">Allocate</span>
+            </div>
+            {purchases.map((purchase, index) => (
+              <div
+                key={purchase.purchaseId}
+                className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 border-b border-border px-4 py-3 last:border-b-0"
+              >
+                <input
+                  type="hidden"
+                  name={`allocation-${index}-purchaseId`}
+                  value={purchase.purchaseId}
+                />
+                <div>
+                  <p className="font-mono text-sm font-medium">{purchase.purchaseNumber}</p>
+                  <p className="text-xs text-muted-foreground">{purchase.issuedOn}</p>
+                </div>
+                <div className="text-right">
+                  <MoneyDisplay value={purchase.outstanding} />
+                </div>
+                <Input
+                  name={`allocation-${index}-amount`}
+                  inputMode="decimal"
+                  className="text-right"
+                  placeholder="0.00"
+                  value={allocations[purchase.purchaseId] ?? ""}
+                  onChange={(event) =>
+                    setAllocations((current) => ({
+                      ...current,
+                      [purchase.purchaseId]: event.target.value,
+                    }))
+                  }
+                  aria-label={`Allocate to ${purchase.purchaseNumber}`}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-md border border-border bg-muted/30 p-4 text-base">
+        <p className="font-medium">What will happen</p>
+        <p className="mt-2 text-muted-foreground">
+          Record {formatINR(money(paymentMinor))} paid to{" "}
+          {selectedSupplier?.name ?? "this supplier"}. {formatINR(money(allocatedMinor))}{" "}
+          will be allocated to bills, payable status will update, and a balanced payment
+          journal will be posted.
+        </p>
+      </section>
+
+      {state.error ? (
+        <p className="text-base text-destructive" role="alert">
+          {state.error}
+        </p>
+      ) : null}
+
+      <div>
+        <Button type="submit" disabled={isPending || purchases.length === 0}>
+          {isPending ? "Recording payment…" : "Record payment"}
+        </Button>
+      </div>
+    </form>
+  );
+}

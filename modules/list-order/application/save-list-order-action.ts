@@ -20,6 +20,7 @@ const LIST_KEY_PATHS: Record<ListKey, string> = {
   quotations: "/app/sales/quotations",
   customers: "/app/sales/customers",
   payments: "/app/sales/payments",
+  "supplier-payments": "/app/purchases/payments",
   suppliers: "/app/purchases/suppliers",
   products: "/app/inventory/products",
   stock: "/app/inventory/stock",

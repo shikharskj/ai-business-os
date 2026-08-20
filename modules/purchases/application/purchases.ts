@@ -1,7 +1,7 @@
 import { isPositiveQuantity } from "@/modules/inventory/domain/quantity";
 import { recordInventoryMovement } from "@/modules/inventory/application/stock";
 import type { InventoryRepository } from "@/modules/inventory/infrastructure/repositories";
-import { toMajorString, type Money, addMoney, money } from "@/modules/shared-kernel/money";
+import { toMajorString, type Money } from "@/modules/shared-kernel/money";
 import type { AuditRepository } from "@/modules/shared-kernel/audit";
 import type { OutboxRepository } from "@/modules/shared-kernel/outbox";
 import { ensureChartOfAccounts } from "@/modules/accounting/application/seed-chart";
@@ -32,7 +32,6 @@ import {
   assertPurchaseEditable,
   assertPurchaseTransition,
   isPostedPurchaseStatus,
-  PAYABLE_PURCHASE_STATUSES,
 } from "@/modules/purchases/domain/status";
 import {
   formatPurchaseNumber,
@@ -48,7 +47,6 @@ import type {
   PurchaseListFilter,
   PurchaseStatus,
   PurchaseTaxContext,
-  SupplierOutstanding,
 } from "@/modules/purchases/domain/types";
 import type { PurchasesRepository } from "@/modules/purchases/infrastructure/repositories";
 
@@ -526,34 +524,4 @@ export async function cancelPurchase(input: {
   });
 
   return purchase;
-}
-
-/**
- * Before supplier payments (spec 20), outstanding equals the full grand total
- * of unpaid posted purchase bills.
- */
-export async function getSupplierOutstanding(input: {
-  tenantId: string;
-  supplierId: string;
-  purchases: PurchasesRepository;
-}): Promise<SupplierOutstanding> {
-  const bills = await input.purchases.listPurchases({
-    tenantId: input.tenantId,
-    supplierId: input.supplierId,
-  });
-  const posted = bills.filter((bill) => isPostedPurchaseStatus(bill.status));
-  const open = posted.filter((bill) =>
-    (PAYABLE_PURCHASE_STATUSES as readonly PurchaseStatus[]).includes(bill.status)
-  );
-  const currency = open.length > 0 ? open[0]!.grandTotal.currency : "INR";
-  const outstanding = open.reduce(
-    (sum, bill) => addMoney(sum, bill.grandTotal),
-    zeroMoney(currency)
-  );
-  return {
-    supplierId: input.supplierId,
-    outstanding,
-    openBillCount: open.filter((bill) => bill.grandTotal.amountMinor > 0n).length,
-    hasPostedPurchases: posted.length > 0,
-  };
 }

@@ -1,6 +1,12 @@
 import type { BusinessDate } from "@/modules/shared-kernel/dates";
 import type { Money } from "@/modules/shared-kernel/money";
+import type {
+  PurchaseStatus,
+  SupplierOutstanding,
+} from "@/modules/purchases/domain/types";
 import type { SalesInvoiceStatus } from "@/modules/sales/domain/types";
+
+export type { SupplierOutstanding };
 
 export const PAYMENT_METHODS = [
   "CASH",
@@ -88,4 +94,67 @@ export type CustomerOutstanding = {
   outstanding: Money;
   openInvoiceCount: number;
   hasPostedInvoices: boolean;
+};
+
+export type SupplierPaymentAllocation = {
+  id: string;
+  tenantId: string;
+  paymentId: string;
+  purchaseId: string;
+  purchaseNumber: string;
+  amount: Money;
+};
+
+export type SupplierPayment = {
+  id: string;
+  tenantId: string;
+  number: string;
+  supplierId: string;
+  supplierName: string;
+  paidOn: BusinessDate;
+  method: PaymentMethod;
+  amount: Money;
+  reference: string | null;
+  notes: string | null;
+  journalId: string;
+  allocations: SupplierPaymentAllocation[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type SupplierPaymentAllocationInput = {
+  purchaseId: string;
+  amount: Money;
+};
+
+export type RecordSupplierPaymentInput = {
+  supplierId: string;
+  paidOn: BusinessDate;
+  method: PaymentMethod;
+  amount: Money;
+  reference?: string | null;
+  notes?: string | null;
+  allocations: SupplierPaymentAllocationInput[];
+};
+
+export type SupplierPaymentListFilter = {
+  tenantId: string;
+  query?: string;
+  supplierId?: string;
+  method?: PaymentMethod;
+  fromDate?: BusinessDate;
+  toDate?: BusinessDate;
+};
+
+export type PurchaseOutstanding = {
+  purchaseId: string;
+  purchaseNumber: string;
+  supplierId: string;
+  supplierName: string;
+  status: PurchaseStatus;
+  issuedOn: BusinessDate;
+  dueOn: BusinessDate | null;
+  grandTotal: Money;
+  allocated: Money;
+  outstanding: Money;
 };

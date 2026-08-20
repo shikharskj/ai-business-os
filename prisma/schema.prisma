@@ -92,6 +92,9 @@ model Business {
   customerPayments CustomerPayment[]
   customerPaymentAllocations CustomerPaymentAllocation[]
   customerPaymentNumberSeries CustomerPaymentNumberSeries[]
+  supplierPayments SupplierPayment[]
+  supplierPaymentAllocations SupplierPaymentAllocation[]
+  supplierPaymentNumberSeries SupplierPaymentNumberSeries[]
   expenses Expense[]
   expenseNumberSeries ExpenseNumberSeries[]
   purchases Purchase[]
@@ -256,6 +259,7 @@ model Journal {
   lines    JournalLine[]
   salesInvoices SalesInvoice[]
   customerPayments CustomerPayment[]
+  supplierPayments SupplierPayment[]
   expenses Expense[]
   purchases Purchase[]
 
@@ -338,6 +342,7 @@ model Party {
   quotations  Quotation[]
   salesInvoices SalesInvoice[]
   customerPayments CustomerPayment[]
+  supplierPayments SupplierPayment[]
   purchases Purchase[]
 
   @@unique([id, tenantId])
@@ -671,6 +676,63 @@ model CustomerPaymentNumberSeries {
   @@map("customer_payment_number_series")
 }
 
+model SupplierPayment {
+  id           String        @id @default(uuid())
+  tenantId     String
+  number       String
+  supplierId   String
+  supplierName String
+  paidOn       String
+  method       PaymentMethod
+  amount       Decimal       @db.Decimal(18, 2)
+  reference    String?
+  notes        String?
+  journalId    String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  business    Business                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier    Party                       @relation(fields: [supplierId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  journal     Journal                     @relation(fields: [journalId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  allocations SupplierPaymentAllocation[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, number])
+  @@unique([journalId, tenantId])
+  @@index([tenantId, supplierId])
+  @@index([tenantId, paidOn])
+  @@map("supplier_payments")
+}
+
+model SupplierPaymentAllocation {
+  id         String  @id @default(uuid())
+  tenantId   String
+  paymentId  String
+  purchaseId String
+  amount     Decimal @db.Decimal(18, 2)
+
+  payment  SupplierPayment @relation(fields: [paymentId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  purchase Purchase        @relation(fields: [purchaseId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  business Business        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([id, tenantId])
+  @@unique([paymentId, purchaseId])
+  @@index([tenantId, purchaseId])
+  @@map("supplier_payment_allocations")
+}
+
+model SupplierPaymentNumberSeries {
+  id               String @id @default(uuid())
+  tenantId         String
+  financialYearKey String
+  lastNumber       Int
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, financialYearKey])
+  @@map("supplier_payment_number_series")
+}
+
 enum ExpenseCategory {
   RENT
   UTILITIES
@@ -769,6 +831,7 @@ model Purchase {
   supplier Party          @relation(fields: [supplierId, tenantId], references: [id, tenantId], onDelete: Restrict)
   journal  Journal?       @relation(fields: [journalId, tenantId], references: [id, tenantId], onDelete: Restrict)
   lines    PurchaseLine[]
+  paymentAllocations SupplierPaymentAllocation[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, number])

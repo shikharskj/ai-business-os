@@ -157,10 +157,6 @@ export async function updateBusinessProfileAction(
       profile,
       businessRepository: prismaBusinessRepository,
     });
-
-    revalidatePath("/app/settings");
-    revalidatePath("/app");
-    redirect("/app/settings?saved=1");
   } catch (error) {
     return {
       error:
@@ -169,6 +165,10 @@ export async function updateBusinessProfileAction(
           : "Unable to update business profile",
     };
   }
+
+  revalidatePath("/app/settings");
+  revalidatePath("/app");
+  redirect("/app/settings?saved=1");
 }
 
 export async function inviteMemberAction(
@@ -201,15 +201,15 @@ export async function inviteMemberAction(
       inviterClerkUserId: user.clerkUserId,
       invitationGateway: clerkInvitationGateway,
     });
-
-    revalidatePath("/app/settings/members");
-    redirect("/app/settings/members?invited=1");
   } catch (error) {
     return {
       error:
         error instanceof Error ? error.message : "Unable to send invitation",
     };
   }
+
+  revalidatePath("/app/settings/members");
+  redirect("/app/settings/members?invited=1");
 }
 
 export async function assertTenantAccessAction(clientTenantId: string) {

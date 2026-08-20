@@ -3,6 +3,7 @@ export const LIST_KEYS = [
   "quotations",
   "customers",
   "payments",
+  "supplier-payments",
   "suppliers",
   "products",
   "stock",

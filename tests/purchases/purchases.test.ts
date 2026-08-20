@@ -26,7 +26,6 @@ import {
   createMemoryPurchasesRepository,
   createPurchase,
   getPurchase,
-  getSupplierOutstanding,
   postPurchase,
   PurchaseAlreadyPostedError,
   PurchaseNotFoundError,
@@ -35,6 +34,10 @@ import {
   type PurchaseInput,
   type PurchaseTaxContext,
 } from "@/modules/purchases";
+import {
+  createMemorySupplierPaymentRepository,
+  getSupplierOutstanding,
+} from "@/modules/payments";
 
 const maharashtraGstin = "27AABCU9603R1ZM";
 
@@ -185,6 +188,7 @@ describe("purchases", () => {
       tenantId: "tenant-a",
       supplierId: supplier.id,
       purchases: d.purchases,
+      supplierPayments: createMemorySupplierPaymentRepository(),
     });
     expect(toMajorString(outstanding.outstanding)).toBe(toMajorString(posted.grandTotal));
     expect(outstanding.openBillCount).toBe(1);

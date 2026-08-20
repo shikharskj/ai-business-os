@@ -35,7 +35,6 @@ export {
   cancelPurchase,
   createPurchase,
   getPurchase,
-  getSupplierOutstanding,
   listPurchases,
   listPurchasesPage,
   postPurchase,
