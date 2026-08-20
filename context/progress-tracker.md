@@ -1137,6 +1137,58 @@ The first objective is to deliver a complete, reliable business workflow for sma
 
 # Implementation Unit Log
 
+## 2026-08-20 — DataTable dnd-kit hydration mismatch
+
+Status: Complete
+
+Implemented:
+- Pass a stable `id={`list-dnd-${listKey}`}` to `DndContext` and `SortableContext` so drag-handle `aria-describedby` matches on server and client when changing rows per page.
+
+Files / Areas:
+- `components/data-table/data-table.tsx`
+
+---
+
+## 2026-08-20 — Reusable server-paginated DataTable
+
+Status: Complete
+
+Implemented:
+- Shared list contract: `ListPageResult`, `listPageParamsSchema`, and `list*Page` on all eight list queries (invoices, quotations, customers, payments, suppliers, products, stock, expenses) with SQL `skip`/`take`/`count`.
+- `ListRowOrder` Prisma model + migration; read path joins order in SQL (`NULLS FIRST`); write path uses neighbor-based ranks without loading full lists.
+- Extended `components/data-table/` (TanStack v9, `@dnd-kit`) with server pagination footer, drag handle, and `saveListOrder` server action.
+- Migrated eight workspace list pages to `*DataTable` wrappers; filters stay GET/server-side; empty state when filtered `total === 0`.
+- Stock list: low-stock filter and pagination in SQL via movement aggregates.
+
+Files / Areas:
+- `modules/shared-kernel/list-page.ts`, `modules/list-order/`
+- `components/data-table/`, `components/business/*-data-table.tsx`
+- `lib/list-table-url.ts`
+- Eight list pages under `app/app/(workspace)/`
+- `prisma/migrations/20260820080000_add_list_row_orders/`
+
+---
+
+## 2026-08-20 — Server-paginated list pages
+
+Status: Complete (superseded by Reusable server-paginated DataTable entry above)
+
+Implemented:
+- Wired seven workspace list pages to server pagination (`list*Page`) and shared `*DataTable` wrappers, matching the expenses list pattern.
+- Parse `page` / `pageSize` via `parseListTableParams`; empty state uses `result.total === 0`; filter forms preserve `pageSize` when not default and omit `page` (reset to 1).
+- Stock list uses `listStockPositionsPage`; low-stock alert count uses a separate count query (`lowStockOnly: true`, `pageSize: 1`) when the stock filter is `ALL`.
+
+Files / Areas:
+- `app/app/(workspace)/sales/invoices/page.tsx`
+- `app/app/(workspace)/sales/quotations/page.tsx`
+- `app/app/(workspace)/sales/customers/page.tsx`
+- `app/app/(workspace)/sales/payments/page.tsx`
+- `app/app/(workspace)/purchases/suppliers/page.tsx`
+- `app/app/(workspace)/inventory/products/page.tsx`
+- `app/app/(workspace)/inventory/stock/page.tsx`
+
+---
+
 ## 2026-08-20 — Expenses
 
 Status: Complete

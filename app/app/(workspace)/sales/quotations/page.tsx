@@ -1,14 +1,9 @@
 import { FileText, Plus, Search } from "lucide-react";
 import Link from "next/link";
 
+import { QuotationsDataTable } from "@/components/business/quotations-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
 import { PageHeader } from "@/components/shell/page-header";
-import { MoneyDisplay } from "@/components/business/money-display";
-import { StatusBadge } from "@/components/business/status-badge";
-import {
-  QUOTATION_STATUS_LABELS,
-  QUOTATION_STATUS_TONES,
-} from "@/components/business/status-tone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,26 +13,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { parseListTableParams, toQueryString } from "@/lib/list-table-url";
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
-import { listQuotations, quotationSearchSchema } from "@/modules/sales";
+import { listQuotationsPage, quotationSearchSchema } from "@/modules/sales";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
 
 export default async function QuotationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    status?: string;
+    page?: string;
+    pageSize?: string;
+  }>;
 }) {
   const tenant = await authorize("quotation:read");
   const params = await searchParams;
+  const { page, pageSize } = parseListTableParams(params);
   const parseResult = quotationSearchSchema.safeParse({
     q: params.q,
     status: params.status,
@@ -46,12 +40,16 @@ export default async function QuotationsPage({
     ? parseResult.data
     : { q: "", status: "ALL" as const };
   const canCreate = roleHasPermission(tenant.membership.role, "quotation:create");
-  const quotations = await listQuotations({
+  const result = await listQuotationsPage({
     tenantId: tenant.tenantId,
     query: filters.q,
     status: filters.status,
+    page,
+    pageSize,
     sales: prismaSalesRepository,
   });
+  const hasFilters = Boolean(filters.q || filters.status !== "ALL");
+  const queryString = toQueryString(params);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
@@ -72,6 +70,9 @@ export default async function QuotationsPage({
       />
 
       <form className="flex flex-wrap items-end gap-3" method="get">
+        {pageSize !== 10 ? (
+          <input type="hidden" name="pageSize" value={pageSize} />
+        ) : null}
         <div className="flex min-w-56 flex-1 flex-col gap-2">
           <label htmlFor="q" className="text-base font-medium">
             Search
@@ -119,17 +120,17 @@ export default async function QuotationsPage({
         </Button>
       </form>
 
-      {quotations.length === 0 ? (
+      {result.total === 0 ? (
         <EmptyState
           icon={FileText}
-          title={filters.q || filters.status !== "ALL" ? "No matching quotations" : "No quotations yet"}
+          title={hasFilters ? "No matching quotations" : "No quotations yet"}
           description={
-            filters.q || filters.status !== "ALL"
+            hasFilters
               ? "Try a different number, customer, or status."
               : "Create a quotation to send pricing with GST to a customer. Stock and accounts stay unchanged."
           }
           action={
-            canCreate && !filters.q && filters.status === "ALL" ? (
+            canCreate && !hasFilters ? (
               <Button
                 nativeButton={false}
                 render={<Link href="/app/sales/quotations/new" />}
@@ -141,43 +142,13 @@ export default async function QuotationsPage({
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-md border border-border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Number</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {quotations.map((quotation) => (
-                <TableRow key={quotation.id}>
-                  <TableCell>
-                    <Link
-                      href={`/app/sales/quotations/${quotation.id}`}
-                      className="font-mono text-sm font-medium hover:underline"
-                    >
-                      {quotation.number}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{quotation.customerName}</TableCell>
-                  <TableCell>{quotation.issuedOn}</TableCell>
-                  <TableCell className="text-right">
-                    <MoneyDisplay value={quotation.grandTotal} />
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge tone={QUOTATION_STATUS_TONES[quotation.status]}>
-                      {QUOTATION_STATUS_LABELS[quotation.status]}
-                    </StatusBadge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <QuotationsDataTable
+          items={result.items}
+          total={result.total}
+          page={result.page}
+          pageSize={result.pageSize}
+          queryString={queryString}
+        />
       )}
     </div>
   );

@@ -1,14 +1,9 @@
 import { FileText, Plus, Search } from "lucide-react";
 import Link from "next/link";
 
+import { InvoicesDataTable } from "@/components/business/invoices-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
 import { PageHeader } from "@/components/shell/page-header";
-import { MoneyDisplay } from "@/components/business/money-display";
-import { StatusBadge } from "@/components/business/status-badge";
-import {
-  INVOICE_STATUS_LABELS,
-  INVOICE_STATUS_TONES,
-} from "@/components/business/status-tone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,17 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { parseListTableParams, toQueryString } from "@/lib/list-table-url";
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
-import { INVOICE_STATUSES, listInvoices, invoiceSearchSchema, paymentStatusLabel } from "@/modules/sales";
+import {
+  INVOICE_STATUSES,
+  listInvoicesPage,
+  invoiceSearchSchema,
+} from "@/modules/sales";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
 
 const STATUS_FILTER_LABELS: Record<(typeof INVOICE_STATUSES)[number] | "ALL", string> = {
@@ -44,10 +36,16 @@ const STATUS_FILTER_LABELS: Record<(typeof INVOICE_STATUSES)[number] | "ALL", st
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    status?: string;
+    page?: string;
+    pageSize?: string;
+  }>;
 }) {
   const tenant = await authorize("invoice:read");
   const params = await searchParams;
+  const { page, pageSize } = parseListTableParams(params);
   const parseResult = invoiceSearchSchema.safeParse({
     q: params.q,
     status: params.status,
@@ -56,12 +54,16 @@ export default async function InvoicesPage({
     ? parseResult.data
     : { q: "", status: "ALL" as const };
   const canCreate = roleHasPermission(tenant.membership.role, "invoice:create");
-  const invoices = await listInvoices({
+  const result = await listInvoicesPage({
     tenantId: tenant.tenantId,
     query: filters.q,
     status: filters.status,
+    page,
+    pageSize,
     sales: prismaSalesRepository,
   });
+  const hasFilters = Boolean(filters.q || filters.status !== "ALL");
+  const queryString = toQueryString(params);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
@@ -82,6 +84,9 @@ export default async function InvoicesPage({
       />
 
       <form className="flex flex-wrap items-end gap-3" method="get">
+        {pageSize !== 10 ? (
+          <input type="hidden" name="pageSize" value={pageSize} />
+        ) : null}
         <div className="flex min-w-56 flex-1 flex-col gap-2">
           <label htmlFor="q" className="text-base font-medium">
             Search
@@ -121,17 +126,17 @@ export default async function InvoicesPage({
         </Button>
       </form>
 
-      {invoices.length === 0 ? (
+      {result.total === 0 ? (
         <EmptyState
           icon={FileText}
-          title={filters.q || filters.status !== "ALL" ? "No matching invoices" : "No invoices yet"}
+          title={hasFilters ? "No matching invoices" : "No invoices yet"}
           description={
-            filters.q || filters.status !== "ALL"
+            hasFilters
               ? "Try a different number, customer, or status."
               : "Create an invoice to bill a customer. Post when ready to update stock and accounts."
           }
           action={
-            canCreate && !filters.q && filters.status === "ALL" ? (
+            canCreate && !hasFilters ? (
               <Button
                 nativeButton={false}
                 render={<Link href="/app/sales/invoices/new" />}
@@ -143,45 +148,13 @@ export default async function InvoicesPage({
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-md border border-border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Number</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Payment</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoices.map((invoice) => (
-                <TableRow key={invoice.id}>
-                  <TableCell>
-                    <Link
-                      href={`/app/sales/invoices/${invoice.id}`}
-                      className="font-mono text-sm font-medium hover:underline"
-                    >
-                      {invoice.number}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{invoice.customerName}</TableCell>
-                  <TableCell>{invoice.issuedOn}</TableCell>
-                  <TableCell className="text-right">
-                    <MoneyDisplay value={invoice.grandTotal} />
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge tone={INVOICE_STATUS_TONES[invoice.status]}>
-                      {INVOICE_STATUS_LABELS[invoice.status]}
-                    </StatusBadge>
-                  </TableCell>
-                  <TableCell>{paymentStatusLabel(invoice.status)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <InvoicesDataTable
+          items={result.items}
+          total={result.total}
+          page={result.page}
+          pageSize={result.pageSize}
+          queryString={queryString}
+        />
       )}
     </div>
   );

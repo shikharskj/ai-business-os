@@ -1,13 +1,9 @@
 import { Plus, Search, Users } from "lucide-react";
 import Link from "next/link";
 
+import { CustomersDataTable } from "@/components/business/customers-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
 import { PageHeader } from "@/components/shell/page-header";
-import { StatusBadge } from "@/components/business/status-badge";
-import {
-  PARTY_STATUS_LABELS,
-  PARTY_STATUS_TONES,
-} from "@/components/business/status-tone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,26 +13,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { parseListTableParams, toQueryString } from "@/lib/list-table-url";
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
-import { listCustomers, customerSearchSchema } from "@/modules/party";
+import { listCustomersPage, customerSearchSchema } from "@/modules/party";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    status?: string;
+    page?: string;
+    pageSize?: string;
+  }>;
 }) {
   const tenant = await authorize("customer:read");
   const params = await searchParams;
+  const { page, pageSize } = parseListTableParams(params);
   const parseResult = customerSearchSchema.safeParse({
     q: params.q,
     status: params.status,
@@ -48,12 +43,16 @@ export default async function CustomersPage({
     tenant.membership.role,
     "customer:create",
   );
-  const customers = await listCustomers({
+  const result = await listCustomersPage({
     tenantId: tenant.tenantId,
     query: filters.q,
     status: filters.status,
+    page,
+    pageSize,
     parties: prismaPartyRepository,
   });
+  const hasFilters = Boolean(filters.q || filters.status !== "ACTIVE");
+  const queryString = toQueryString(params);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
@@ -74,6 +73,9 @@ export default async function CustomersPage({
       />
 
       <form className="flex flex-wrap items-end gap-3" method="get">
+        {pageSize !== 10 ? (
+          <input type="hidden" name="pageSize" value={pageSize} />
+        ) : null}
         <div className="flex min-w-56 flex-1 flex-col gap-2">
           <label htmlFor="q" className="text-base font-medium">
             Search
@@ -111,21 +113,17 @@ export default async function CustomersPage({
         </Button>
       </form>
 
-      {customers.length === 0 ? (
+      {result.total === 0 ? (
         <EmptyState
           icon={Users}
-          title={
-            filters.q || filters.status !== "ACTIVE"
-              ? "No matching customers"
-              : "No customers yet"
-          }
+          title={hasFilters ? "No matching customers" : "No customers yet"}
           description={
-            filters.q || filters.status !== "ACTIVE"
+            hasFilters
               ? "Try a different name, phone, email, or GSTIN."
               : "Add your first customer to start tracking sales and outstanding balances."
           }
           action={
-            canCreate && !filters.q && filters.status === "ACTIVE" ? (
+            canCreate && !hasFilters ? (
               <Button
                 nativeButton={false}
                 render={<Link href="/app/sales/customers/new" />}
@@ -137,46 +135,13 @@ export default async function CustomersPage({
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-md border border-border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead>GSTIN</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {customers.map((customer) => (
-                <TableRow key={customer.id}>
-                  <TableCell>
-                    <Link
-                      href={`/app/sales/customers/${customer.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {customer.name}
-                    </Link>
-                    {customer.email ? (
-                      <p className="text-xs text-muted-foreground">
-                        {customer.email}
-                      </p>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {customer.gstin ?? "—"}
-                  </TableCell>
-                  <TableCell>{customer.phone ?? "—"}</TableCell>
-                  <TableCell>
-                    <StatusBadge tone={PARTY_STATUS_TONES[customer.status]}>
-                      {PARTY_STATUS_LABELS[customer.status]}
-                    </StatusBadge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CustomersDataTable
+          items={result.items}
+          total={result.total}
+          page={result.page}
+          pageSize={result.pageSize}
+          queryString={queryString}
+        />
       )}
     </div>
   );

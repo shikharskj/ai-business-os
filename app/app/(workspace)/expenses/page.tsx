@@ -1,9 +1,9 @@
 import { Plus, Search, Wallet } from "lucide-react";
 import Link from "next/link";
 
+import { ExpensesDataTable } from "@/components/business/expenses-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
 import { PageHeader } from "@/components/shell/page-header";
-import { MoneyDisplay } from "@/components/business/money-display";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,23 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { parseListTableParams, toQueryString } from "@/lib/list-table-url";
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
 import {
   EXPENSE_CATEGORY_LABELS,
   expenseSearchSchema,
-  listExpenses,
+  listExpensesPage,
 } from "@/modules/expenses";
 import { prismaExpenseRepository } from "@/modules/expenses/infrastructure/prisma-expenses-repository";
-import { PAYMENT_METHOD_LABELS } from "@/modules/payments";
 import { businessDate } from "@/modules/shared-kernel/dates";
 
 const CATEGORY_FILTER_LABELS = {
@@ -40,10 +32,18 @@ const CATEGORY_FILTER_LABELS = {
 export default async function ExpensesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; from?: string; to?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    category?: string;
+    from?: string;
+    to?: string;
+    page?: string;
+    pageSize?: string;
+  }>;
 }) {
   const tenant = await authorize("expense:read");
   const params = await searchParams;
+  const { page, pageSize } = parseListTableParams(params);
   const parseResult = expenseSearchSchema.safeParse({
     q: params.q,
     category: params.category,
@@ -54,17 +54,20 @@ export default async function ExpensesPage({
     ? parseResult.data
     : { q: "", category: "ALL" as const, from: undefined, to: undefined };
   const canCreate = roleHasPermission(tenant.membership.role, "expense:create");
-  const expenses = await listExpenses({
+  const result = await listExpensesPage({
     tenantId: tenant.tenantId,
     query: filters.q,
     category: filters.category === "ALL" ? undefined : filters.category,
     fromDate: filters.from ? businessDate(filters.from) : undefined,
     toDate: filters.to ? businessDate(filters.to) : undefined,
+    page,
+    pageSize,
     expenses: prismaExpenseRepository,
   });
   const hasFilters = Boolean(
     filters.q || filters.category !== "ALL" || filters.from || filters.to
   );
+  const queryString = toQueryString(params);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
@@ -85,6 +88,9 @@ export default async function ExpensesPage({
       />
 
       <form className="flex flex-wrap items-end gap-3" method="get">
+        {pageSize !== 10 ? (
+          <input type="hidden" name="pageSize" value={pageSize} />
+        ) : null}
         <div className="flex min-w-56 flex-1 flex-col gap-2">
           <label htmlFor="q" className="text-base font-medium">
             Search
@@ -146,7 +152,7 @@ export default async function ExpensesPage({
         </Button>
       </form>
 
-      {expenses.length === 0 ? (
+      {result.total === 0 ? (
         <EmptyState
           icon={Wallet}
           title={hasFilters ? "No matching expenses" : "No expenses yet"}
@@ -168,39 +174,13 @@ export default async function ExpensesPage({
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-md border border-border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Number</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Paid by</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {expenses.map((expense) => (
-                <TableRow key={expense.id}>
-                  <TableCell>
-                    <Link
-                      href={`/app/expenses/${expense.id}`}
-                      className="font-mono text-sm font-medium hover:underline"
-                    >
-                      {expense.number}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{expense.incurredOn}</TableCell>
-                  <TableCell>{EXPENSE_CATEGORY_LABELS[expense.category]}</TableCell>
-                  <TableCell>{PAYMENT_METHOD_LABELS[expense.method]}</TableCell>
-                  <TableCell className="text-right">
-                    <MoneyDisplay value={expense.grandTotal} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <ExpensesDataTable
+          items={result.items}
+          total={result.total}
+          page={result.page}
+          pageSize={result.pageSize}
+          queryString={queryString}
+        />
       )}
     </div>
   );

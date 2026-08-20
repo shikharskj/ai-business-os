@@ -21,7 +21,7 @@ export {
   EXPENSE_SERIES_PREFIX,
 } from "@/modules/expenses/domain/numbering";
 export { recordExpense } from "@/modules/expenses/application/record-expense";
-export { getExpense, listExpenses } from "@/modules/expenses/application/queries";
+export { getExpense, listExpenses, listExpensesPage } from "@/modules/expenses/application/queries";
 export {
   attachExpenseDocument,
   listExpenseDocuments,

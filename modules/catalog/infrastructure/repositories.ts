@@ -1,4 +1,6 @@
 import type { Product, ProductInput, ProductKind } from "@/modules/catalog/domain/types";
+import type { ListPageParams, ListPageResult } from "@/modules/shared-kernel/list-page";
+import { paginateArray } from "@/modules/shared-kernel/list-page";
 
 export type ProductListFilter = {
   tenantId: string;
@@ -19,6 +21,9 @@ export type CatalogRepository = {
   findProductById(tenantId: string, productId: string): Promise<Product | null>;
   findProductBySku(tenantId: string, sku: string): Promise<Product | null>;
   listProducts(filter: ProductListFilter): Promise<Product[]>;
+  listProductsPage(
+    filter: ProductListFilter & ListPageParams
+  ): Promise<ListPageResult<Product>>;
 };
 
 export function createMemoryCatalogRepository(
@@ -107,6 +112,9 @@ export function createMemoryCatalogRepository(
             .some((value) => value!.toLowerCase().includes(query));
         })
         .sort((a, b) => a.name.localeCompare(b.name));
+    },
+    async listProductsPage(filter) {
+      return paginateArray(await this.listProducts(filter), filter.page, filter.pageSize);
     },
   };
 }

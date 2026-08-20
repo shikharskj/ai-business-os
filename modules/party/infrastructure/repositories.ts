@@ -7,6 +7,8 @@ import type {
   Supplier,
   SupplierInput,
 } from "@/modules/party/domain/types";
+import type { ListPageParams, ListPageResult } from "@/modules/shared-kernel/list-page";
+import { paginateArray } from "@/modules/shared-kernel/list-page";
 
 export type PartyListFilter = {
   tenantId: string;
@@ -29,6 +31,9 @@ export type PartyRepository = {
   }): Promise<Customer | null>;
   findCustomerById(tenantId: string, customerId: string): Promise<Customer | null>;
   listCustomers(filter: CustomerListFilter): Promise<Customer[]>;
+  listCustomersPage(
+    filter: CustomerListFilter & ListPageParams
+  ): Promise<ListPageResult<Customer>>;
   deactivateCustomer(
     tenantId: string,
     customerId: string
@@ -44,6 +49,9 @@ export type PartyRepository = {
   }): Promise<Supplier | null>;
   findSupplierById(tenantId: string, supplierId: string): Promise<Supplier | null>;
   listSuppliers(filter: SupplierListFilter): Promise<Supplier[]>;
+  listSuppliersPage(
+    filter: SupplierListFilter & ListPageParams
+  ): Promise<ListPageResult<Supplier>>;
   deactivateSupplier(
     tenantId: string,
     supplierId: string
@@ -178,6 +186,9 @@ export function createMemoryPartyRepository(
     async listCustomers(filter) {
       return listKind("CUSTOMER", filter).map(asCustomer);
     },
+    async listCustomersPage(filter) {
+      return paginateArray(await this.listCustomers(filter), filter.page, filter.pageSize);
+    },
     async deactivateCustomer(tenantId, customerId) {
       const index = findIndex(tenantId, customerId, "CUSTOMER");
       if (index === -1) {
@@ -218,6 +229,9 @@ export function createMemoryPartyRepository(
     },
     async listSuppliers(filter) {
       return listKind("SUPPLIER", filter).map(asSupplier);
+    },
+    async listSuppliersPage(filter) {
+      return paginateArray(await this.listSuppliers(filter), filter.page, filter.pageSize);
     },
     async deactivateSupplier(tenantId, supplierId) {
       const index = findIndex(tenantId, supplierId, "SUPPLIER");

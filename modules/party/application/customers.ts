@@ -206,6 +206,23 @@ export async function getCustomer(input: {
   return customer;
 }
 
+export async function listCustomersPage(input: {
+  tenantId: string;
+  query?: string;
+  status?: PartyStatus | "ALL";
+  page: number;
+  pageSize: import("@/modules/shared-kernel/list-page").PageSize;
+  parties: PartyRepository;
+}) {
+  return input.parties.listCustomersPage({
+    tenantId: input.tenantId,
+    query: input.query,
+    status: input.status,
+    page: input.page,
+    pageSize: input.pageSize,
+  });
+}
+
 export async function listCustomers(input: {
   tenantId: string;
   query?: string;

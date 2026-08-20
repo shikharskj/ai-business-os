@@ -94,8 +94,25 @@ model Business {
   customerPaymentNumberSeries CustomerPaymentNumberSeries[]
   expenses Expense[]
   expenseNumberSeries ExpenseNumberSeries[]
+  listRowOrders ListRowOrder[]
 
   @@map("businesses")
+}
+
+model ListRowOrder {
+  id        String   @id @default(uuid())
+  tenantId  String
+  listKey   String
+  recordId  String
+  sortOrder Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, listKey, recordId])
+  @@index([tenantId, listKey, sortOrder])
+  @@map("list_row_orders")
 }
 
 model Membership {

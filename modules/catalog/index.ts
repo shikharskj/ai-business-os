@@ -17,6 +17,7 @@ export {
   updateProduct,
   getProduct,
   listProducts,
+  listProductsPage,
 } from "@/modules/catalog/application/products";
 export {
   createMemoryCatalogRepository,

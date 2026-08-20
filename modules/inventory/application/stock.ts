@@ -264,6 +264,46 @@ export async function getStockPosition(input: {
   });
 }
 
+export async function buildStockPositionsForProductIds(input: {
+  tenantId: string;
+  productIds: string[];
+  lowStockThreshold?: Quantity;
+  catalog: CatalogRepository;
+  inventory: InventoryRepository;
+}): Promise<StockPosition[]> {
+  const threshold = input.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
+  if (input.productIds.length === 0) {
+    return [];
+  }
+
+  const products = await Promise.all(
+    input.productIds.map((productId) =>
+      input.catalog.findProductById(input.tenantId, productId)
+    )
+  );
+  const tracked = products.filter(
+    (product): product is NonNullable<typeof product> =>
+      product !== null && product.tracksInventory
+  );
+  const aggregates = await input.inventory.sumQuantitiesByProduct(
+    input.tenantId,
+    tracked.map((product) => product.id)
+  );
+
+  return tracked.map((product) => {
+    const aggregate = aggregates.get(product.id) ?? {
+      quantity: 0n,
+      hasMovements: false,
+    };
+    return toStockPositionFromAggregate({
+      product,
+      quantity: quantity(aggregate.quantity),
+      hasMovements: aggregate.hasMovements,
+      threshold,
+    });
+  });
+}
+
 export async function listStockPositions(input: {
   tenantId: string;
   query?: string;

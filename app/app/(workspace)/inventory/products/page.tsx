@@ -1,11 +1,9 @@
 import { Package, Plus, Search } from "lucide-react";
 import Link from "next/link";
 
+import { ProductsDataTable } from "@/components/business/products-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
 import { PageHeader } from "@/components/shell/page-header";
-import { MoneyDisplay } from "@/components/business/money-display";
-import { StatusBadge } from "@/components/business/status-badge";
-import { catalogKindPresentation } from "@/components/business/status-tone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,26 +13,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { parseListTableParams, toQueryString } from "@/lib/list-table-url";
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
-import { listProducts, productSearchSchema } from "@/modules/catalog";
+import { listProductsPage, productSearchSchema } from "@/modules/catalog";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; kind?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    kind?: string;
+    page?: string;
+    pageSize?: string;
+  }>;
 }) {
   const tenant = await authorize("product:read");
   const params = await searchParams;
+  const { page, pageSize } = parseListTableParams(params);
   const parseResult = productSearchSchema.safeParse({
     q: params.q,
     kind: params.kind,
@@ -43,12 +40,16 @@ export default async function ProductsPage({
     ? parseResult.data
     : { q: "", kind: "ALL" as const };
   const canCreate = roleHasPermission(tenant.membership.role, "product:create");
-  const products = await listProducts({
+  const result = await listProductsPage({
     tenantId: tenant.tenantId,
     query: filters.q,
     kind: filters.kind,
+    page,
+    pageSize,
     catalog: prismaCatalogRepository,
   });
+  const hasFilters = Boolean(filters.q || filters.kind !== "ALL");
+  const queryString = toQueryString(params);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
@@ -69,6 +70,9 @@ export default async function ProductsPage({
       />
 
       <form className="flex flex-wrap items-end gap-3" method="get">
+        {pageSize !== 10 ? (
+          <input type="hidden" name="pageSize" value={pageSize} />
+        ) : null}
         <div className="flex min-w-56 flex-1 flex-col gap-2">
           <label htmlFor="q" className="text-base font-medium">
             Search
@@ -106,21 +110,17 @@ export default async function ProductsPage({
         </Button>
       </form>
 
-      {products.length === 0 ? (
+      {result.total === 0 ? (
         <EmptyState
           icon={Package}
-          title={
-            filters.q || filters.kind !== "ALL"
-              ? "No matching products"
-              : "No products yet"
-          }
+          title={hasFilters ? "No matching products" : "No products yet"}
           description={
-            filters.q || filters.kind !== "ALL"
+            hasFilters
               ? "Try a different name, SKU, HSN/SAC, or category."
               : "Add your first product or service to start invoicing."
           }
           action={
-            canCreate && !filters.q && filters.kind === "ALL" ? (
+            canCreate && !hasFilters ? (
               <Button
                 nativeButton={false}
                 render={<Link href="/app/inventory/products/new" />}
@@ -132,51 +132,13 @@ export default async function ProductsPage({
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-md border border-border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Unit</TableHead>
-                <TableHead>Selling price</TableHead>
-                <TableHead>Type</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.map((product) => {
-                const kind = catalogKindPresentation(product.kind);
-                return (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <Link
-                      href={`/app/inventory/products/${product.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {product.name}
-                    </Link>
-                    {product.category ? (
-                      <p className="text-xs text-muted-foreground">
-                        {product.category}
-                      </p>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {product.sku}
-                  </TableCell>
-                  <TableCell>{product.unitOfMeasurement}</TableCell>
-                  <TableCell>
-                    <MoneyDisplay value={product.sellingPrice} />
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge tone={kind.tone}>{kind.label}</StatusBadge>
-                  </TableCell>
-                </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+        <ProductsDataTable
+          items={result.items}
+          total={result.total}
+          page={result.page}
+          pageSize={result.pageSize}
+          queryString={queryString}
+        />
       )}
     </div>
   );

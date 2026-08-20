@@ -1,7 +1,9 @@
 import "server-only";
 
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
+import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { fetchOrderedPage } from "@/modules/list-order/infrastructure/ordered-page";
 import type { Product } from "@/modules/catalog/domain/types";
 import type { CatalogRepository } from "@/modules/catalog/infrastructure/repositories";
 import {
@@ -47,8 +49,30 @@ function mapProduct(record: {
   };
 }
 
+function productWhereConditions(filter: {
+  tenantId: string;
+  query?: string;
+  kind?: Product["kind"] | "ALL";
+}): Prisma.Sql[] {
+  const conditions: Prisma.Sql[] = [Prisma.sql`p."tenantId" = ${filter.tenantId}`];
+  if (filter.kind && filter.kind !== "ALL") {
+    conditions.push(Prisma.sql`p.kind = ${filter.kind}`);
+  }
+  const query = filter.query?.trim();
+  if (query) {
+    const pattern = `%${query}%`;
+    conditions.push(Prisma.sql`(
+      p.name ILIKE ${pattern}
+      OR p.sku ILIKE ${pattern}
+      OR COALESCE(p."hsnSac", '') ILIKE ${pattern}
+      OR COALESCE(p.category, '') ILIKE ${pattern}
+    )`);
+  }
+  return conditions;
+}
+
 export function createPrismaCatalogRepository(
-  client: Pick<PrismaClient, "product">
+  client: Pick<PrismaClient, "product" | "$queryRaw">
 ): CatalogRepository {
   return {
     async createProduct(input) {
@@ -135,6 +159,27 @@ export function createPrismaCatalogRepository(
         orderBy: { name: "asc" },
       });
       return records.map(mapProduct);
+    },
+
+    async listProductsPage(filter) {
+      return fetchOrderedPage({
+        client,
+        tenantId: filter.tenantId,
+        listKey: "products",
+        fromSql: Prisma.sql`products p`,
+        idColumn: Prisma.sql`p.id`,
+        whereConditions: productWhereConditions(filter),
+        defaultOrderSql: Prisma.sql`p.name ASC`,
+        page: filter.page,
+        pageSize: filter.pageSize,
+        fetchByIds: async (ids) => {
+          const records = await client.product.findMany({
+            where: { tenantId: filter.tenantId, id: { in: ids } },
+          });
+          return records.map(mapProduct);
+        },
+        getId: (product) => product.id,
+      });
     },
   };
 }

@@ -1,7 +1,9 @@
 import "server-only";
 
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
+import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { fetchOrderedPage } from "@/modules/list-order/infrastructure/ordered-page";
 import { businessDate } from "@/modules/shared-kernel/dates";
 import { moneyFromPrismaDecimal, toDecimalForPrisma } from "@/modules/shared-kernel/money";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/modules/payments/domain/types";
@@ -13,7 +15,10 @@ import {
 import type { ExpenseRepository } from "@/modules/expenses/infrastructure/repositories";
 import type { GstSupplyType, GstTreatment } from "@/modules/tax/domain/types";
 
-type PrismaExpenseClient = Pick<PrismaClient, "expense" | "expenseNumberSeries">;
+type PrismaExpenseClient = Pick<
+  PrismaClient,
+  "expense" | "expenseNumberSeries" | "$queryRaw"
+>;
 
 const METHODS = new Set<PaymentMethod>(PAYMENT_METHODS);
 const CATEGORIES = new Set<ExpenseCategory>(EXPENSE_CATEGORIES);
@@ -98,6 +103,35 @@ function mapExpense(record: {
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
+}
+
+function expenseWhereConditions(filter: {
+  tenantId: string;
+  query?: string;
+  category?: ExpenseCategory;
+  fromDate?: string;
+  toDate?: string;
+}): Prisma.Sql[] {
+  const conditions: Prisma.Sql[] = [Prisma.sql`e."tenantId" = ${filter.tenantId}`];
+  if (filter.category) {
+    conditions.push(Prisma.sql`e.category = ${filter.category}`);
+  }
+  if (filter.fromDate) {
+    conditions.push(Prisma.sql`e."incurredOn" >= ${filter.fromDate}`);
+  }
+  if (filter.toDate) {
+    conditions.push(Prisma.sql`e."incurredOn" <= ${filter.toDate}`);
+  }
+  const query = filter.query?.trim();
+  if (query) {
+    const pattern = `%${query}%`;
+    conditions.push(Prisma.sql`(
+      e.number ILIKE ${pattern}
+      OR COALESCE(e.notes, '') ILIKE ${pattern}
+      OR COALESCE(e."vendorGstin", '') ILIKE ${pattern}
+    )`);
+  }
+  return conditions;
 }
 
 export function createPrismaExpenseRepository(
@@ -189,6 +223,33 @@ export function createPrismaExpenseRepository(
         orderBy: [{ incurredOn: "desc" }, { number: "desc" }],
       });
       return records.map(mapExpense);
+    },
+
+    async listExpensesPage(filter) {
+      return fetchOrderedPage({
+        client,
+        tenantId: filter.tenantId,
+        listKey: "expenses",
+        fromSql: Prisma.sql`expenses e`,
+        idColumn: Prisma.sql`e.id`,
+        whereConditions: expenseWhereConditions({
+          tenantId: filter.tenantId,
+          query: filter.query,
+          category: filter.category,
+          fromDate: filter.fromDate,
+          toDate: filter.toDate,
+        }),
+        defaultOrderSql: Prisma.sql`e."incurredOn" DESC, e.number DESC`,
+        page: filter.page,
+        pageSize: filter.pageSize,
+        fetchByIds: async (ids) => {
+          const records = await client.expense.findMany({
+            where: { tenantId: filter.tenantId, id: { in: ids } },
+          });
+          return records.map(mapExpense);
+        },
+        getId: (expense) => expense.id,
+      });
     },
   };
 }

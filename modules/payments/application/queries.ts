@@ -26,6 +26,23 @@ export async function getPayment(input: {
   return payment;
 }
 
+export async function listPaymentsPage(input: {
+  tenantId: string;
+  query?: string;
+  customerId?: string;
+  page: number;
+  pageSize: import("@/modules/shared-kernel/list-page").PageSize;
+  payments: PaymentRepository;
+}) {
+  return input.payments.listPaymentsPage({
+    tenantId: input.tenantId,
+    query: input.query,
+    customerId: input.customerId,
+    page: input.page,
+    pageSize: input.pageSize,
+  });
+}
+
 export async function listPayments(input: {
   tenantId: string;
   query?: string;

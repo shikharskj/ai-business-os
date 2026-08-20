@@ -1,5 +1,7 @@
 import { businessDate } from "@/modules/shared-kernel/dates";
+import { paginateArray } from "@/modules/shared-kernel/list-page";
 import type { Expense, ExpenseListFilter } from "@/modules/expenses/domain/types";
+import type { ListPageParams, ListPageResult } from "@/modules/shared-kernel/list-page";
 
 export type CreateExpenseRecordInput = Omit<Expense, "createdAt" | "updatedAt">;
 
@@ -11,6 +13,9 @@ export type ExpenseRepository = {
   createExpense(input: CreateExpenseRecordInput): Promise<Expense>;
   findExpenseById(tenantId: string, expenseId: string): Promise<Expense | null>;
   listExpenses(filter: ExpenseListFilter): Promise<Expense[]>;
+  listExpensesPage(
+    filter: ExpenseListFilter & ListPageParams
+  ): Promise<ListPageResult<Expense>>;
 };
 
 function cloneExpense(expense: Expense): Expense {
@@ -78,6 +83,10 @@ export function createMemoryExpenseRepository(
             b.incurredOn.localeCompare(a.incurredOn) || b.number.localeCompare(a.number)
         )
         .map(cloneExpense);
+    },
+    async listExpensesPage(filter) {
+      const items = await this.listExpenses(filter);
+      return paginateArray(items, filter.page, filter.pageSize);
     },
   };
 }

@@ -210,6 +210,23 @@ export async function getSupplier(input: {
   return supplier;
 }
 
+export async function listSuppliersPage(input: {
+  tenantId: string;
+  query?: string;
+  status?: PartyStatus | "ALL";
+  page: number;
+  pageSize: import("@/modules/shared-kernel/list-page").PageSize;
+  parties: PartyRepository;
+}) {
+  return input.parties.listSuppliersPage({
+    tenantId: input.tenantId,
+    query: input.query,
+    status: input.status,
+    page: input.page,
+    pageSize: input.pageSize,
+  });
+}
+
 export async function listSuppliers(input: {
   tenantId: string;
   query?: string;

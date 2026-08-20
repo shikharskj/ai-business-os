@@ -25,6 +25,7 @@ export {
   updateCustomer,
   getCustomer,
   listCustomers,
+  listCustomersPage,
   deactivateCustomer,
 } from "@/modules/party/application/customers";
 export {
@@ -32,6 +33,7 @@ export {
   updateSupplier,
   getSupplier,
   listSuppliers,
+  listSuppliersPage,
   deactivateSupplier,
 } from "@/modules/party/application/suppliers";
 export {

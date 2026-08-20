@@ -1,7 +1,9 @@
 import "server-only";
 
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
+import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { fetchOrderedPage } from "@/modules/list-order/infrastructure/ordered-page";
 import { businessDate } from "@/modules/shared-kernel/dates";
 import {
   money,
@@ -16,10 +18,14 @@ import type {
 } from "@/modules/payments/domain/types";
 import { PAYMENT_METHODS } from "@/modules/payments/domain/types";
 import type { PaymentRepository } from "@/modules/payments/infrastructure/repositories";
+import type { PaymentListFilter } from "@/modules/payments/domain/types";
 
 type PrismaPaymentClient = Pick<
   PrismaClient,
-  "customerPayment" | "customerPaymentAllocation" | "customerPaymentNumberSeries"
+  | "customerPayment"
+  | "customerPaymentAllocation"
+  | "customerPaymentNumberSeries"
+  | "$queryRaw"
 >;
 
 const METHODS = new Set<PaymentMethod>(PAYMENT_METHODS);
@@ -95,6 +101,22 @@ const paymentInclude = {
     include: { invoice: { select: { number: true } } },
   },
 } as const;
+
+function paymentWhereConditions(filter: PaymentListFilter): Prisma.Sql[] {
+  const conditions: Prisma.Sql[] = [Prisma.sql`cp."tenantId" = ${filter.tenantId}`];
+  if (filter.customerId) {
+    conditions.push(Prisma.sql`cp."customerId" = ${filter.customerId}`);
+  }
+  const query = filter.query?.trim();
+  if (query) {
+    const pattern = `%${query}%`;
+    conditions.push(Prisma.sql`(
+      cp.number ILIKE ${pattern}
+      OR cp."customerName" ILIKE ${pattern}
+    )`);
+  }
+  return conditions;
+}
 
 export function createPrismaPaymentRepository(
   client: PrismaPaymentClient = prisma
@@ -180,6 +202,28 @@ export function createPrismaPaymentRepository(
         orderBy: [{ receivedOn: "desc" }, { number: "desc" }],
       });
       return records.map(mapPayment);
+    },
+
+    async listPaymentsPage(filter) {
+      return fetchOrderedPage({
+        client,
+        tenantId: filter.tenantId,
+        listKey: "payments",
+        fromSql: Prisma.sql`customer_payments cp`,
+        idColumn: Prisma.sql`cp.id`,
+        whereConditions: paymentWhereConditions(filter),
+        defaultOrderSql: Prisma.sql`cp."receivedOn" DESC, cp.number DESC`,
+        page: filter.page,
+        pageSize: filter.pageSize,
+        fetchByIds: async (ids) => {
+          const records = await client.customerPayment.findMany({
+            where: { tenantId: filter.tenantId, id: { in: ids } },
+            include: paymentInclude,
+          });
+          return records.map(mapPayment);
+        },
+        getId: (payment) => payment.id,
+      });
     },
 
     async listPaymentsForInvoice(tenantId, invoiceId) {

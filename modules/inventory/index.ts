@@ -33,11 +33,13 @@ export {
   listLowStockProducts,
   listStockMovements,
   listStockPositions,
+  buildStockPositionsForProductIds,
   parseLowStockThreshold,
   recordInventoryMovement,
   recordOpeningStock,
   recordStockAdjustment,
 } from "@/modules/inventory/application/stock";
+export { listStockPositionsPage } from "@/modules/inventory/application/stock-list-page";
 export {
   createMemoryInventoryRepository,
   type InventoryRepository,
