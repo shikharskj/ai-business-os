@@ -25,6 +25,7 @@ function CalendarDropdown({
   value,
   onChange,
   disabled,
+  "aria-label": ariaLabel,
 }: DropdownProps) {
   const selected = options?.find((option) => option.value === Number(value))
   const items = Object.fromEntries(
@@ -48,6 +49,7 @@ function CalendarDropdown({
       <SelectTrigger
         size="sm"
         disabled={disabled}
+        aria-label={ariaLabel}
         className="h-(--cell-size) gap-1 border-input px-2 text-sm font-medium shadow-xs"
       >
         <SelectValue>{selected?.label}</SelectValue>

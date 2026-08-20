@@ -73,12 +73,6 @@ export function DatePicker({
     () => selectedDate ?? new Date()
   )
 
-  React.useEffect(() => {
-    if (selectedDate) {
-      setVisibleMonth(selectedDate)
-    }
-  }, [selectedDate])
-
   const commitDate = (nextDate: Date | undefined, close: boolean) => {
     if (date === undefined) {
       setInternalDate(nextDate)
