@@ -23,6 +23,10 @@ export type BusinessRepository = {
     tenantId: string,
     input: BusinessProfileInput
   ): Promise<BusinessProfile>;
+  setClosedThroughPeriodKey(
+    tenantId: string,
+    periodKey: string | null
+  ): Promise<BusinessProfile>;
   deleteByClerkOrganizationId(clerkOrganizationId: string): Promise<void>;
 };
 
@@ -103,6 +107,7 @@ export function createMemoryBusinessRepository(
         currency: input.currency,
         defaultGstRateBps: input.defaultGstRateBps ?? 1800,
         lowStockThreshold: input.lowStockThreshold ?? "5",
+        closedThroughPeriodKey: null,
       };
 
       businesses.set(created.id, created);
@@ -138,6 +143,19 @@ export function createMemoryBusinessRepository(
         lowStockThreshold: input.lowStockThreshold ?? existing.lowStockThreshold,
       };
 
+      businesses.set(tenantId, updated);
+      return updated;
+    },
+
+    async setClosedThroughPeriodKey(tenantId, periodKey) {
+      const existing = businesses.get(tenantId);
+      if (!existing) {
+        throw new Error("Business not found");
+      }
+      const updated: BusinessProfile = {
+        ...existing,
+        closedThroughPeriodKey: periodKey,
+      };
       businesses.set(tenantId, updated);
       return updated;
     },

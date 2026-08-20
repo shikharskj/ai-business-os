@@ -35,6 +35,7 @@ describe("tenant org lifecycle", () => {
       currency: "INR",
       defaultGstRateBps: 1800,
       lowStockThreshold: "5",
+      closedThroughPeriodKey: null,
     },
   ]);
 

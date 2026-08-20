@@ -216,13 +216,16 @@ export async function postPurchaseAction(purchaseId: string): Promise<PurchaseAc
 
   try {
     const tenant = await authorize("purchase:update");
-    const purchase = await prisma.$transaction(async (tx) =>
-      postPurchase({
+    const purchase = await prisma.$transaction(async (tx) => {
+      const business = await tx.business.findUnique({
+        where: { id: tenant.tenantId },
+      });
+      return postPurchase({
         tenantId: tenant.tenantId,
         actorUserId: tenant.membership.userId,
         purchaseId,
         taxContext: taxContextFromTenant(tenant),
-        closedThroughPeriodKey: null,
+        closedThroughPeriodKey: business?.closedThroughPeriodKey ?? null,
         purchases: createPrismaPurchasesRepository(tx),
         parties: createPrismaPartyRepository(tx),
         catalog: createPrismaCatalogRepository(tx),
@@ -233,8 +236,8 @@ export async function postPurchaseAction(purchaseId: string): Promise<PurchaseAc
         journals: createPrismaJournalRepository(tx),
         audit: createPrismaAuditRepository(tx),
         outbox: createPrismaOutboxRepository(tx),
-      })
-    );
+      });
+    });
     supplierId = purchase.supplierId;
   } catch (error) {
     const mapped = mapError(error);

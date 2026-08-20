@@ -107,13 +107,16 @@ export async function recordCustomerPaymentAction(
   try {
     const tenant = await authorize("payment:create");
     const fields = readPaymentFields(formData);
-    const payment = await prisma.$transaction(async (tx) =>
-      recordCustomerPayment({
+    const payment = await prisma.$transaction(async (tx) => {
+      const business = await tx.business.findUnique({
+        where: { id: tenant.tenantId },
+      });
+      return recordCustomerPayment({
         tenantId: tenant.tenantId,
         actorUserId: tenant.membership.userId,
         fields,
         financialYearStartMonth: tenant.business.financialYearStartMonth,
-        closedThroughPeriodKey: null,
+        closedThroughPeriodKey: business?.closedThroughPeriodKey ?? null,
         payments: createPrismaPaymentRepository(tx),
         sales: createPrismaSalesRepository(tx),
         parties: createPrismaPartyRepository(tx),
@@ -121,8 +124,8 @@ export async function recordCustomerPaymentAction(
         journals: createPrismaJournalRepository(tx),
         audit: createPrismaAuditRepository(tx),
         outbox: createPrismaOutboxRepository(tx),
-      })
-    );
+      });
+    });
     paymentId = payment.id;
   } catch (error) {
     const mapped = mapError(error);

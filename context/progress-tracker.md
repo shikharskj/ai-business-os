@@ -99,7 +99,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Expenses              | Complete    |
 | Suppliers             | Complete    |
 | Purchases             | Complete    |
-| Accounting            | In Progress |
+| Accounting            | Complete    |
 | GST                   | In Progress |
 | Dashboard             | Not Started |
 | Reports               | Not Started |
@@ -112,6 +112,12 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* Accounting workspace (`21-accounting-workspace.md`):
+  * Ledger query (account + date/period), trial balance for a period, period status + close (`Business.closedThroughPeriodKey`), reversal and manual adjustment journals via posting service (never UPDATE posted lines).
+  * Accounting UI: Overview, Chart of accounts, Journals (list/detail/new), Ledger, Trial balance, Periods. Nested sidebar under Accounting.
+  * Permissions: `report:read` for views; `accounting:post` for reverse/adjust/close. Posting actions pass tenant `closedThroughPeriodKey`.
+  * Tests: `tests/accounting/workspace.test.ts` (TB balance, reversal, closed-period reject, cross-tenant ledger, adjustment).
 
 * Supplier payments (`20-supplier-payments.md`):
   * `modules/payments/` supplier payments + allocation lines (same module/allocation rules as customer receipts). Record against unpaid/partial purchase bills. Partial and full payment. Over-allocation rejected.
@@ -305,7 +311,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Current implementable spec:** `context/feature-specs/21-accounting-workspace.md`
+**Current implementable spec:** `context/feature-specs/22-gst-reporting.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -1394,6 +1400,40 @@ Verification:
 
 Notes:
 - Next implementation unit is `21-accounting-workspace.md`.
+
+---
+
+## 2026-08-20 — Accounting workspace
+
+Status: Complete
+
+Implemented:
+- Extended `modules/accounting/` with journal list/ledger/trial-balance queries, period close (`assertCanClosePeriod` + `Business.closedThroughPeriodKey`), and workspace use cases for adjustments and audited reversals. Posted journals remain immutable.
+- `BusinessProfile.closedThroughPeriodKey` mapped end-to-end; workspace financial post actions pass the tenant closed-through key into `postJournal`.
+- Accounting UI under `/app/accounting`: overview, chart of accounts, journals (list/detail/adjustment), ledger, trial balance, periods. Nested Accounting nav. Money via `MoneyDisplay`.
+- Permissions: `report:read` for reads; `accounting:post` for reverse, adjustment, and period close.
+
+Files / Areas:
+- `modules/accounting/` (workspace use cases, period-close, schemas, repo query methods)
+- `modules/tenant/` (`closedThroughPeriodKey` on profile + `setClosedThroughPeriodKey`)
+- `app/app/(workspace)/accounting/`
+- `components/business/post-adjustment-form.tsx`, `reverse-journal-form.tsx`, `close-period-form.tsx`
+- `components/shell/app-sidebar.tsx`
+- `app/app/(workspace)/*/actions.ts` (closed-through wiring)
+- `tests/accounting/workspace.test.ts`
+
+Tests:
+- `npx vitest run tests/accounting/`
+- `npm run typecheck`
+
+Verification:
+- Trial balance balances for posted activity.
+- Posted journal cannot be edited; reversal creates a new balanced journal.
+- Closed period rejects new posts.
+- Cross-tenant ledger access is rejected.
+
+Notes:
+- Next implementation unit is `22-gst-reporting.md`.
 
 ---
 

@@ -37,6 +37,7 @@ function mapBusiness(record: {
   currency: string;
   defaultGstRateBps: number;
   lowStockThreshold: { toString(): string } | string;
+  closedThroughPeriodKey: string | null;
 }): BusinessProfile {
   return {
     id: record.id,
@@ -59,6 +60,7 @@ function mapBusiness(record: {
     currency: record.currency,
     defaultGstRateBps: record.defaultGstRateBps,
     lowStockThreshold: record.lowStockThreshold.toString(),
+    closedThroughPeriodKey: record.closedThroughPeriodKey,
   };
 }
 
@@ -133,6 +135,14 @@ export const prismaBusinessRepository: BusinessRepository = {
       data: toBusinessData(input),
     });
 
+    return mapBusiness(record);
+  },
+
+  async setClosedThroughPeriodKey(tenantId, periodKey) {
+    const record = await prisma.business.update({
+      where: { id: tenantId },
+      data: { closedThroughPeriodKey: periodKey },
+    });
     return mapBusiness(record);
   },
 

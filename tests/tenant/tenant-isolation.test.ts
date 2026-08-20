@@ -62,6 +62,7 @@ describe("requireTenantForTrustedResource", () => {
         currency: "INR",
         defaultGstRateBps: 1800,
         lowStockThreshold: "5",
+        closedThroughPeriodKey: null,
       },
     ]);
     const membershipRepository = createMemoryMembershipRepository([

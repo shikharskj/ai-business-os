@@ -85,7 +85,19 @@ const inventoryNav: NavItem[] = [
 
 const operationsNav: NavItem[] = [
   { label: "Expenses", href: "/app/expenses", icon: Wallet },
-  { label: "Accounting", href: "/app/accounting", icon: FileText },
+  {
+    label: "Accounting",
+    href: "/app/accounting",
+    icon: FileText,
+    children: [
+      { label: "Overview", href: "/app/accounting" },
+      { label: "Chart of accounts", href: "/app/accounting/accounts" },
+      { label: "Journals", href: "/app/accounting/journals" },
+      { label: "Ledger", href: "/app/accounting/ledger" },
+      { label: "Trial balance", href: "/app/accounting/trial-balance" },
+      { label: "Periods", href: "/app/accounting/periods" },
+    ],
+  },
   { label: "Reports", href: "/app/reports", icon: BarChart3 },
 ];
 
@@ -163,13 +175,16 @@ function NavGroup({
                   <SidebarMenuSub>
                     {item.children.map((child) => {
                       const childIsActive = pathMatches(pathname, child.href);
+                      const childIsExactMatch = pathname === child.href;
+                      const parentExactMatch = pathname === item.href;
+                      const shouldHighlight = childIsExactMatch || (childIsActive && !parentExactMatch);
 
                       return (
                         <SidebarMenuSubItem key={child.href}>
                           <SidebarMenuSubButton
                             render={<Link href={child.href} />}
-                            isActive={childIsActive}
-                            aria-current={childIsActive ? "page" : undefined}
+                            isActive={shouldHighlight}
+                            aria-current={childIsExactMatch ? "page" : undefined}
                           >
                             {child.label}
                           </SidebarMenuSubButton>
