@@ -22,7 +22,7 @@ function moneyFact(
   };
 }
 
-function buildFacts(overview: DashboardOverview, tenantId: string): DashboardFact[] {
+function buildFacts(overview: DashboardOverview): DashboardFact[] {
   const facts: DashboardFact[] = [
     moneyFact("fact.revenue", "Sales (taxable)", overview.revenue),
     moneyFact("fact.expenses", "Expenses", overview.expenses),
@@ -72,12 +72,11 @@ function buildFacts(overview: DashboardOverview, tenantId: string): DashboardFac
 
   for (const invoice of overview.recentInvoices) {
     facts.push({
-      id: `fact.invoice.${invoice.id}`,
-      kind: "activity",
-      label: invoice.number,
-      value: invoice.grandTotal.amountMinor.toString(),
-      currency: invoice.grandTotal.currency,
-      scale: invoice.grandTotal.scale,
+      ...moneyFact(
+        `fact.invoice.${invoice.id}`,
+        invoice.number,
+        invoice.grandTotal
+      ),
       href: `/app/sales/invoices/${invoice.id}`,
       meta: {
         party: invoice.customerName,
@@ -117,6 +116,6 @@ export async function runDataFetcher(input: {
     fromDate: overview.range.fromDate,
     toDate: overview.range.toDate,
     overview,
-    facts: buildFacts(overview, input.tenantId),
+    facts: buildFacts(overview),
   };
 }

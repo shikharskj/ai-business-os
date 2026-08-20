@@ -189,18 +189,6 @@ export function runGenerativeUiMapper(input: {
             },
             caption: "Open customer balances",
           },
-          {
-            type: "MetricCard",
-            id: "kpi.payables",
-            title: "Payables",
-            value: {
-              amountMinor: overview.payables.amountMinor.toString(),
-              currency: overview.payables.currency,
-              scale: overview.payables.scale,
-              factId: "fact.payables",
-            },
-            caption: "Open supplier balances",
-          },
         ],
       },
       {

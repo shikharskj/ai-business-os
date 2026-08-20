@@ -21,7 +21,6 @@ import {
 import {
   createMemoryInventoryRepository,
   quantityFromMajor,
-  recordOpeningStock,
 } from "@/modules/inventory";
 import {
   createInvoice,
