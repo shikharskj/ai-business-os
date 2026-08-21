@@ -22,7 +22,7 @@
 | File Storage                     | **Cloudflare R2 (S3-compatible)**                                   | Invoices, receipts, attachments, and business documents                                                 |
 | Search                           | **PostgreSQL Full-Text Search + indexed queries**                   | Global business search for MVP without introducing unnecessary infrastructure                           |
 | Cache                            | **Optional Redis**                                                  | Caching, rate limiting, short-lived state, and distributed coordination when required                   |
-| AI Gateway                       | **Provider-agnostic AI service layer (OpenAI initially)**           | Centralized model access, prompts, tool calling, usage tracking, and provider abstraction               |
+| AI Gateway                       | **Provider-agnostic AI service layer (Gemini or OpenAI via adapter)** | Centralized model access, prompts, tool calling, usage tracking, and provider abstraction               |
 | AI Tools                         | **Typed business tools**                                            | Safe interface through which AI can query or mutate business data                                       |
 | AI Knowledge                     | **PostgreSQL + embeddings/vector capability when required**         | Retrieval of business documents and contextual knowledge                                                |
 | Events                           | **Domain Events + Outbox Pattern**                                  | Reliable propagation of business events to async consumers                                              |
@@ -897,6 +897,52 @@ Raw SQL
 Database
 ```
 
+## Implemented Path (specs `27`, `28`)
+
+```text
+app/api/assistant/chat                     AI SDK streamText transport (Gemini via @ai-sdk/google)
+lib/ai/model.ts                            language model + stub-mode resolution
+lib/ai/assistant-sdk-tools.ts              SDK tool() wrappers → runAiToolCall / pending actions
+modules/ai/application/tools/registry.ts   the tool registry
+modules/ai/application/execute-tool.ts     the single execution gate
+modules/ai/application/confirm-action.ts   confirmed mutation execution (spec 28)
+modules/ai/infrastructure/tool-context.ts  trusted tenant + repository wiring
+app/api/assistant/actions/confirm          run a confirmed action
+components/shell/assistant-launcher.tsx    top-bar sheet (only UI entry point)
+```
+
+`executeAiTool` is the only way to run a tool. In order it rejects model-supplied identity fields, requires an authenticated user and a tenant resolved on the server, checks the tool's declared permission against the membership role, refuses a confirmation-required tool that has not been confirmed, validates input with Zod, runs the tool, validates output with Zod, and audits the outcome as `ai.tool.invoked` on the `ai_tool` resource.
+
+Tools receive repositories through `AiToolContext`; they never import the Prisma client. The model never sees a tenant id, user id, role, or permission as an input field.
+
+The AI SDK is confined to `app/api/assistant/chat`, `lib/ai/model.ts`, `lib/ai/assistant-sdk-tools.ts`, and the client `useChat` hook. `modules/ai/domain` and tool implementations must not import `ai` or `@ai-sdk/*`. Hand-rolled `complete()` provider adapters are not used.
+
+The chat route imports no Prisma client and no business repository: every figure it returns came from a registered tool. Provider and configuration failures are converted by `describeAssistantFailure` into an assistant error state and never propagate into shell or page rendering (invariant 33).
+
+## Facts and Recommendations
+
+Business facts shown by the assistant are produced only by `factsFromToolResult`, from schema-validated tool output, and each one carries the tool that produced it. Streaming chat emits those facts as typed data parts alongside model text. Model prose has no path into the facts band.
+
+## Confirmation Gate
+
+```text
+Model proposes an action
+      ↓
+Loop validates arguments, refuses to execute, returns a preview
+      ↓
+UI renders the preview as a decision, not a chat reply
+      ↓
+User confirms → signed token (tenant, user, tool, arguments, expiry)
+      ↓
+Confirm route re-resolves tenant and user, verifies the token
+      ↓
+executeAiTool re-checks identity, permission, and schema
+      ↓
+Use case runs → audit
+```
+
+Confirmation supplies consent only. It skips no authorization, validation, or tenant check. The token exists so a confirmation can execute only the action that was previewed; it is not the authorization boundary.
+
 ---
 
 # AI Tool Categories
@@ -916,6 +962,17 @@ get_expense_summary()
 get_gst_summary()
 ```
 
+Registered read tools (spec `27`):
+
+```text
+get_sales_summary            report:read
+get_expenses_summary        report:read
+get_outstanding_receivables report:read
+get_overdue_invoices        invoice:read
+get_low_stock_products      product:read
+get_business_metrics        report:read
+```
+
 ## Action Tools
 
 Examples:
@@ -929,6 +986,12 @@ create_quotation()
 generate_payment_reminder()
 ```
 
+Registered action tools (spec `28`):
+
+```text
+send_payment_reminders      invoice:update      confirmation required
+```
+
 Every action tool must:
 
 1. Validate input.
@@ -938,6 +1001,8 @@ Every action tool must:
 5. Use the appropriate transaction.
 6. Record the action.
 7. Return a structured result.
+
+An action tool must also declare `requiresConfirmation: true` and have a preview in `previewAiAction`. The assistant refuses to propose an action it cannot preview, so the user is never asked to approve something unexplained.
 
 ---
 

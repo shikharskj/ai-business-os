@@ -753,14 +753,46 @@ AI Provider SDK
 Prefer:
 
 ```text
-AI Application Layer
+Assistant chat route
  ↓
-AI Gateway
+AI SDK streamText (@ai-sdk/google)
  ↓
-Provider Adapter
+modules/ai tools (authz / Zod / audit)
 ```
 
-Do not allow individual business modules to become coupled to a specific AI provider.
+Do not allow individual business modules to become coupled to a specific AI provider. Do not keep parallel hand-rolled `complete()` adapters.
+
+## Gateway Usage
+
+* Stream chat through `POST /api/assistant/chat` using the Vercel AI SDK (`streamText` + `useChat`). Do not add hand-rolled `complete()` provider adapters.
+* Resolve Gemini via `resolveAiConfig` / `getAssistantLanguageModel()` (`AI_PROVIDER`, `GEMINI_API_KEY`, `GEMINI_MODEL`). Development without a key uses a deterministic stub stream; production refuses the stub and a missing key.
+* Multi-provider later means another `@ai-sdk/*` package on the chat route — not a resurrected fetch adapter under `lib/ai`.
+* Never import `ai` or `@ai-sdk/*` from `modules/ai/domain`, tool implementations, or schemas. SDK types stay in the route, `lib/ai/model.ts`, `lib/ai/assistant-sdk-tools.ts`, and client hooks.
+* Misconfiguration surfaces as `AiConfigError`; provider failures as `AiProviderError` (or SDK errors mapped by `describeAssistantFailure`). Business pages must keep working when either is thrown (invariant 33).
+
+## Tool Definition
+
+* Define tools with `defineAiTool` and register them in `modules/ai/application/tools/registry.ts`. A tool that is not in the registry does not exist.
+* Declare `permission` and `category` on the tool; `executeAiTool` enforces them. Do not re-check authorization inside the tool body.
+* Advertise tools with `listAiToolsForRole(role)` / `listAiToolSpecsForRole(role)` so the model only sees tools the caller may run.
+* Tool input schemas must not contain `tenantId`, `userId`, `role`, or `permission`; `assertNoIdentityOverride` rejects such input.
+* SDK tool `execute` handlers call `runAiToolCall` (or emit a signed pending action for confirmation-required tools). Tool results returned to the model should be treated as untrusted data.
+* Build the execution context on the server with `createAiToolContext()` from `modules/ai/infrastructure/tool-context`. It is imported by its own path rather than the `modules/ai` barrel, because client components import that barrel. `modules/ai/domain/action-token` is kept out of the barrel for the same reason — it uses `node:crypto`.
+
+## Assistant Transport
+
+* The chat route is the only place that drives model streaming and tool calling for the assistant; cap steps rather than looping until the model stops.
+* Never query the database from a chat route or component. A route that needs business data needs a tool.
+* Show a business number only if it came from `factsFromToolResult` (emitted as typed stream data parts). Model text is never treated as verified figures.
+* Say what could not be done. A tool a role cannot run, a lookup that failed, or a question no tool can answer becomes a user-facing notice — not a silent gap or a guess.
+
+## Action Confirmation
+
+* Give a mutation tool `category: "action"`, `requiresConfirmation: true`, and a preview in `previewAiAction`. The chat path refuses to execute an action it cannot preview.
+* A chat turn never executes a mutation. It returns a preview; execution needs a separate confirmed request.
+* Confirmation supplies consent only. `executeAiTool` still re-checks identity, permission, and input schema, and still audits. Never add a path that treats a confirmation as pre-authorized.
+* Bind a confirmation to what was previewed with `signAiActionToken` / `verifyAiActionToken`, and check the payload's tenant and user against the current session.
+* An action tool must reuse an existing application use case and re-derive its own facts. The model may name records; it must never supply amounts, customer details, or generated content that lands in a business record.
 
 ---
 

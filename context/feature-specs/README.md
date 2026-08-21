@@ -21,7 +21,7 @@ Next numbered spec
 * Implement **one spec at a time**.
 * Do **not** skip a numbered dependency.
 * Do **not** implement later specs “while you are here.”
-* Specs `01`–`26` are complete through notifications. Next implementable spec is `27-ai-gateway-tools.md`.
+* Specs `01`–`28` are complete through the AI assistant. Next implementable spec is `29-automated-testing.md`.
 * Specs are implementation briefs. Architecture, UI, and coding rules live in the context files — follow those pointers instead of inventing behavior.
 * Do **not** silently reverse Accepted decisions in `context/progress-tracker.md`. Confirm any *new* open question with the project owner before choosing a vendor or expanding scope.
 
@@ -33,7 +33,7 @@ Owner-confirmed. Specs must follow these; do not re-open them during implementat
 | ---- | -------- | --- |
 | PostgreSQL | Neon PostgreSQL | Serverless Postgres, autoscaling, connection pooling, usage-based pricing |
 | Object storage | Cloudflare R2 | S3-compatible, no egress fees, inexpensive storage |
-| AI provider | OpenAI initially + provider abstraction | Strong capability, mature API, easy to replace later |
+| AI provider | Gemini (or OpenAI) + provider abstraction | Same `lib/ai` contract; Gemini preferred locally; OpenAI adapter retained |
 | Multi-user | Yes, from foundation | Avoids painful tenant/member redesign later |
 | Payment methods | Cash, UPI, Bank Transfer, Card, Cheque | Covers the core Indian SMB use cases |
 | GST depth | GST-ready, not GST-filing platform | Enough for MVP without huge compliance scope |

@@ -104,7 +104,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Dashboard             | Complete    |
 | Reports               | Complete    |
 | Search                | Complete    |
-| AI Assistant          | Not Started |
+| AI Assistant          | Complete    |
 | Notifications         | Complete    |
 | Testing               | Not Started |
 | Security hardening    | Not Started |
@@ -113,6 +113,14 @@ Do not skip foundational dependencies merely to build visually impressive featur
 ---
 
 # Completed
+
+* AI Assistant (`28-ai-assistant.md`) — sheet-only + AI SDK transport:
+  * Top-bar sheet is the only entry point (`/app/assistant` permanently redirects to `/app`). Custom `complete()` adapters and `runAiAssistant` were removed; Gemini streams via `@ai-sdk/google` + `streamText` / `useChat`.
+  * Sheet UX polish: `bg-sidebar` + ~42rem width, tool-activity timeline, lead-bold prose + lists (no raw `* **`), fact card/table, animated empty welcome.
+  * Facts vs opinion is structural: `factsFromToolResult` builds fact cards from schema-validated tool output only; the stream emits them as typed data parts. Model prose never becomes verified figures.
+  * Confirmation gate: `send_payment_reminders` is previewed but never executed during a chat turn. `/api/assistant/actions/confirm` verifies an HMAC token, then `executeAiTool` re-checks identity, permission, and schema before running and audits it.
+  * Chat routes reach data through tools only (no Prisma import); SDK confined to route + `lib/ai` bridge + client hooks; provider outages become a contained assistant error state.
+  * Tests: `tests/ai/ai-assistant.test.ts`, `ai-gateway.test.ts`, `ai-safety.test.ts` (tools/confirm/facts, config, no SDK in `modules/ai`).
 
 * Notifications (`26-notifications.md`):
   * `modules/notifications/` — in-app channel abstraction (email/SMS/WhatsApp later), idempotent outbox consumer, overdue scheduled check, mark read/unread. Tenant-scoped `Notification` table with unique `(tenantId, idempotencyKey)`.
@@ -342,13 +350,15 @@ Do not skip foundational dependencies merely to build visually impressive featur
 
 # In Progress
 
+Nothing in progress. See **Next Up**.
+
 ---
 
 # Next Up
 
 Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
 
-**Current implementable spec:** `context/feature-specs/27-ai-gateway-tools.md`
+**Current implementable spec:** `context/feature-specs/29-automated-testing.md`
 
 ## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
 
@@ -1034,9 +1044,11 @@ Production object storage is **Cloudflare R2** (S3-compatible). Chosen for no eg
 
 ### Decision: OpenAI Initially, Behind a Provider Abstraction
 
-**Status:** Accepted
+**Status:** Accepted (superseded for active local/prod selection by Gemini adapter)
 
-The initial AI provider is **OpenAI**. All model calls go through `lib/ai/` so the provider can be replaced later. Tools must not import the OpenAI SDK.
+The initial AI provider was **OpenAI**. All model calls go through `lib/ai/` so the provider can be replaced later. Tools must not import provider SDKs.
+
+**Update:** A **Gemini** adapter (`lib/ai/gemini-adapter.ts`) is a first-class provider behind the same `AiAdapter` contract. Prefer `AI_PROVIDER=gemini` with `GEMINI_API_KEY` for local/prod. The OpenAI adapter is retained for swap.
 
 ---
 
@@ -1437,6 +1449,105 @@ Verification:
 
 Notes:
 - Next implementation unit is `21-accounting-workspace.md`.
+
+---
+
+## 2026-08-21 — Gemini AI Provider Adapter
+
+Status: Complete
+
+Implemented:
+- Added `lib/ai/gemini-adapter.ts` behind the existing `AiAdapter` contract (`generateContent` + function calling via `fetch`). OpenAI adapter retained for swap.
+- Extended `resolveAiConfig` / env for `AI_PROVIDER=gemini`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_BASE_URL`. When unset, a Gemini key is preferred over an OpenAI key.
+- No changes to tools, confirmation, or the assistant chat loop.
+
+Files / Areas:
+- `lib/ai/` (`gemini-adapter.ts`, `resolve-config.ts`, `create-adapter.ts`, `types.ts`, `adapter.ts`, `index.ts`)
+- `lib/env.ts`, `.env.example`
+- `tests/ai/ai-gateway.test.ts`, `tests/ai/ai-safety.test.ts`
+- `context/architecture-context.md`, `context/code-standards.md`, `context/feature-specs/README.md`
+
+Notes:
+- Rotate any Gemini key that was pasted into chat; store only in `.env`.
+
+---
+
+## 2026-08-21 — AI Assistant
+
+Status: Complete
+
+Implemented:
+- Added the assistant surface: `/app/assistant` page plus a top-bar entry that opens the same conversation in a sheet. Conversation, empty state with starter questions, honest loading text, per-message error state with retry, and contextual navigation chips — no fake progress and no invented affordances.
+- Added `runAiAssistant`: the tool-calling loop over `getAiAdapter()`. It advertises only `listAiToolSpecsForRole(role)`, builds messages with `buildAiConversation`, runs tools through `runAiToolCall` with a server-built `AiToolContext`, returns results as fenced untrusted content, and stops after `AI_ASSISTANT_MAX_ITERATIONS` (4) rather than looping.
+- Facts are separated from opinion in code, not just visually. `factsFromToolResult` is the only producer of displayed business facts and reads schema-validated tool output, so every figure in the "Verified business data" band cites the tool that produced it. Model prose can only reach the "AI analysis" and "AI recommendation" bands. An answer with no tool behind it that still quotes figures is flagged as unverified.
+- Added the confirmation gate end to end. The single action tool `send_payment_reminders` (`invoice:update`, `requiresConfirmation: true`) reuses `getReceivablesReport` and the notifications in-app channel. During a chat turn the loop refuses to execute it and returns a preview instead; execution needs a second request to `/api/assistant/actions/confirm` carrying an HMAC-signed token that binds the confirmation to the previewed tenant, user, tool, and arguments. `runConfirmedAiAction` then re-resolves the tool and hands to `executeAiTool`, which re-runs the identity guard, permission check, and schema validation before running and audits the result as `ai.tool.invoked`.
+- The model names invoices; it never authors a reminder. Customer, amount, and overdue age are re-derived server-side, unknown or non-overdue invoices are skipped, and reminders are idempotent per invoice per business day.
+- Added `POST /api/assistant/chat` and `POST /api/assistant/actions/confirm`. Neither imports Prisma or a business repository — the only path to data is a registered tool. Client history is limited to user and assistant turns, so no system message or forged tool result can be injected. `AiProviderError` / `AiConfigError` are converted by `describeAssistantFailure` into a contained assistant error state.
+- Added optional `AI_ACTION_SIGNING_SECRET` (falls back to `CLERK_SECRET_KEY`) to `lib/env.ts` and `.env.example`.
+
+Files / Areas:
+- `modules/ai/domain/` (`assistant-types.ts`, `assistant-facts.ts`, `assistant-answer.ts`, `assistant-actions.ts`, `action-token.ts`, `tool-types.ts`)
+- `modules/ai/application/` (`assistant.ts`, `confirm-action.ts`, `tools/payment-reminders.ts`, `tools/registry.ts`)
+- `modules/ai/schemas/` (`assistant.schema.ts`, `ai-tool.schema.ts`), `modules/ai/infrastructure/` (`action-secret.ts`, `tool-context.ts`), `modules/ai/index.ts`
+- `app/api/assistant/chat/route.ts`, `app/api/assistant/actions/confirm/route.ts`
+- `app/app/(workspace)/assistant/page.tsx`
+- `components/assistant/` (`assistant-panel.tsx`, `assistant-answer-view.tsx`, `types.ts`)
+- `components/shell/assistant-launcher.tsx`, `components/shell/app-top-bar.tsx`
+- `lib/env.ts`, `.env.example`
+- `tests/ai/ai-assistant.test.ts`, `tests/ai/ai-tools.test.ts`, `tests/ai/tool-context-fixture.ts`
+
+Tests:
+- `npx vitest run` (44 files, 285 tests)
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+
+Verification:
+- An owner asking "who owes me money?" gets a tenant-scoped answer whose figures are cited to `get_outstanding_receivables`; the same question in another tenant returns only that tenant's balances.
+- A role without the tool's permission gets an honest "your role cannot access that" notice, no facts, and a `denied` audit record.
+- A proposed reminder creates no notification and no action audit record until the user confirms; confirming from a role without `invoice:update` is rejected; a tampered, foreign-signed, or expired token is refused.
+- `AiProviderError` and `AiConfigError` resolve to a 503 assistant error state; the workspace layout, invoice pages, and the launcher never import the AI provider.
+
+Notes:
+- Next implementation unit is `29-automated-testing.md`.
+- `send_payment_reminders` is the only mutation the assistant can propose, and it reuses existing use cases. Adding another action tool means adding a preview in `previewAiAction` — the loop refuses to propose an action it cannot preview.
+- The production build still needs `CLERK_WEBHOOK_SIGNING_SECRET` set; it is empty in the local `.env`, so `npm run build` was verified with a placeholder for that pre-existing variable.
+
+---
+
+## 2026-08-21 — AI Gateway and Tools
+
+Status: Complete
+
+Implemented:
+- Added the provider-agnostic AI gateway in `lib/ai/`: a single `AiAdapter` contract (`complete(request)`), an OpenAI chat-completions adapter, and a deterministic stub adapter. `resolveAiConfig` picks the provider from env (`AI_PROVIDER`, `OPENAI_API_KEY`) — no key in dev/test falls back to the stub, while production refuses the stub and a missing key.
+- Added six read-only AI tools in `modules/ai/application/tools/`: `get_sales_summary`, `get_expenses_summary`, `get_outstanding_receivables`, `get_overdue_invoices`, `get_low_stock_products`, `get_business_metrics`. Each one calls an existing reporting/dashboard use case; none touches Prisma or SQL directly.
+- Added `executeAiTool` / `runAiToolCall`: rejects model-supplied `tenantId`/`userId`/`role`/`permission`, requires authenticated identity plus tenant from the trusted server context, checks the tool's permission against the membership role, validates input and output with Zod, and writes an `ai.tool.invoked` audit record (authorization decision only, never the business payload) for every success, denial, and failure.
+- Added prompt-injection defence: a versioned system policy that is always the first and only system message (`buildAiConversation`), and tool results returned to the model inside a sanitized `UNTRUSTED-CONTENT` fence.
+- Added AI env vars (`AI_PROVIDER`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL`, `AI_REQUEST_TIMEOUT_MS`) to `lib/env.ts` and `.env.example`.
+
+Files / Areas:
+- `lib/ai/` (`types.ts`, `resolve-config.ts`, `openai-adapter.ts`, `stub-adapter.ts`, `create-adapter.ts`, `adapter.ts`, `index.ts`)
+- `modules/ai/domain/` (`tool-types.ts`, `define-tool.ts`, `errors.ts`, `identity-guard.ts`, `system-policy.ts`, `untrusted-content.ts`, `tool-output.ts`)
+- `modules/ai/application/` (`tools/*`, `execute-tool.ts`, `conversation.ts`, `tool-period.ts`), `modules/ai/schemas/ai-tool.schema.ts`, `modules/ai/infrastructure/tool-context.ts`
+- `lib/env.ts`, `.env.example`
+- `tests/ai/ai-tools.test.ts`, `tests/ai/ai-gateway.test.ts`, `tests/ai/ai-safety.test.ts`, `tests/ai/tool-context-fixture.ts`
+
+Tests:
+- `npx vitest run tests/ai/`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+
+Verification:
+- Tools return only the caller's tenant data; a cross-tenant customer id is rejected as not found and audited.
+- Tools refuse to run without an authenticated user and tenant, and refuse tools the role lacks permission for.
+- Swapping the stub adapter for the OpenAI adapter produces identical tool specs and identical tool results.
+- Tool results carrying injected instructions cannot escape the untrusted-content fence or displace the system policy.
+
+Notes:
+- Next implementation unit is `28-ai-assistant.md`. The assistant consumes `getAiAdapter()` from `lib/ai`, plus `listAiToolSpecsForRole(role)`, `buildAiConversation()`, `runAiToolCall()`, and `aiToolResultMessage()` from `modules/ai`, and `createAiToolContext()` from `modules/ai/infrastructure/tool-context` (kept out of the `modules/ai` barrel because client dashboard components import it). No mutation tools exist yet, so mutation UX and confirmation flows arrive with spec 28.
+- The production build needs `CLERK_WEBHOOK_SIGNING_SECRET` set in the local `.env`; it is currently empty, so `npm run build` was verified with a placeholder value for that pre-existing variable.
 
 ---
 

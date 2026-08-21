@@ -86,6 +86,21 @@ const envSchema = z.object({
     z.string().url().optional()
   ),
   CRON_SECRET: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  AI_PROVIDER: z.preprocess((value) => {
+    const normalized = emptyToUndefined(value);
+    // OpenAI was removed; ignore leftover env so local boots still work.
+    if (normalized === "openai") {
+      return undefined;
+    }
+    return normalized;
+  }, z.enum(["gemini", "stub"]).optional()),
+  GEMINI_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  GEMINI_MODEL: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  // Signs AI action confirmations. Falls back to CLERK_SECRET_KEY when unset.
+  AI_ACTION_SIGNING_SECRET: z.preprocess(
+    emptyToUndefined,
+    z.string().min(16).optional()
+  ),
 });
 
 export const env = envSchema.parse({
@@ -104,6 +119,10 @@ export const env = envSchema.parse({
   CLOUDFLARE_R2_BUCKET: process.env.CLOUDFLARE_R2_BUCKET,
   CLOUDFLARE_R2_ENDPOINT: process.env.CLOUDFLARE_R2_ENDPOINT,
   CRON_SECRET: process.env.CRON_SECRET,
+  AI_PROVIDER: process.env.AI_PROVIDER,
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  GEMINI_MODEL: process.env.GEMINI_MODEL,
+  AI_ACTION_SIGNING_SECRET: process.env.AI_ACTION_SIGNING_SECRET,
 });
 
 if (

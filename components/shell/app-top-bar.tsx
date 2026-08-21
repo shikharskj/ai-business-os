@@ -2,6 +2,7 @@
 
 import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 
+import { AssistantLauncher } from "@/components/shell/assistant-launcher";
 import { NotificationInbox } from "@/components/shell/notification-inbox";
 import { WorkspaceCommandMenu } from "@/components/shell/workspace-command-menu";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
@@ -18,6 +19,7 @@ export function AppTopBar({ children }: { children?: React.ReactNode }) {
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <WorkspaceCommandMenu />
+        <AssistantLauncher />
         <NotificationInbox />
         <OrganizationSwitcher
           hidePersonal
