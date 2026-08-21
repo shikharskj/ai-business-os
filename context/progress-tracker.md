@@ -111,14 +111,14 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
   * AI tool `get_cash_position` uses the same `getCashPosition` query — no invoice-table cash heuristic. System policy forbids inventing cash from unpaid invoices.
   * Tests: `tests/business-state/cash-position.test.ts` (receipt moves cash, invoices do not, rebuild matches ledger, outbox, tool facts; non-INR tenant with only Cash or only Bank activity; non-2-decimal currency; tenant-configured account names).
   * Ledger totals for cash position are tagged with the tenant currency and the ledger line scale (`accountTotals` + `computeCashPosition`) so an inactive Cash/Bank zero does not currency- or scale-mismatch a live total.
-  * Prisma BusinessState writes apply `computedAt` atomically (`updateMany` where older, else insert; unique conflict retries the guarded update).
+  * Prisma BusinessState writes apply `computedAt` atomically (`updateMany` where older, else `createMany` with `skipDuplicates`; retry guarded update if the insert was skipped). Do not `create` + catch unique conflicts inside `$transaction` — PostgreSQL aborts the transaction (25P02) and later families / `writeMeta` cannot commit.
   * Cash-position projection persists tenant Cash/Bank account names (`cashAccountName` / `bankAccountName`) instead of reconstructing from the MVP chart template.
   * Next: `04-attention-queue.md`.
 
 * **BusinessState projections (`02-business-state-projections.md`):**
   * `modules/business-state/` — ReceivablesRisk, InventoryRisk, SalesMomentum (30-day posted invoice rollup) + `BusinessStateMeta` envelope; Prisma migration `20260821120000_add_business_state_projections`.
   * Rebuild from domain truth (`rebuildBusinessStateProjections`); outbox consumer `business-state` replaces projection-stub in default registration.
-  * Write hardening: outbox page coalesce via `handleBatch`, `computedAt` guards, atomic `commitSnapshots` (+ meta).
+  * Write hardening: outbox page coalesce via `handleBatch`, `computedAt` guards, atomic `commitSnapshots` (+ meta). Family upserts inside the transaction use `createMany`/`skipDuplicates` (catching unique conflicts would abort PostgreSQL). Prisma coverage: `tests/business-state/prisma-projections.integration.test.ts`.
   * Read/rebuild APIs: `GET /api/business-state`, `POST /api/business-state/rebuild` (`report:read`).
   * Cron / `after()` wire `createPrismaBusinessStateConsumerDeps`; tests in `tests/business-state/projections.test.ts`.
   * Next: `03-cash-position-model.md`.

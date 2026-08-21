@@ -34,38 +34,30 @@ type PrismaProjectionDelegateClient = Pick<
 type PrismaProjectionClient = PrismaProjectionDelegateClient &
   Pick<PrismaClient, "$transaction">;
 
-function isPrismaUniqueConflict(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "P2002"
-  );
-}
-
 /**
  * Apply a snapshot only when missing or stored.computedAt is older.
  * The computedAt predicate lives in the UPDATE so a concurrent write cannot
  * overwrite newer state after a stale read.
+ *
+ * Insert must be ON CONFLICT DO NOTHING (`createMany` + `skipDuplicates`),
+ * not `create` + catch P2002. A unique violation inside a PostgreSQL
+ * interactive `$transaction` aborts the transaction (25P02), so the retry
+ * update, later family writes, and `writeMeta` cannot commit.
  */
 async function insertOrUpdateIfNewer(input: {
   updateNewer: () => Promise<{ count: number }>;
-  insert: () => Promise<unknown>;
+  insertIfAbsent: () => Promise<{ count: number }>;
 }): Promise<boolean> {
   const updated = await input.updateNewer();
   if (updated.count > 0) {
     return true;
   }
-  try {
-    await input.insert();
+  const inserted = await input.insertIfAbsent();
+  if (inserted.count > 0) {
     return true;
-  } catch (error) {
-    if (!isPrismaUniqueConflict(error)) {
-      throw error;
-    }
-    const retried = await input.updateNewer();
-    return retried.count > 0;
   }
+  const retried = await input.updateNewer();
+  return retried.count > 0;
 }
 
 async function writeReceivablesRisk(
@@ -89,9 +81,10 @@ async function writeReceivablesRisk(
         },
         data: values,
       }),
-    insert: () =>
-      client.receivablesRiskState.create({
+    insertIfAbsent: () =>
+      client.receivablesRiskState.createMany({
         data: { tenantId: snapshot.tenantId, ...values },
+        skipDuplicates: true,
       }),
   });
 }
@@ -114,9 +107,10 @@ async function writeInventoryRisk(
         },
         data: values,
       }),
-    insert: () =>
-      client.inventoryRiskState.create({
+    insertIfAbsent: () =>
+      client.inventoryRiskState.createMany({
         data: { tenantId: snapshot.tenantId, ...values },
+        skipDuplicates: true,
       }),
   });
 }
@@ -144,9 +138,10 @@ async function writeSalesMomentum(
         },
         data: values,
       }),
-    insert: () =>
-      client.salesMomentumState.create({
+    insertIfAbsent: () =>
+      client.salesMomentumState.createMany({
         data: { tenantId: snapshot.tenantId, ...values },
+        skipDuplicates: true,
       }),
   });
 }
@@ -185,9 +180,10 @@ async function writeCashPosition(
         },
         data: values,
       }),
-    insert: () =>
-      client.cashPositionState.create({
+    insertIfAbsent: () =>
+      client.cashPositionState.createMany({
         data: { tenantId: snapshot.tenantId, ...values },
+        skipDuplicates: true,
       }),
   });
 }

@@ -357,6 +357,52 @@ describe("business state projections (post-mvp 02)", () => {
     expect(projections.receivables.get("tenant-a")?.computedAt).toEqual(newerAt);
   });
 
+  it("commitSnapshots still writes later families when an earlier snapshot is not newer", async () => {
+    const projections = createMemoryBusinessStateProjectionRepository();
+    const computedAt = new Date("2026-08-21T12:00:00.000Z");
+
+    await projections.commitSnapshots({
+      tenantId: "tenant-a",
+      schemaVersion: BUSINESS_STATE_SCHEMA_VERSION,
+      receivablesRisk: {
+        tenantId: "tenant-a",
+        openInvoiceCount: 2,
+        overdueInvoiceCount: 1,
+        totalOutstanding: money(200_00n),
+        overdueOutstanding: money(100_00n),
+        currency: "INR",
+        computedAt,
+      },
+    });
+
+    const second = await projections.commitSnapshots({
+      tenantId: "tenant-a",
+      schemaVersion: BUSINESS_STATE_SCHEMA_VERSION,
+      receivablesRisk: {
+        tenantId: "tenant-a",
+        openInvoiceCount: 9,
+        overdueInvoiceCount: 9,
+        totalOutstanding: money(999_00n),
+        overdueOutstanding: money(999_00n),
+        currency: "INR",
+        computedAt,
+      },
+      inventoryRisk: {
+        tenantId: "tenant-a",
+        lowStockCount: 3,
+        thresholdMajor: "5.0000",
+        computedAt,
+      },
+    });
+
+    expect(second.appliedFamilies).toBe(1);
+    expect(projections.receivables.get("tenant-a")?.openInvoiceCount).toBe(2);
+    expect(projections.inventory.get("tenant-a")?.lowStockCount).toBe(3);
+    expect(projections.meta.get("tenant-a")?.schemaVersion).toBe(
+      BUSINESS_STATE_SCHEMA_VERSION
+    );
+  });
+
   it("commitSnapshots is all-or-nothing on failure", async () => {
     const projections = createMemoryBusinessStateProjectionRepository();
     projections.failCommitAfterFamilies = 1;

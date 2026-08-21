@@ -743,6 +743,7 @@ Rules:
 * Projections are **derived** and must be rebuildable from ledgers and source documents.
 * Projection writers never invent money; they aggregate domain truth.
 * Refresh path: mutation + outbox in one transaction → async consumer applies projection upsert.
+* Prisma `commitSnapshots` is one transaction. Family upserts use `updateMany` (only when stored `computedAt` is older) then `createMany` with `skipDuplicates`. Do not catch unique violations inside that transaction — PostgreSQL aborts it and later families cannot commit.
 * Dashboard, Daily Brief, and AI context assembly prefer BusinessState APIs over ad-hoc multi-table scans in the chat route.
 * Chat/tools still return schema-validated **facts** from domain services; projections speed attention and context, they do not replace the truth engine.
 
