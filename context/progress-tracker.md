@@ -8,75 +8,58 @@ This file is the **single source of truth for implementation progress**. The AI 
 
 ## Current Phase
 
-* **Phase:** MVP Development
-* **Status:** In Progress
-* **MVP Stage:** Foundation / Authentication
+* **Phase:** Post-MVP — Business Intelligence Spine (R1)
+* **Status:** Ready to implement
+* **Active roadmap:** [`context/product-roadmap.md`](product-roadmap.md)
+* **Active specs:** [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) — next: `01-typed-domain-events.md`
+* **MVP archive:** [`context/feature-specs-mvp/`](feature-specs-mvp/)
+* **Deferred horizon:** [`context/future-scope.md`](future-scope.md) (do not schedule as current Next)
+* **Launch trust:** MVP `29` / `30` deferred until after Post-MVP + future-scope (not parallel)
 
 ---
 
 ## Current Goal
 
-Build and ship a **production-ready MVP of the AI Business OS for small Indian businesses**.
-
-The MVP should provide the most frequently required business operations in one simple application:
+Ship the Post-MVP companion OS on the completed MVP system of record by implementing **one Post-MVP feature spec at a time**:
 
 ```text
-Authentication
+Understand the business (R1) — specs 01–04
       ↓
-Business Setup
+Tell what matters (R2) — specs 05–06
       ↓
-Dashboard
+Ask why / what next (R3) — spec 07
       ↓
-Customers
+Automate routine work (R4) — specs 08–11
       ↓
-Products / Inventory
+Selective coverage (R5) — specs 12–15 (after R2–R4 unless pulled)
       ↓
-Sales / Invoices
-      ↓
-Payments
-      ↓
-Expenses
-      ↓
-Purchases / Suppliers
-      ↓
-Basic Accounting
-      ↓
-GST-ready Business Data
-      ↓
-Reports
-      ↓
-AI Business Assistant
+Guardian (R6) → AI Ops (R7) — specs 16–17
 ```
 
-The priority is **correctness, usability, and a complete end-to-end business workflow**, not maximum feature breadth.
+North star: an AI-native OS for Indian SMEs that records correctly, understands continuously, tells the owner what matters, and automates routine work under autonomy L0–L4.
+
+**Next implementation unit:** `context/feature-specs-post-mvp/01-typed-domain-events.md`. Do not start R5 (`12`–`15`) before R2–R4 unless a metric pull is recorded here. Do not start MVP `29`/`30` until launch readiness.
+
+The priority is **correctness, attention quality, and automation under guardrails** — not feature parity with billing ERPs.
 
 ---
 
-# MVP Development Priorities
+# Post-MVP Development Priorities
 
-Features should generally be implemented in this order:
+Work in this order (see `product-roadmap.md`):
 
-1. Project foundation
-2. Authentication
-3. Business/workspace setup
-4. Database and tenant isolation
-5. Customers
-6. Products
-7. Inventory
-8. Sales invoices
-9. Payments
-10. Expenses
-11. Suppliers
-12. Purchases
-13. Basic accounting
-14. GST-ready calculations/data
-15. Dashboard
-16. Reports
-17. AI assistant
-18. Notifications
-19. Production hardening
+1. Intelligence Spine (R1) — post-MVP specs `01`–`04`
+2. Operator / Daily Brief (R2) — specs `05`–`06`
+3. Copilot depth (R3) — spec `07`
+4. Automation Engine (R4) — specs `08`–`11` (collections first)
+5. Coverage completers (R5) — specs `12`–`15` (after R2–R4 unless pulled)
+6. Business Guardian (R6) — spec `16`
+7. AI Operations / Bookkeeper (R7) — spec `17`
+8. Launch only: MVP `29` automated testing and `30` production hardening (after Post-MVP + future-scope)
 
-Do not skip foundational dependencies merely to build visually impressive features.
+Do not pull items from `future-scope.md` into this list without an explicit progress-tracker promotion and metric.
+
+Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/README.md). Historical MVP: [`context/feature-specs-mvp/`](feature-specs-mvp/).
 
 ---
 
@@ -104,15 +87,25 @@ Do not skip foundational dependencies merely to build visually impressive featur
 | Dashboard             | Complete    |
 | Reports               | Complete    |
 | Search                | Complete    |
-| AI Assistant          | Complete    |
+| AI Assistant (thin)   | Complete    |
 | Notifications         | Complete    |
-| Testing               | Not Started |
-| Security hardening    | Not Started |
+| Testing (`29`)        | Deferred until launch |
+| Security hardening (`30`) | Deferred until launch |
 | Production deployment | Not Started |
+| Intelligence Spine (R1) | Not Started |
+| Operator / Daily Brief (R2) | Not Started |
+| Copilot Depth (R3)    | Not Started |
+| Automation Engine (R4)| Not Started |
+| Coverage Completers (R5) | Not Started |
+| Business Guardian (R6)| Not Started |
+| AI Operations (R7)    | Not Started |
 
 ---
 
 # Completed
+
+* **Product direction locked (docs):** Post-MVP roadmap + future scope + context architecture updates. Feature specs catalog: `feature-specs-post-mvp/` (`01`–`17`). MVP archive: `feature-specs-mvp/`. Specs `29`/`30` deferred until launch.
+* **Post-MVP feature specs catalog created:** `context/feature-specs-post-mvp/` README + specs `01`–`17`; pointers synced in product-roadmap, progress-tracker, feature-specs-mvp README, AGENTS, ai-workflow-rules.
 
 * AI Assistant (`28-ai-assistant.md`) — sheet-only + AI SDK transport:
   * Top-bar sheet is the only entry point (`/app/assistant` permanently redirects to `/app`). Custom `complete()` adapters and `runAiAssistant` were removed; Gemini streams via `@ai-sdk/google` + `streamText` / `useChat`.
@@ -339,7 +332,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
   * Scripts: `db:generate`, `db:migrate`, `lint`, `lint:fix`, `typecheck`.
   * GitHub Actions CI: lint, typecheck, production build.
   * Production Postgres host is **Neon** (wired in spec `30`; this spec used local Postgres).
-* Feature spec catalog created (`context/feature-specs/`):
+* Feature spec catalog created (`context/feature-specs-mvp/`):
   * `README.md` defines execution order and the spec template.
   * Specs `02`–`30` written for remaining MVP units.
   * `01-design-system.md` remains complete; **next implementable spec is `02-project-foundation.md`**.
@@ -375,11 +368,19 @@ Nothing in progress. See **Next Up**.
 
 # Next Up
 
-Implement **one feature spec at a time**, in numeric order. Catalog: `context/feature-specs/README.md`.
+**Active product work** follows [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) one numbered file at a time.
 
-**Current implementable spec:** `context/feature-specs/29-automated-testing.md`
+1. **Next implementable spec:** [`01-typed-domain-events.md`](feature-specs-post-mvp/01-typed-domain-events.md)
+2. Then `02`–`04` (projections, cash, attention) → `05`–`07` (brief, operator, copilot) → `08`–`11` (automation)
+3. Specs `12`–`15` (R5) only after R2–R4 unless a metric pull is recorded here
+4. Then `16` Guardian → `17` AI Operations
+5. **Not now:** [`future-scope.md`](future-scope.md); MVP `29`/`30` until launch after Post-MVP + future-scope
 
-## 1. Project Foundation (`02-project-foundation.md`) *(complete)*
+Product sequencing: [`product-roadmap.md`](product-roadmap.md). MVP archive: [`feature-specs-mvp/`](feature-specs-mvp/).
+
+---
+
+## Legacy: Project Foundation (`02-project-foundation.md`) *(complete)*
 
 Build the remaining application foundation (see the spec for exact scope):
 
@@ -876,6 +877,8 @@ Future:
 * Email
 * SMS
 * WhatsApp
+
+(See also `context/future-scope.md` for post-R7 distribution channels — not current backlog.)
 
 Do not introduce multiple communication providers until the core notification abstraction is stable.
 
@@ -1484,7 +1487,7 @@ Files / Areas:
 - `lib/ai/` (`gemini-adapter.ts`, `resolve-config.ts`, `create-adapter.ts`, `types.ts`, `adapter.ts`, `index.ts`)
 - `lib/env.ts`, `.env.example`
 - `tests/ai/ai-gateway.test.ts`, `tests/ai/ai-safety.test.ts`
-- `context/architecture-context.md`, `context/code-standards.md`, `context/feature-specs/README.md`
+- `context/architecture-context.md`, `context/code-standards.md`, `context/feature-specs-mvp/README.md`
 
 Notes:
 - Rotate any Gemini key that was pasted into chat; store only in `.env`.
@@ -2203,7 +2206,7 @@ Implemented:
 - Reviewed completed implementations for specs `01`–`03`: **no code rewrite required**. Spec `02` still correctly uses local Postgres (Neon is spec `30`). Spec `03` still correctly maps Clerk **users** only; Organization → Business is spec `04`. Verified Clerk Organizations feature on the linked instance (`clerk enable orgs` → no changes; already enabled). Updated `.env.example` comments for accepted vendors.
 
 Files / Areas:
-- `context/feature-specs/`
+- `context/feature-specs-mvp/`
 - `context/progress-tracker.md`
 - `context/architecture-context.md`
 - `.env.example`
@@ -2313,11 +2316,11 @@ Notes:
 Status: Complete *(documentation only — no product features implemented)*
 
 Implemented:
-- Added `context/feature-specs/README.md` with execution order and spec template.
+- Added `context/feature-specs-mvp/README.md` with execution order and spec template.
 - Created implementable specs `02` through `30` matching `01-design-system.md` style.
 
 Files / Areas:
-- `context/feature-specs/`
+- `context/feature-specs-mvp/`
 - `context/progress-tracker.md`
 
 Tests:

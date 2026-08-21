@@ -6,12 +6,14 @@ Build the AI Business OS incrementally using a **spec-driven, verification-first
 
 The context files are the source of truth for the project:
 
-* `Project overview.md` — defines **what** the product is and its scope.
-* `Architecture.md` — defines **how** the system is structured.
-* `UI-Context.md` — defines **how the application should look and behave**.
-* `Coding standards.md` — defines **how code must be written**.
-* `ai-workflow rules.md` — defines **how the AI development agent must work**.
-* `Progress tracker.md` — defines **what has been completed and what should happen next**.
+* `context/project-overview.md` — defines **what** the product is and its scope.
+* `context/product-roadmap.md` — defines **Post-MVP sequencing** (active backlog R1–R7).
+* `context/architecture-context.md` — defines **how** the system is structured.
+* `context/ui-context.md` — defines **how the application should look and behave**.
+* `context/code-standards.md` — defines **how code must be written**.
+* `context/ai-workflow-rules.md` — defines **how the AI development agent must work**.
+* `context/progress-tracker.md` — defines **what has been completed and what should happen next**.
+* `context/future-scope.md` — **deferred** post-roadmap ideas; read only when planning beyond R7 or evaluating out-of-roadmap requests.
 
 Always implement against these specifications.
 
@@ -29,7 +31,8 @@ It must:
 * Implement one verifiable unit at a time.
 * Test critical behavior.
 * Keep documentation and progress synchronized.
-* Never silently expand MVP scope.
+* Never silently expand scope beyond the active roadmap release.
+* Never treat `future-scope.md` as the current backlog.
 * Use the official **Clerk Cursor skills** when implementing or modifying Clerk authentication functionality.
 
 ---
@@ -39,14 +42,16 @@ It must:
 When information conflicts, use this priority order:
 
 1. **Explicit user instruction**
-2. `Project overview.md`
-3. `Architecture.md`
-4. `UI-Context.md`
-5. `Coding standards.md`
-6. `ai-workflow rules.md`
-7. `Progress tracker.md`
-8. Existing implementation
-9. AI assumptions
+2. `context/project-overview.md`
+3. `context/product-roadmap.md` (active Post-MVP sequencing)
+4. `context/architecture-context.md`
+5. `context/ui-context.md`
+6. `context/code-standards.md`
+7. `context/ai-workflow-rules.md`
+8. `context/progress-tracker.md`
+9. Existing implementation
+10. `context/future-scope.md` (deferred only — never overrides roadmap)
+11. AI assumptions
 
 Existing code must **not automatically override the specifications**.
 
@@ -115,15 +120,15 @@ A feature should be considered complete only when:
 
 Before modifying code:
 
-1. Read the relevant context files.
-2. Read the current `Progress tracker.md`.
-3. Identify the current phase/feature unit.
+1. Read the relevant context files (including `product-roadmap.md` for Post-MVP work).
+2. Read the current `context/progress-tracker.md`.
+3. Identify the current phase / roadmap release (R1–R7) and the current Post-MVP feature spec in `context/feature-specs-post-mvp/`. Do not treat MVP `29`/`30` as parallel work — they wait until launch after Post-MVP + future-scope.
 4. Inspect the existing implementation.
 5. Identify relevant modules and dependencies.
 6. Check existing patterns before introducing a new pattern.
 7. Identify affected invariants.
 8. Determine how the change will be tested.
-9. Confirm the change is within MVP scope.
+9. Confirm the change is within the **active roadmap release** (not `future-scope.md` unless explicitly promoted).
 10. If Clerk authentication is involved, inspect and follow the applicable **Clerk Cursor skill** before implementing.
 
 Do not immediately start writing code after receiving a feature request.
@@ -134,6 +139,7 @@ First understand:
 What?
 Why?
 Where?
+Roadmap release?
 Dependencies?
 Invariants?
 Security?
@@ -670,21 +676,23 @@ Audit
 
 ## AI Autonomy Rules
 
-Default autonomy:
+Default autonomy ladder (L0–L4):
 
 ```text
-Answer
+L0 Inform / Answer
    ↓
-Recommend
+L1 Recommend
    ↓
-Draft
+L2 Prepare / Draft
    ↓
-Confirm
+L3 Confirm then Execute
    ↓
-Execute
+L4 Auto within tenant policy
 ```
 
-The MVP should favor human confirmation for actions affecting:
+**L5 unrestricted financial autonomy is forbidden.**
+
+Favor human confirmation (L3) for actions affecting:
 
 * Financial records.
 * Customer-facing communication.
@@ -695,9 +703,11 @@ The MVP should favor human confirmation for actions affecting:
 * GST/tax records.
 * Business configuration.
 
-Low-risk actions may eventually execute automatically only when explicitly allowed by policy.
+Low-risk actions may execute automatically (L4) only when explicitly allowed by tenant policy and amount/class thresholds.
 
-Authentication through Clerk does not imply permission for autonomous execution.
+Every mutating tool/action must declare an autonomy level. L3 keeps the confirm-token path. Authentication through Clerk does not imply permission for autonomous execution.
+
+When BusinessState projections exist, assemble AI context from state + tools — not raw multi-table dumps. Capture automation outcomes (sent, paid, dismissed, failed) where the feature emits actions.
 
 ---
 
@@ -1089,18 +1099,30 @@ Events represent facts that have already occurred.
 Good:
 
 ```text
-InvoiceCreated
+InvoicePosted
 PaymentReceived
 InventoryAdjusted
+StockLow
+AttentionDismissed
+AutomationOutcomeRecorded
 ```
 
 Avoid events that represent vague future intent unless they are explicitly modeled as commands/workflows.
 
-Events must contain enough metadata for correlation and debugging.
+Events must:
 
-Consumers must tolerate duplicate delivery.
+* Use explicit names and include `tenantId` plus correlation metadata.
+* Prefer a schema version when payloads evolve.
+* Be emitted in the **same database transaction** as the domain mutation (outbox).
+* Keep payloads small (ids + essentials); consumers load domain data as needed.
+
+Consumers must tolerate duplicate delivery and be independently testable.
+
+Fan-out targets include search, notifications, **BusinessState projections**, and **automation** — not only in-app notify.
 
 Events must not contain secrets, authentication tokens, or unnecessary sensitive authentication information.
+
+**Screen rule:** do not add a new UI screen unless it also feeds events/state or reduces owner actions for a roadmap metric.
 
 ---
 
@@ -1134,20 +1156,22 @@ Measurement
  ↓
 Query Optimization
  ↓
-Indexing
+Indexing (tenantId-first)
  ↓
-Caching
+BusinessState / attention read models
  ↓
-Async Processing
+Caching (derived only)
  ↓
-Read Models
+Async Processing / outbox
  ↓
-Scaling
+Scaling the monolith
 ```
 
-Do not introduce Redis, Kafka, Elasticsearch, microservices, or other infrastructure solely for theoretical future scale.
+Do not introduce Redis, Kafka, Elasticsearch, microservices, or other infrastructure solely for theoretical future scale. Redis is allowed later only for derived hot reads and rate limits — never money truth.
 
 Do not introduce additional authentication infrastructure when Clerk already satisfies the requirement.
+
+Keep HTTP request paths short: projection apply, OCR, bulk PDF, and multi-step automation belong in workers.
 
 ---
 
@@ -1375,43 +1399,52 @@ when relevant.
 
 ---
 
-## MVP Discipline
+## Post-MVP Discipline
 
-The AI development agent must aggressively protect MVP scope.
+The AI development agent must aggressively protect **active roadmap scope**.
 
 Do not implement:
 
-* Features explicitly listed as out of scope.
+* Features explicitly listed as out of scope in `project-overview.md`.
+* Items from `future-scope.md` unless progress-tracker promotes them with a metric.
+* Competitor feature parity (e.g. Vyapar surface area) without a roadmap release.
+* R5 coverage completers before R2 Operator without explicit pull justification.
 * Enterprise functionality without a requirement.
 * Complex infrastructure without a demonstrated need.
-* Advanced autonomous agents before the core business system works.
-* Complex tax automation without clearly defined requirements.
-* Premature microservices.
-* Premature event infrastructure beyond what the MVP needs.
-* Advanced analytics before transactional reporting works.
+* Advanced unrestricted agents before Intelligence Spine + Operator exist.
+* Premature microservices or sharding.
+* Premature event infrastructure that bypasses the transactional outbox for money mutations.
 * AI capabilities that compromise business correctness.
 * Custom authentication infrastructure when Clerk satisfies the requirement.
+* Redesign of frozen posting / tax / money pipelines for intelligence features (extend via events/tools).
 
-The MVP priority is:
+Priority stack:
 
 ```text
 Business Correctness
         ↓
-Usability
+Intelligence Spine (R1) — post-mvp specs 01–04
         ↓
-Reliability
+Operator / Daily Brief (R2) — specs 05–06
         ↓
-Security
+Copilot depth (R3) — spec 07
         ↓
-Observability
+Automation (R4) — specs 08–11
         ↓
-AI Assistance
+Selective coverage (R5) — specs 12–15 (after R2–R4 unless pulled)
+        ↓
+Guardian / AI Ops (R6–R7) — specs 16–17
+        ↓
+Future scope (on demand)
+        ↓
+Launch trust: MVP testing (29) + hardening (30)
         ↓
 Optimization
         ↓
-Advanced Autonomy
+Advanced autonomy (still bounded L4)
 ```
 
+Active specs: `context/feature-specs-post-mvp/`. MVP archive: `context/feature-specs-mvp/`.
 ---
 
 ## Definition of Done
@@ -1419,23 +1452,23 @@ Advanced Autonomy
 A feature is **DONE** only when:
 
 1. The requested behavior is implemented.
-2. The implementation follows `Architecture.md`.
-3. The implementation follows `Coding standards.md`.
-4. The UI follows `UI-Context.md`.
-5. No MVP scope boundary has been violated.
+2. The implementation follows `architecture-context.md`.
+3. The implementation follows `code-standards.md`.
+4. The UI follows `ui-context.md`.
+5. No active roadmap / overview scope boundary has been violated; exit criteria for the current release in `product-roadmap.md` are considered.
 6. Authentication and authorization are enforced.
 7. Clerk integration follows the applicable official/Clerk Cursor implementation guidance.
 8. Tenant isolation is preserved.
 9. Business invariants are preserved.
 10. Relevant automated tests pass.
 11. Error and loading states are handled.
-12. Important mutations are observable/auditable.
-13. AI actions, if applicable, use authorized tools.
+12. Important mutations are observable/auditable; events/outbox emitted where required.
+13. AI actions, if applicable, use authorized tools and declare autonomy level.
 14. Database migrations are safe.
 15. No secrets are exposed.
 16. Production build passes.
 17. The implementation has been reviewed for unnecessary complexity.
-18. `Progress tracker.md` has been updated.
+18. `progress-tracker.md` has been updated.
 
 ---
 

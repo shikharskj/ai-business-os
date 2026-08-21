@@ -35,6 +35,50 @@
 | CI/CD                            | **GitHub Actions**                                                  | Automated validation, testing, builds, migrations, and deployment                                       |
 | Configuration                    | **Environment variables + typed configuration**                     | Environment-specific configuration without hardcoding secrets                                           |
 
+**Product direction:** Post-MVP sequencing lives in [`context/product-roadmap.md`](product-roadmap.md). Platform bet: modular monolith + transactional outbox + idempotent consumers + read projections + background jobs + observability. No microservices-first. Derived systems never become money truth.
+
+---
+
+# Layered OS Architecture
+
+Post-MVP the system is understood as six layers. Upper layers consume lower layers; they never bypass the truth engine for money, tax, stock, or permissions.
+
+```text
+┌────────────────────────────────────────────┐
+│ EXPERIENCE                                 │
+│ Dashboard • Daily Brief • Chat • Notify    │
+└─────────────────────┬──────────────────────┘
+                      │
+┌─────────────────────▼──────────────────────┐
+│ AI COMPANION                               │
+│ Copilot • Operator • Context • Memory      │
+└─────────────────────┬──────────────────────┘
+                      │
+┌─────────────────────▼──────────────────────┐
+│ AUTOMATION                                 │
+│ Events • Policies • Workflows • Jobs       │
+│ Autonomy L0–L4                             │
+└─────────────────────┬──────────────────────┘
+                      │
+┌─────────────────────▼──────────────────────┐
+│ BUSINESS DOMAIN                            │
+│ Sales • Purchases • Inventory • Payments   │
+│ Parties • Expenses • GST-ready docs        │
+│        ┌─────────────────────────┐         │
+│        │ TRUTH ENGINE (owned)    │         │
+│        │ Ledger • Tax • Stock    │         │
+│        └─────────────────────────┘         │
+└─────────────────────┬──────────────────────┘
+                      │
+┌─────────────────────▼──────────────────────┐
+│ DATA & PLATFORM                            │
+│ PostgreSQL • R2 • Search • Outbox • Obs    │
+│ BusinessState projections (derived)        │
+└────────────────────────────────────────────┘
+```
+
+Mobile experience prioritizes brief, approve, and collect paths — not a full desktop clone on day one.
+
 ---
 
 # System Boundaries
@@ -59,8 +103,9 @@
 * `modules/workflows/` — Reusable approval, confirmation, status-transition, and business workflow primitives.
 * `modules/tenant/` — Business/workspace lifecycle, tenant configuration, financial year, business settings, and tenant-level policies.
 * `modules/users/` — Application user profiles, roles, permissions, memberships, and organization relationships.
-* `modules/events/` — Domain-event definitions, event publishing, outbox processing, and event consumers.
+* `modules/events/` — Typed domain-event catalog, consumer registration, and projection/automation wiring. **Persistence primitive:** transactional outbox rows (today in shared-kernel / Prisma outbox). Promote catalog and consumers under `modules/` without changing “emit in same DB transaction as mutation.”
 * `modules/integrations/` — External provider adapters such as email, storage, payment, tax, and future third-party integrations.
+* BusinessState / attention projections — derived read models (tables or rebuildable views) updated by idempotent outbox consumers; never the source of transactional truth.
 * `lib/` — Cross-cutting technical infrastructure that is not owned by a particular business domain.
 * `lib/db/` — Prisma client, database configuration, transaction helpers, and persistence infrastructure.
 * `lib/auth/` — Clerk integration, authentication helpers, identity resolution, session access, and application identity mapping.
@@ -630,22 +675,30 @@ when they belong to the same atomic business transaction.
 
 # Event Model
 
-The MVP uses domain events without prematurely introducing a distributed microservice architecture.
+The product uses domain events **without** a distributed microservice architecture. Outbox remains the persistence primitive; typed catalogs and consumers expand under `modules/`.
 
-Example:
+Example catalog (extend as Post-MVP progresses):
 
 ```text
 SalesInvoiceCreated
 SalesInvoicePosted
+InvoiceOverdue
 PaymentReceived
 PurchaseCreated
+PurchasePosted
 InventoryAdjusted
+StockLow
 ExpenseRecorded
 JournalPosted
+QuotationCreated
+QuotationAccepted
+QuotationIdle
 CustomerCreated
 SupplierCreated
 DocumentUploaded
 AIActionExecuted
+AttentionDismissed
+AutomationOutcomeRecorded
 ```
 
 Events are persisted using the Outbox Pattern:
@@ -659,12 +712,74 @@ Business Transaction
                 ▼
           Event Processor
                 │
-        ┌───────┼────────┐
-        ▼       ▼        ▼
-      Search  Reports  Notifications
+        ┌───────┼────────┬──────────┬────────────┐
+        ▼       ▼        ▼          ▼            ▼
+      Search  Notify  Projections  Automation  (Reports rebuild)
 ```
 
-Event consumers must be idempotent.
+Event consumers must be idempotent (natural keys / processed-event ids). Payloads stay small; consumers load domain data by id when needed.
+
+---
+
+# Business Intelligence Spine
+
+Post-MVP R1 introduces a **living** understanding of the business — not another report warehouse.
+
+## BusinessState projections (derived)
+
+Examples:
+
+```text
+CashPosition
+ReceivablesRisk
+PayablesPressure
+InventoryRisk
+SalesMomentum
+AttentionQueue
+```
+
+Rules:
+
+* Projections are **derived** and must be rebuildable from ledgers and source documents.
+* Projection writers never invent money; they aggregate domain truth.
+* Refresh path: mutation + outbox in one transaction → async consumer applies projection upsert.
+* Dashboard, Daily Brief, and AI context assembly prefer BusinessState APIs over ad-hoc multi-table scans in the chat route.
+* Chat/tools still return schema-validated **facts** from domain services; projections speed attention and context, they do not replace the truth engine.
+
+## Cash model
+
+Cash position is defined from **ledger cash and bank account balances**. Payment methods (Cash, UPI, Bank Transfer, Card, Cheque) map into those accounts on posting. AI must not invent cash from invoice tables alone.
+
+---
+
+# Automation Runtime
+
+Pattern:
+
+```text
+EVENT → CONDITION → REASONING → ACTION → RESULT → OUTCOME
+```
+
+* Jobs execute off the request path (queue/worker).
+* Every mutating action goes through existing domain use cases + authz + audit.
+* Idempotency keys required for sends and posts.
+* First vertical: **collections** (overdue → prioritize → draft reminder → L3 confirm or L4 policy send).
+* Record outcomes (sent, paid, dismissed, failed) so learning has a place to land.
+
+Workflow primitives may live in `modules/workflows/` / automation boundaries; they must not post journals or stock directly.
+
+---
+
+# Frozen vs Extend-Only (Post-MVP)
+
+**Do not redesign** for Intelligence Spine / Operator / Automation work:
+
+* Invoice / purchase / payment / expense posting pipelines
+* Tax engine ownership of GST calculation
+* Money and quantity primitives
+* Tenant isolation and permission model
+
+**Extend via:** outbox events, projections, tools, confirmation/automation policies, new read models.
 
 ---
 
@@ -1008,33 +1123,57 @@ An action tool must also declare `requiresConfirmation: true` and have a preview
 
 # AI Autonomy Model
 
-The MVP should use bounded autonomy:
+Bounded autonomy (product safety):
 
 ```text
-L0 — Answer
+L0 — Inform / Answer
 L1 — Recommend
-L2 — Draft
+L2 — Prepare / Draft
 L3 — Execute after confirmation
 L4 — Execute within explicitly configured low-risk policy
 ```
 
-The MVP should **not** support unrestricted L5 autonomous financial operations.
+**L5 unrestricted financial operations are forbidden.**
+
+## Tenant autonomy policy
+
+Store per-tenant policy (even if UI is simple initially):
+
+```text
+allowedActionClasses
+amountThresholds (e.g. auto-reminder max)
+requireConfirmationAbove
+disabledAutomations
+```
+
+L4 only runs when policy explicitly enables the action class and thresholds match. L3 keeps the existing HMAC confirm-token path.
 
 Examples:
 
 ```text
 Explain sales → L0
-
 Suggest customers to follow up → L1
-
 Draft payment reminder → L2
-
-Create invoice → L3
-
-Send low-risk reminder → L3/L4
-
+Send reminder after confirm → L3
+Send low-risk reminder under threshold → L4
+Create / post invoice → L3 (never silent L4 for posting in early Post-MVP)
 Approve large payment → Human approval required
 ```
+
+---
+
+# AI Context Assembly
+
+Prefer this order when building model context:
+
+```text
+1. Trusted execution identity (tenant, user, permissions)
+2. BusinessState / AttentionQueue summaries (derived)
+3. Typed tool results (schema-validated facts)
+4. Minimal conversation text (sanitized)
+```
+
+Avoid dumping raw multi-table query results into the prompt. Facts shown to users remain tool/domain-built, never model prose.
 
 ---
 
@@ -1110,13 +1249,15 @@ Examples:
 
 ```text
 PDF generation
-Email delivery
+Email / WhatsApp delivery (when enabled)
 Notification delivery
 Search indexing
-Document processing
+Document processing / OCR prepare
 AI-heavy operations
 Report generation
 Scheduled reminders
+Outbox → projection apply
+Automation workflows
 ```
 
 Flow:
@@ -1124,7 +1265,7 @@ Flow:
 ```text
 Request
   ↓
-Create Job
+Create Job / Outbox row
   ↓
 Return
   ↓
@@ -1143,7 +1284,43 @@ retry
 backoff
 failure tracking
 observability
+tenant-safe concurrency keys
 ```
+
+---
+
+# Scalability and Performance (~10k tenants)
+
+Target: smooth operation for thousands of tenants without redesigning the platform. Optimize the modular monolith; do not invent microservices or sharding early.
+
+## Request path
+
+* Short transactions; no OCR, bulk PDF, or multi-step automation inside the HTTP request that can be deferred.
+* Neon pooled connections; avoid connection storms from unbounded parallelism.
+* List endpoints paginated; enforce `tenantId` in every query predicate.
+* Ban N+1 on list/detail hot paths.
+
+## Derived reads
+
+* Attention / Daily Brief / Operator surfaces read BusinessState projections.
+* Optional Redis (or equivalent) **only** for derived hot reads and rate limits — never as money truth.
+* Projections indexed by `(tenantId, …)` natural keys.
+
+## Async
+
+* Outbox processor with backoff and dead-letter; concurrency keyed safely per tenant/event type.
+* Automation and projection lag are first-class health signals.
+
+## AI
+
+* Bound tools, steps, and tokens per turn.
+* Degrade to stub / deterministic brief when provider is down; core billing continues.
+
+## Explicit non-goals until proven
+
+* Premature database sharding
+* Per-domain microservices
+* Event buses that replace the transactional outbox for money mutations
 
 ---
 
@@ -1212,8 +1389,13 @@ Sensitive tokens, session data, secrets, and authentication credentials must nev
 * Database performance.
 * Queue depth.
 * Job failures.
+* Outbox lag.
+* Projection lag.
+* Automation success / fail / skip counts.
+* Attention open / dismiss rates (product signal).
 * AI usage.
 * AI cost.
+* AI tool latency.
 * Business transaction failures.
 * Authentication failures.
 * Authorization failures.
@@ -1720,29 +1902,27 @@ Test:
 
 # Scalability Strategy
 
-The MVP should scale vertically and horizontally before introducing unnecessary distributed complexity.
+See also **Scalability and Performance (~10k tenants)** above for concrete request-path, projection, async, and AI constraints.
 
-Initial strategy:
+Scale the modular monolith before introducing distributed complexity:
 
 ```text
 Modular Monolith
        ↓
-Optimize Queries
+Optimize Queries + tenantId indexes
        ↓
-Indexes
+BusinessState read models / projections
        ↓
-Caching
+Background Jobs + Outbox consumers
        ↓
-Background Jobs
+Optional Redis for derived hot reads only
        ↓
-Read Models
-       ↓
-Horizontal Scaling
+Horizontal Scaling of the monolith
        ↓
 Extract Specific Services Only When Necessary
 ```
 
-Potential future extraction candidates:
+Potential future extraction candidates (only with proof of need):
 
 ```text
 AI Runtime
@@ -1752,13 +1932,13 @@ Notifications
 Analytics
 ```
 
-Core accounting and transaction logic should remain strongly controlled even if infrastructure boundaries evolve.
+Core accounting and transaction logic remain strongly controlled even if infrastructure boundaries evolve. Do not extract the truth engine into a separate service as a default.
 
 ---
 
 # Architectural Evolution
 
-## MVP
+## MVP (shipped)
 
 ```text
 Next.js
@@ -1771,9 +1951,23 @@ PostgreSQL
    +
 Object Storage
    +
-Background Workers
+Background Workers / Outbox
    +
-AI Gateway
+AI Gateway + typed tools
+```
+
+## Post-MVP (active)
+
+```text
+MVP base
+      +
+Typed event catalog + BusinessState projections
+      +
+Operator / Daily Brief
+      +
+Automation runtime (L0–L4)
+      +
+Observability for outbox / projection / automation lag
 ```
 
 ## Growth Stage
@@ -1781,13 +1975,13 @@ AI Gateway
 ```text
 Modular Monolith
       +
-Redis
+Redis (derived only)
       +
-Dedicated Search
+Dedicated Search (if FTS limits hit)
       +
-Analytics Warehouse
+Analytics Warehouse (derived)
       +
-Dedicated AI Runtime
+Dedicated AI Runtime (if needed)
 ```
 
 ## Enterprise Stage

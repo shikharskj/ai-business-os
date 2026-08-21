@@ -1035,15 +1035,15 @@ depending on information density.
 
 Mobile should prioritize:
 
-1. Dashboard.
-2. Customers.
-3. Invoices.
-4. Payments.
-5. Expenses.
-6. Inventory.
-7. AI assistant.
+1. Daily Brief / Needs attention.
+2. Confirm / approve automation actions.
+3. Dashboard KPIs.
+4. Collections / payments.
+5. Invoices (view + create where practical).
+6. Stock check / low stock.
+7. AI assistant sheet.
 
-Complex accounting/reporting workflows may remain optimized for desktop if necessary.
+Do not aim for a full desktop clone on mobile. Complex accounting/reporting workflows may remain desktop-optimized.
 
 ---
 
@@ -1051,9 +1051,11 @@ Complex accounting/reporting workflows may remain optimized for desktop if neces
 
 # AI Assistant UI
 
-AI should feel like a **business copilot**, not a separate chatbot product.
+AI should feel like a **business companion**, not a separate chatbot product.
 
 **Entry point:** global top-bar sheet only (no dedicated `/app/assistant` page). Header: title, New chat, Close. Sheet uses `bg-sidebar` (same as the main left sidebar) and is ~`42rem` wide (`data-[side=right]:sm:max-w-[42rem]`), overriding the default sheet `max-w-sm`.
+
+The Daily Brief / Needs attention surface (below) is **not** a second chatbot — it is the Operator entry on the home dashboard. The sheet remains for ask/confirm flows.
 
 Recommended experience:
 
@@ -1082,13 +1084,55 @@ Loading uses an honest tool-activity timeline (Thinking / per-tool steps / Writi
 The AI should be available through:
 
 - Global assistant (top-bar sheet).
+- Daily Brief / Needs attention (dashboard Operator surface).
 - Contextual actions.
 - Suggested actions.
 - Inline insights.
 
 ---
 
+# Daily Brief / Needs Attention UI
 
+Primary **Operator** surface on `/app` (home dashboard), above or beside KPIs as space allows — one composition, not a second app.
+
+```text
+┌─ Needs attention ─────────────────────────────┐
+│ Good morning · Yesterday: Sales · Cash in …   │
+│                                               │
+│ 🔴 ABC Traders — ₹1.2L overdue                │
+│    [Prepare reminder] [View invoice]          │
+│ 🟡 Product X — stockout risk                  │
+│    [Review stock]                             │
+│ 🟡 Quotation QT-12 idle                       │
+│    [Follow up]                                │
+└───────────────────────────────────────────────┘
+```
+
+Rules:
+
+* Ranked by severity; each row links to a domain record.
+* Verified amounts come from facts / BusinessState — never invent figures in marketing copy.
+* When AI is down, render a **deterministic** brief from BusinessState (same rows, quieter copy).
+* Actions from the brief use the same confirmation pattern as assistant pending actions.
+* Do not duplicate the full chat transcript on the dashboard.
+
+---
+
+# Autonomy cues (Trust UI)
+
+Label AI and automation affordances consistently:
+
+| Cue | Meaning |
+| --- | ------- |
+| Inform | L0 — statement of fact / state |
+| Recommend | L1 — suggested next step |
+| Prepare | L2 — draft ready to review |
+| Confirm | L3 — will mutate after explicit confirm |
+| Auto (policy) | L4 — may run within tenant limits |
+
+Keep these quieter than primary CTAs; they support trust, they are not badges for decoration.
+
+---
 
 # AI Trust UI
 

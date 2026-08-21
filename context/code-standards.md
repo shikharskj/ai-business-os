@@ -650,11 +650,12 @@ Business orchestration belongs in application/domain layers.
 * Separate state-changing commands from read queries where practical.
 * Queries must not unexpectedly mutate state.
 * Optimize reporting queries independently from transactional commands.
-* Use dedicated read models when complexity or performance justifies them.
-* Derived reporting/search data must never become the transactional source of truth.
+* Use dedicated read models when complexity or performance justifies them — especially **AttentionQueue / Daily Brief / BusinessState** (yes); avoid inventing read models for one-off screens (no).
+* Derived reporting/search/projection data must never become the transactional source of truth.
 * Always apply tenant and authorization filters to read models.
-* Paginate large datasets.
+* Paginate large datasets; index list/projection queries by `(tenantId, …)`.
 * Avoid loading entire tables into memory.
+* Ban N+1 queries on list and detail hot paths.
 
 ---
 
@@ -724,13 +725,38 @@ Avoid inconsistent response structures without a documented reason.
 # Events
 
 * Events represent facts that have occurred.
-* Use explicit event names.
-* Include sufficient metadata for tracing and correlation.
-* Do not expose unnecessary database implementation details.
-* Event consumers must tolerate duplicate delivery.
+* Use explicit event names and include `tenantId`, correlation ids, and a schema version when payloads evolve.
+* Emit outbox events in the **same database transaction** as the domain mutation.
+* Keep payloads small (ids + essentials); do not expose unnecessary database implementation details.
+* Event consumers must tolerate duplicate delivery and be independently testable.
 * Do not assume exactly-once delivery.
 * Use the Outbox Pattern where reliable publication is required.
-* Event handlers must be independently testable.
+* Fan-out may include search, notifications, BusinessState projections, and automation.
+
+# Projections / BusinessState
+
+* Projections are derived read models; they must be rebuildable from source truth.
+* Upsert by natural key including `tenantId`.
+* Index projection queries by `(tenantId, …)`.
+* Never write ledger money, tax, or stock balances from projection code — only aggregate domain truth.
+* Provide a rebuild/backfill command for each projection family.
+* Use projections for attention, Daily Brief, and AI context assembly — not for inventing new “screens of reports.”
+
+# Automation
+
+* Automation/workflows belong behind a clear module boundary (`modules/workflows` and/or automation consumers).
+* Pattern: event → condition → reasoning → action → result → outcome.
+* Every mutating action calls existing domain use cases with the same authz as the UI.
+* Require idempotency keys for sends and posts.
+* Record outcomes for learning hooks.
+* First vertical: collections (unless progress-tracker says otherwise).
+
+# Autonomy metadata
+
+* Tools and automatable actions declare autonomy level L0–L4.
+* L3 uses the existing confirm-token path.
+* L4 requires explicit tenant policy + thresholds.
+* L5 is forbidden.
 
 ---
 
@@ -769,6 +795,7 @@ Do not allow individual business modules to become coupled to a specific AI prov
 * Multi-provider later means another `@ai-sdk/*` package on the chat route — not a resurrected fetch adapter under `lib/ai`.
 * Never import `ai` or `@ai-sdk/*` from `modules/ai/domain`, tool implementations, or schemas. SDK types stay in the route, `lib/ai/model.ts`, `lib/ai/assistant-sdk-tools.ts`, and client hooks.
 * Misconfiguration surfaces as `AiConfigError`; provider failures as `AiProviderError` (or SDK errors mapped by `describeAssistantFailure`). Business pages must keep working when either is thrown (invariant 33).
+* Assemble model context from trusted identity → BusinessState/attention summaries (when present) → typed tool facts → sanitized conversation text. Do not dump raw multi-table query results into prompts.
 
 ## Tool Definition
 
