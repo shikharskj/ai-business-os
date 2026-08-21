@@ -21,6 +21,7 @@ import {
   projectionFamiliesForEvent,
   rebuildBusinessStateProjections,
 } from "@/modules/business-state";
+import { createMemoryAttentionQueueRepository } from "@/modules/business-state/infrastructure/memory-attention-repository";
 import { cashPositionToDto } from "@/modules/business-state/application/dto";
 import { createMemoryCatalogRepository } from "@/modules/catalog";
 import {
@@ -237,6 +238,7 @@ describe("cash position model (post-mvp 03)", () => {
       accounts,
       journals,
       projections: createMemoryBusinessStateProjectionRepository(),
+      attention: createMemoryAttentionQueueRepository(),
       families: ["cashPosition"],
     });
     expect(rebuilt.cashPosition!.total.currency).toBe("USD");
@@ -319,6 +321,7 @@ describe("cash position model (post-mvp 03)", () => {
       accounts,
       journals,
       projections,
+      attention: createMemoryAttentionQueueRepository(),
       families: ["cashPosition"],
     });
     expect(
@@ -396,6 +399,7 @@ describe("cash position model (post-mvp 03)", () => {
       accounts,
       journals,
       projections,
+      attention: createMemoryAttentionQueueRepository(),
     });
 
     expect(toMajorString(rebuilt.receivablesRisk!.totalOutstanding)).toBe(
@@ -434,6 +438,7 @@ describe("cash position model (post-mvp 03)", () => {
       accounts,
       journals,
       projections,
+      attention: createMemoryAttentionQueueRepository(),
       families: ["cashPosition"],
       markRebuilt: true,
     });
@@ -490,6 +495,7 @@ describe("cash position model (post-mvp 03)", () => {
         accounts,
         journals,
         projections,
+        attention: createMemoryAttentionQueueRepository(),
         async resolveTenantContext(tenantId) {
           if (tenantId !== "tenant-a") return null;
           return {

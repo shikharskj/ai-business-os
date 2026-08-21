@@ -16,6 +16,7 @@ import {
   rebuildBusinessStateProjections,
   SALES_MOMENTUM_WINDOW_DAYS,
 } from "@/modules/business-state";
+import { createMemoryAttentionQueueRepository } from "@/modules/business-state/infrastructure/memory-attention-repository";
 import { createMemoryCatalogRepository } from "@/modules/catalog";
 import { createMemoryInventoryRepository } from "@/modules/inventory";
 import { createMemoryPaymentRepository } from "@/modules/payments";
@@ -146,6 +147,7 @@ describe("business state projections (post-mvp 02)", () => {
       inventory: createMemoryInventoryRepository(),
       ...(await seededAccounting()),
       projections,
+      attention: createMemoryAttentionQueueRepository(),
       markRebuilt: true,
     });
 
@@ -202,6 +204,7 @@ describe("business state projections (post-mvp 02)", () => {
       inventory: createMemoryInventoryRepository(),
       ...(await seededAccounting()),
       projections,
+      attention: createMemoryAttentionQueueRepository(),
       families: ["salesMomentum"],
     });
 
@@ -240,6 +243,7 @@ describe("business state projections (post-mvp 02)", () => {
         inventory: createMemoryInventoryRepository(),
         ...(await seededAccounting()),
         projections,
+        attention: createMemoryAttentionQueueRepository(),
         async resolveTenantContext(tenantId) {
           if (tenantId !== "tenant-a") return null;
           return {
@@ -306,6 +310,7 @@ describe("business state projections (post-mvp 02)", () => {
       inventory: createMemoryInventoryRepository(),
       ...(await seededAccounting()),
       projections,
+      attention: createMemoryAttentionQueueRepository(),
     } as const;
 
     const first = await rebuildBusinessStateProjections(deps);
@@ -484,6 +489,7 @@ describe("business state projections (post-mvp 02)", () => {
         inventory: createMemoryInventoryRepository(),
         ...(await seededAccounting()),
         projections,
+        attention: createMemoryAttentionQueueRepository(),
         async resolveTenantContext(tenantId) {
           if (tenantId !== "tenant-a") return null;
           return {

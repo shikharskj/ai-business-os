@@ -10,7 +10,9 @@ import type { PaymentRepository, SupplierPaymentRepository } from "@/modules/pay
 import type { PurchasesRepository } from "@/modules/purchases";
 import type { SalesRepository } from "@/modules/sales";
 import type { AccountRepository, JournalRepository } from "@/modules/accounting";
+import type { AttentionQueueRepository } from "@/modules/business-state/domain/attention-repository";
 import type { AuditRepository } from "@/modules/shared-kernel/audit";
+import type { OutboxRepository } from "@/modules/shared-kernel/outbox";
 import type { MembershipRole } from "@/modules/tenant/domain/types";
 
 export const AI_TOOL_NAMES = [
@@ -48,6 +50,9 @@ export type AiToolRepositories = {
   journals: JournalRepository;
   /** Delivery for the confirmed payment-reminder action (spec 28). */
   notifications: NotificationRepository;
+  /** Attention outcomes for reminder proposed/sent (spec 04). */
+  attention: AttentionQueueRepository;
+  outbox: OutboxRepository;
 };
 
 /**

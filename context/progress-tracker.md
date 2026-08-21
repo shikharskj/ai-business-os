@@ -9,9 +9,9 @@ This file is the **single source of truth for implementation progress**. The AI 
 ## Current Phase
 
 * **Phase:** Post-MVP — Business Intelligence Spine (R1)
-* **Status:** Ready — next `04-attention-queue.md`
+* **Status:** Ready — next `05-daily-brief-ui.md`
 * **Active roadmap:** [`context/product-roadmap.md`](product-roadmap.md)
-* **Active specs:** [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) — next: `04-attention-queue.md`
+* **Active specs:** [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) — next: `05-daily-brief-ui.md`
 * **MVP archive:** [`context/feature-specs-mvp/`](feature-specs-mvp/)
 * **Deferred horizon:** [`context/future-scope.md`](future-scope.md) (do not schedule as current Next)
 * **Launch trust:** MVP `29` / `30` deferred until after Post-MVP + future-scope (not parallel)
@@ -38,7 +38,7 @@ Guardian (R6) → AI Ops (R7) — specs 16–17
 
 North star: an AI-native OS for Indian SMEs that records correctly, understands continuously, tells the owner what matters, and automates routine work under autonomy L0–L4.
 
-**Next implementation unit:** `context/feature-specs-post-mvp/04-attention-queue.md`. Do not start R5 (`12`–`15`) before R2–R4 unless a metric pull is recorded here. Do not start MVP `29`/`30` until launch readiness.
+**Next implementation unit:** `context/feature-specs-post-mvp/05-daily-brief-ui.md`. Do not start R5 (`12`–`15`) before R2–R4 unless a metric pull is recorded here. Do not start MVP `29`/`30` until launch readiness.
 
 The priority is **correctness, attention quality, and automation under guardrails** — not feature parity with billing ERPs.
 
@@ -92,7 +92,7 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 | Testing (`29`)        | Deferred until launch |
 | Security hardening (`30`) | Deferred until launch |
 | Production deployment | Not Started |
-| Intelligence Spine (R1) | In Progress (`03` done; next `04`) |
+| Intelligence Spine (R1) | In Progress (`04` done; next `05`) |
 | Operator / Daily Brief (R2) | Not Started |
 | Copilot Depth (R3)    | Not Started |
 | Automation Engine (R4)| Not Started |
@@ -103,6 +103,13 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 ---
 
 # Completed
+
+* **Attention queue (`04-attention-queue.md`):**
+  * Tenant-scoped `AttentionItem` projection (overdue receivable, low stock, idle SENT/ACCEPTED quotation) with ranked severity, href, optional money fact, OPEN/DISMISSED. Migration `20260822060000_add_attention_queue`.
+  * Rebuild from domain truth (`rebuildBusinessStateProjections` family `attentionQueue`); outbox consumer + scheduled overdue scan refresh the queue. Dismiss is preserved across rebuilds; resolved issues drop so a later recurrence can surface.
+  * APIs: `GET /api/business-state/attention` (open, ranked) and `POST /api/business-state/attention/dismiss` (idempotent). Authz `report:read`. Dismiss emits `AttentionDismissed` and does not mutate invoices or stock. `GET /api/business-state` includes `attention.openCount`.
+  * Outcome hooks (`AutomationOutcome` + `AutomationOutcomeRecorded`): `ATTENTION_DISMISSED`, `REMINDER_PROPOSED` / `REMINDER_SENT` from confirmed payment reminders, `PAID_AFTER_REMINDER` when a reminded invoice is paid.
+  * Tests: `tests/business-state/attention-queue.test.ts`. Next: `05-daily-brief-ui.md`.
 
 * **Cash position model (`03-cash-position-model.md`):**
   * Cash = ledger balances of designated COA accounts Cash (`1000`) and Bank (`1010`). Payment methods map on posting: CASH → Cash; UPI / bank transfer / card / cheque → Bank.
@@ -398,8 +405,8 @@ Nothing in progress. See **Next Up**.
 
 **Active product work** follows [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) one numbered file at a time.
 
-1. **Next implementable spec:** [`04-attention-queue.md`](feature-specs-post-mvp/04-attention-queue.md)
-2. Then `05`–`07` (brief, operator, copilot) → `08`–`11` (automation)
+1. **Next implementable spec:** [`05-daily-brief-ui.md`](feature-specs-post-mvp/05-daily-brief-ui.md)
+2. Then `06`–`07` (operator, copilot) → `08`–`11` (automation)
 3. Specs `12`–`15` (R5) only after R2–R4 unless a metric pull is recorded here
 4. Then `16` Guardian → `17` AI Operations
 5. **Not now:** [`future-scope.md`](future-scope.md); MVP `29`/`30` until launch after Post-MVP + future-scope

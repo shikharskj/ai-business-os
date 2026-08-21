@@ -19,9 +19,11 @@ import {
   createMemoryJournalRepository,
 } from "@/modules/accounting";
 import { createMemoryAuditRepository } from "@/modules/shared-kernel/audit";
+import { createMemoryOutboxRepository } from "@/modules/shared-kernel/outbox";
 import { businessDate } from "@/modules/shared-kernel/dates";
 import { money } from "@/modules/shared-kernel/money";
 import type { MembershipRole } from "@/modules/tenant/domain/types";
+import { createMemoryAttentionQueueRepository } from "@/modules/business-state/infrastructure/memory-attention-repository";
 
 export const TENANT_A = "tenant-a";
 export const TENANT_B = "tenant-b";
@@ -240,6 +242,8 @@ export function toolContext(options?: {
       accounts: createMemoryAccountRepository(),
       journals: createMemoryJournalRepository(),
       notifications,
+      attention: createMemoryAttentionQueueRepository(),
+      outbox: createMemoryOutboxRepository(),
     },
     audit,
     auditRecords: audit.records,

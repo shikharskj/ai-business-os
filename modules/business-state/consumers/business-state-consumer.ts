@@ -4,10 +4,15 @@ import type {
 } from "@/modules/events/domain/types";
 import { projectionFamiliesForEvent } from "@/modules/business-state/application/event-families";
 import {
+  invoiceIdsFromPaymentPayload,
+  recordPaidAfterReminderOutcomes,
+} from "@/modules/business-state/application/record-paid-after-reminder";
+import {
   rebuildBusinessStateProjections,
   type RebuildBusinessStateDeps,
 } from "@/modules/business-state/application/rebuild";
 import type { ProjectionFamily } from "@/modules/business-state/domain/types";
+import type { OutboxRepository } from "@/modules/shared-kernel/outbox";
 
 export const BUSINESS_STATE_CONSUMER_NAME = "business-state";
 
@@ -29,6 +34,7 @@ export type BusinessStateConsumerDeps = Omit<
   resolveTenantContext(
     tenantId: string
   ): Promise<BusinessStateConsumerTenantContext | null>;
+  outbox?: OutboxRepository;
 };
 
 /**
@@ -66,6 +72,19 @@ export function createBusinessStateOutboxConsumer(
       return { handled: false };
     }
 
+    for (const event of events) {
+      if (event.eventType !== "PaymentReceived") continue;
+      const invoiceIds = invoiceIdsFromPaymentPayload(event.payload);
+      if (invoiceIds.length === 0) continue;
+      await recordPaidAfterReminderOutcomes({
+        tenantId,
+        paymentId: event.aggregateId,
+        invoiceIds,
+        attention: deps.attention,
+        outbox: deps.outbox,
+      });
+    }
+
     await rebuildBusinessStateProjections({
       tenantId,
       timezone: context.timezone,
@@ -78,6 +97,7 @@ export function createBusinessStateOutboxConsumer(
       accounts: deps.accounts,
       journals: deps.journals,
       projections: deps.projections,
+      attention: deps.attention,
       families,
     });
 

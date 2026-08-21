@@ -1,3 +1,4 @@
+import type { AttentionQueueRepository } from "@/modules/business-state/domain/attention-repository";
 import type { BusinessStateProjectionRepository } from "@/modules/business-state/domain/projection-repository";
 import type { BusinessStateSummary } from "@/modules/business-state/domain/types";
 
@@ -8,14 +9,18 @@ import type { BusinessStateSummary } from "@/modules/business-state/domain/types
 export async function getBusinessStateSummary(input: {
   tenantId: string;
   projections: BusinessStateProjectionRepository;
+  attention?: AttentionQueueRepository;
 }): Promise<BusinessStateSummary> {
-  const [meta, receivablesRisk, inventoryRisk, salesMomentum, cashPosition] =
+  const [meta, receivablesRisk, inventoryRisk, salesMomentum, cashPosition, openCount] =
     await Promise.all([
       input.projections.getMeta(input.tenantId),
       input.projections.getReceivablesRisk(input.tenantId),
       input.projections.getInventoryRisk(input.tenantId),
       input.projections.getSalesMomentum(input.tenantId),
       input.projections.getCashPosition(input.tenantId),
+      input.attention
+        ? input.attention.countOpen(input.tenantId)
+        : Promise.resolve(0),
     ]);
 
   if (meta && meta.tenantId !== input.tenantId) {
@@ -40,5 +45,6 @@ export async function getBusinessStateSummary(input: {
     inventoryRisk,
     salesMomentum,
     cashPosition,
+    attention: { openCount },
   };
 }
