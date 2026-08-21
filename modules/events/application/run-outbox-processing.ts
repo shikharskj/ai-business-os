@@ -50,7 +50,9 @@ export async function runOutboxProcessing(
 
   let overdueChecked = 0;
   if (input.includeOverdueCheck !== false) {
-    const tenantIds = new Set<string>();
+    // Match legacy processOutboxNotifications: union tenants from the drained
+    // outbox batch with explicit tenantId / overdueTenantIds (cron sample).
+    const tenantIds = new Set<string>(dispatch.tenantIdsTouched);
     if (input.tenantId) {
       tenantIds.add(input.tenantId);
     }

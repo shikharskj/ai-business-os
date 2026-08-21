@@ -191,4 +191,78 @@ describe("typed domain events (post-mvp 01)", () => {
     expect(retry.totalSucceeded).toBe(1);
     expect(outbox.receipts.get("evt-fail")?.has("flaky")).toBe(true);
   });
+
+  it("returns tenantIdsTouched from the drained outbox batch", async () => {
+    const outbox = createMemoryOutboxDispatchRepository([
+      event({
+        id: "evt-a",
+        tenantId: "tenant-outside-sample",
+        eventType: "SalesInvoicePosted",
+        aggregateId: "inv-a",
+      }),
+      event({
+        id: "evt-b",
+        tenantId: "tenant-b",
+        eventType: "PaymentReceived",
+        aggregateId: "pay-b",
+        aggregateType: "CustomerPayment",
+      }),
+    ]);
+
+    registerOutboxConsumer(createProjectionStubConsumer());
+    const result = await processOutboxConsumers({ outbox });
+
+    expect(result.tenantIdsTouched.sort()).toEqual(
+      ["tenant-b", "tenant-outside-sample"].sort()
+    );
+  });
+
+  it("runOutboxProcessing overdue-scans tenants from the outbox batch, not only the cron sample", async () => {
+    const { runOutboxProcessing } = await import(
+      "@/modules/events/application/run-outbox-processing"
+    );
+    const notifications = createMemoryNotificationRepository();
+    const outbox = createMemoryOutboxDispatchRepository([
+      event({
+        id: "evt-outside",
+        tenantId: "tenant-outside-sample",
+        eventType: "CustomerCreated",
+        aggregateId: "cust-1",
+        aggregateType: "Customer",
+        payload: {},
+      }),
+    ]);
+
+    const result = await runOutboxProcessing({
+      outbox,
+      channel: createInAppChannel(notifications),
+      context: createMemoryNotificationContextRepository({
+        overdue: {
+          "tenant-outside-sample": [
+            {
+              id: "inv-overdue",
+              number: "INV/1",
+              customerName: "Acme",
+              dueOn: "2026-01-01",
+            },
+          ],
+          "tenant-in-sample": [
+            {
+              id: "inv-sample",
+              number: "INV/2",
+              customerName: "Beta",
+              dueOn: "2026-01-01",
+            },
+          ],
+        },
+      }),
+      // Cron first-50 sample does not include the tenant that had events.
+      overdueTenantIds: ["tenant-in-sample"],
+      includeOverdueCheck: true,
+    });
+
+    expect(result.overdueChecked).toBe(2);
+    const types = notifications.records.map((row) => row.resourceId).sort();
+    expect(types).toEqual(["inv-overdue", "inv-sample"]);
+  });
 });

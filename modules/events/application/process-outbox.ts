@@ -29,6 +29,8 @@ export type ProcessOutboxConsumersResult = {
   totalAttempted: number;
   totalSucceeded: number;
   totalFailed: number;
+  /** Tenants that had outbox events in this pass (for overdue / follow-up scans). */
+  tenantIdsTouched: string[];
 };
 
 /**
@@ -46,6 +48,7 @@ export async function processOutboxConsumers(
   let totalAttempted = 0;
   let totalSucceeded = 0;
   let totalFailed = 0;
+  const tenantIdsTouched = new Set<string>();
 
   for (const consumer of consumers) {
     const consumerStats: ConsumerProcessStats = {
@@ -63,6 +66,8 @@ export async function processOutboxConsumers(
     });
 
     for (const event of events) {
+      tenantIdsTouched.add(event.tenantId);
+
       if (!consumerAcceptsEvent(consumer, event)) {
         await input.outbox.recordReceipt({
           eventId: event.id,
@@ -115,6 +120,7 @@ export async function processOutboxConsumers(
     totalAttempted,
     totalSucceeded,
     totalFailed,
+    tenantIdsTouched: [...tenantIdsTouched],
   };
 }
 
