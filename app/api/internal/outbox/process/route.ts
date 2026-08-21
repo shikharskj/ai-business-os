@@ -45,7 +45,9 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     if (Array.isArray(body.tenantIds)) {
-      overdueTenantIds = body.tenantIds;
+      overdueTenantIds = body.tenantIds
+        .filter((id: unknown): id is string => typeof id === "string" && id.length > 0)
+        .slice(0, 50);
     }
   } catch {
     // No body or invalid JSON

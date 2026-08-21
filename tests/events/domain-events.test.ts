@@ -58,6 +58,18 @@ describe("typed domain events (post-mvp 01)", () => {
     expect(payload.number).toBe("RCPT/1");
   });
 
+  it("rejects null, array, and primitive event payloads", () => {
+    expect(() => parseDomainEventPayload("SalesInvoicePosted", null)).toThrow(
+      /plain object/
+    );
+    expect(() => parseDomainEventPayload("SalesInvoicePosted", [])).toThrow(
+      /plain object/
+    );
+    expect(() => parseDomainEventPayload("SalesInvoicePosted", "x")).toThrow(
+      /plain object/
+    );
+  });
+
   it("persistDomainEvent writes through outbox with validated payload", async () => {
     const outbox = createMemoryOutboxRepository();
     await persistDomainEvent(outbox, {

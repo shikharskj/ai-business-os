@@ -180,11 +180,17 @@ export function parseDomainEventPayload(
   eventType: string,
   payload: unknown
 ): Record<string, unknown> {
-  const base = domainEventPayloadSchema.parse(
-    payload && typeof payload === "object" && !Array.isArray(payload)
-      ? payload
-      : {}
-  );
+  if (
+    payload === null ||
+    typeof payload !== "object" ||
+    Array.isArray(payload)
+  ) {
+    throw new Error(
+      `Domain event payload for "${eventType}" must be a plain object`
+    );
+  }
+
+  const base = domainEventPayloadSchema.parse(payload);
   if (!isDomainEventType(eventType)) {
     return base;
   }
@@ -192,7 +198,7 @@ export function parseDomainEventPayload(
   if (!schema) {
     return base;
   }
-  return schema.parse(base);
+  return schema.parse(payload);
 }
 
 export type DomainOutboxEventInput = {
