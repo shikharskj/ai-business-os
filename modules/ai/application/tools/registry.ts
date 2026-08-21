@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { roleHasPermission } from "@/lib/security/permissions";
 import { businessMetricsTool } from "@/modules/ai/application/tools/business-metrics";
+import { cashPositionTool } from "@/modules/ai/application/tools/cash-position";
 import { expensesSummaryTool } from "@/modules/ai/application/tools/expenses-summary";
 import { lowStockTool } from "@/modules/ai/application/tools/low-stock";
 import { overdueInvoicesTool } from "@/modules/ai/application/tools/overdue-invoices";
@@ -27,6 +28,7 @@ export const AI_TOOLS: readonly AiToolDefinition[] = [
   overdueInvoicesTool,
   lowStockTool,
   businessMetricsTool,
+  cashPositionTool,
   paymentRemindersTool,
 ];
 

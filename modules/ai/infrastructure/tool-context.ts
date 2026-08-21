@@ -12,6 +12,10 @@ import { prismaPaymentRepository } from "@/modules/payments/infrastructure/prism
 import { prismaSupplierPaymentRepository } from "@/modules/payments/infrastructure/prisma-supplier-payments-repository";
 import { prismaPurchasesRepository } from "@/modules/purchases/infrastructure/prisma-purchases-repository";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
+import {
+  createPrismaAccountRepository,
+  createPrismaJournalRepository,
+} from "@/modules/accounting/infrastructure/prisma-accounting-repositories";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 
 /**
@@ -43,6 +47,8 @@ export async function createAiToolContext(options?: {
       catalog: prismaCatalogRepository,
       inventory: prismaInventoryRepository,
       party: prismaPartyRepository,
+      accounts: createPrismaAccountRepository(prisma),
+      journals: createPrismaJournalRepository(prisma),
       notifications: createPrismaNotificationRepository(prisma),
     },
     audit: createPrismaAuditRepository(prisma),

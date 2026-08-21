@@ -62,7 +62,7 @@ Every spec uses this shape:
 | ---- | ---- | ------- | ------ |
 | 01 | Typed domain event catalog + outbox consumer registry | R1 | Complete |
 | 02 | BusinessState projections + rebuild | R1 | Complete |
-| 03 | Cash position model (ledger cash/bank) | R1 | Not Started |
+| 03 | Cash position model (ledger cash/bank) | R1 | Complete |
 | 04 | AttentionQueue + minimal outcome hooks | R1 | Not Started |
 | 05 | Needs attention / Daily Brief UI (deterministic) | R2 | Not Started |
 | 06 | Operator recommendations (L0–L2) on brief | R2 | Not Started |
@@ -78,4 +78,4 @@ Every spec uses this shape:
 | 16 | Business Guardian | R6 | Not Started |
 | 17 | AI Operations / document → prepared purchase | R7 | Not Started |
 
-**Next implementable spec:** `03-cash-position-model.md`
+**Next implementable spec:** `04-attention-queue.md`

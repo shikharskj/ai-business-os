@@ -256,12 +256,46 @@ export const paymentRemindersOutputSchema = z
   })
   .strict();
 
+const moneyFactViewSchema = moneyViewSchema
+  .extend({
+    scale: z.number().int().nonnegative(),
+    factId: z.string().min(1),
+  })
+  .strict();
+
+/**
+ * Ledger cash/bank balances. The model must use this tool for cash questions —
+ * never unpaid invoices or receipts-in-period as a cash substitute.
+ */
+export const cashPositionInputSchema = z.object({}).strict();
+
+export const cashPositionOutputSchema = z
+  .object({
+    total: moneyFactViewSchema,
+    cash: moneyFactViewSchema,
+    bank: moneyFactViewSchema,
+    currency: z.string().length(3),
+    scale: z.number().int().nonnegative(),
+    accounts: z.array(
+      z
+        .object({
+          accountCode: z.string().min(1),
+          accountName: z.string().min(1),
+          balance: moneyFactViewSchema,
+        })
+        .strict()
+    ),
+    computedAt: z.string().min(1),
+  })
+  .strict();
+
 export type SalesSummaryOutput = z.infer<typeof salesSummaryOutputSchema>;
 export type ExpensesSummaryOutput = z.infer<typeof expensesSummaryOutputSchema>;
 export type ReceivablesOutput = z.infer<typeof receivablesOutputSchema>;
 export type OverdueInvoicesOutput = z.infer<typeof overdueInvoicesOutputSchema>;
 export type LowStockOutput = z.infer<typeof lowStockOutputSchema>;
 export type BusinessMetricsOutput = z.infer<typeof businessMetricsOutputSchema>;
+export type CashPositionOutput = z.infer<typeof cashPositionOutputSchema>;
 export type PaymentRemindersInput = z.infer<typeof paymentRemindersInputSchema>;
 export type PaymentRemindersOutput = z.infer<
   typeof paymentRemindersOutputSchema

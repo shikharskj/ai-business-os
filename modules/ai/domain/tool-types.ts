@@ -9,6 +9,7 @@ import type { PartyRepository } from "@/modules/party";
 import type { PaymentRepository, SupplierPaymentRepository } from "@/modules/payments";
 import type { PurchasesRepository } from "@/modules/purchases";
 import type { SalesRepository } from "@/modules/sales";
+import type { AccountRepository, JournalRepository } from "@/modules/accounting";
 import type { AuditRepository } from "@/modules/shared-kernel/audit";
 import type { MembershipRole } from "@/modules/tenant/domain/types";
 
@@ -19,6 +20,7 @@ export const AI_TOOL_NAMES = [
   "get_overdue_invoices",
   "get_low_stock_products",
   "get_business_metrics",
+  "get_cash_position",
   "send_payment_reminders",
 ] as const;
 
@@ -41,6 +43,9 @@ export type AiToolRepositories = {
   catalog: CatalogRepository;
   inventory: InventoryRepository;
   party: PartyRepository;
+  /** Ledger cash/bank reads for get_cash_position (spec 03). */
+  accounts: AccountRepository;
+  journals: JournalRepository;
   /** Delivery for the confirmed payment-reminder action (spec 28). */
   notifications: NotificationRepository;
 };

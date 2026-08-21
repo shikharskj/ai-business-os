@@ -106,6 +106,7 @@ model Business {
   receivablesRiskState ReceivablesRiskState?
   inventoryRiskState InventoryRiskState?
   salesMomentumState SalesMomentumState?
+  cashPositionState CashPositionState?
 
   @@map("businesses")
 }
@@ -256,6 +257,23 @@ model SalesMomentumState {
   business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("sales_momentum_state")
+}
+
+/// Derived cash position — ledger balances of designated cash/bank COA accounts.
+/// Never unpaid invoices. Rebuildable from journals.
+model CashPositionState {
+  tenantId     String   @id
+  cashBalance  Decimal  @db.Decimal(18, 2)
+  bankBalance  Decimal  @db.Decimal(18, 2)
+  total        Decimal  @db.Decimal(18, 2)
+  currency     String   @default("INR")
+  scale        Int      @default(2)
+  computedAt   DateTime
+  updatedAt    DateTime @updatedAt
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("cash_position_state")
 }
 
 model Notification {

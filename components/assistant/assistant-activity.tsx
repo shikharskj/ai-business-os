@@ -26,6 +26,7 @@ const TOOL_LABELS: Record<string, string> = {
   get_expenses_summary: "Checking expenses",
   get_low_stock_products: "Checking stock levels",
   get_business_metrics: "Checking business metrics",
+  get_cash_position: "Checking cash position",
   send_payment_reminders: "Preparing payment reminders",
 };
 

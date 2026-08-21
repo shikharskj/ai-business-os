@@ -19,8 +19,17 @@ const SALES_EVENTS: ReadonlySet<string> = new Set<DomainEventType>([
   "SalesInvoiceCancelled",
 ]);
 
+const CASH_EVENTS: ReadonlySet<string> = new Set<DomainEventType>([
+  "PaymentReceived",
+  "PaymentMade",
+  "ExpenseRecorded",
+  "JournalPosted",
+  "JournalReversed",
+]);
+
 /**
  * Maps a catalog event to projection families that must be rebuilt from truth.
+ * Sales invoices do not move cash — only payment/expense/journal events do.
  */
 export function projectionFamiliesForEvent(
   eventType: string
@@ -34,6 +43,9 @@ export function projectionFamiliesForEvent(
   }
   if (SALES_EVENTS.has(eventType)) {
     families.push("salesMomentum");
+  }
+  if (CASH_EVENTS.has(eventType)) {
+    families.push("cashPosition");
   }
   return families;
 }

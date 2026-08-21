@@ -3,6 +3,8 @@ export type {
   ReceivablesRiskSnapshot,
   InventoryRiskSnapshot,
   SalesMomentumSnapshot,
+  CashPositionSnapshot,
+  CashPositionAccountBalance,
   BusinessStateMetaSnapshot,
   ProjectionFamily,
 } from "@/modules/business-state/domain/types";
@@ -21,9 +23,14 @@ export {
   computeSalesMomentum,
   type RebuildBusinessStateDeps,
 } from "@/modules/business-state/application/rebuild";
+export { computeCashPosition } from "@/modules/business-state/application/compute-cash-position";
+export { getCashPosition } from "@/modules/business-state/application/get-cash-position";
 export { getBusinessStateSummary } from "@/modules/business-state/application/get-business-state";
 export { projectionFamiliesForEvent } from "@/modules/business-state/application/event-families";
-export { businessStateSummaryToDto } from "@/modules/business-state/application/dto";
+export {
+  businessStateSummaryToDto,
+  cashPositionToDto,
+} from "@/modules/business-state/application/dto";
 export {
   createBusinessStateOutboxConsumer,
   BUSINESS_STATE_CONSUMER_NAME,

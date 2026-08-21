@@ -1,5 +1,6 @@
 import type {
   BusinessStateMetaSnapshot,
+  CashPositionSnapshot,
   InventoryRiskSnapshot,
   ReceivablesRiskSnapshot,
   SalesMomentumSnapshot,
@@ -13,12 +14,14 @@ export type CommitBusinessStateSnapshotsInput = {
   receivablesRisk?: ReceivablesRiskSnapshot;
   inventoryRisk?: InventoryRiskSnapshot;
   salesMomentum?: SalesMomentumSnapshot;
+  cashPosition?: CashPositionSnapshot;
 };
 
 export type BusinessStateProjectionRepository = {
   upsertReceivablesRisk(snapshot: ReceivablesRiskSnapshot): Promise<void>;
   upsertInventoryRisk(snapshot: InventoryRiskSnapshot): Promise<void>;
   upsertSalesMomentum(snapshot: SalesMomentumSnapshot): Promise<void>;
+  upsertCashPosition(snapshot: CashPositionSnapshot): Promise<void>;
   touchMeta(input: {
     tenantId: string;
     schemaVersion: number;
@@ -35,5 +38,6 @@ export type BusinessStateProjectionRepository = {
   getReceivablesRisk(tenantId: string): Promise<ReceivablesRiskSnapshot | null>;
   getInventoryRisk(tenantId: string): Promise<InventoryRiskSnapshot | null>;
   getSalesMomentum(tenantId: string): Promise<SalesMomentumSnapshot | null>;
+  getCashPosition(tenantId: string): Promise<CashPositionSnapshot | null>;
   getMeta(tenantId: string): Promise<BusinessStateMetaSnapshot | null>;
 };

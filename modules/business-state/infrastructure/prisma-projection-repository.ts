@@ -6,10 +6,14 @@ import type {
 } from "@/modules/business-state/domain/projection-repository";
 import type {
   BusinessStateMetaSnapshot,
+  CashPositionSnapshot,
   InventoryRiskSnapshot,
   ReceivablesRiskSnapshot,
   SalesMomentumSnapshot,
 } from "@/modules/business-state/domain/types";
+import { CASH_POSITION_ACCOUNT_CODES } from "@/modules/accounting/domain/cash-accounts";
+import { MVP_CHART_OF_ACCOUNTS } from "@/modules/accounting/domain/chart";
+import { ACCOUNT_CODES } from "@/modules/accounting/domain/types";
 import { businessDate } from "@/modules/shared-kernel/dates";
 import {
   moneyFromPrismaDecimal,
@@ -22,6 +26,7 @@ type PrismaProjectionDelegateClient = Pick<
   | "receivablesRiskState"
   | "inventoryRiskState"
   | "salesMomentumState"
+  | "cashPositionState"
 >;
 
 type PrismaProjectionClient = PrismaProjectionDelegateClient &
@@ -134,6 +139,40 @@ async function writeSalesMomentum(
   return true;
 }
 
+async function writeCashPosition(
+  client: PrismaProjectionDelegateClient,
+  snapshot: CashPositionSnapshot
+): Promise<boolean> {
+  const existing = await client.cashPositionState.findUnique({
+    where: { tenantId: snapshot.tenantId },
+    select: { computedAt: true },
+  });
+  if (!shouldApplySnapshot(existing?.computedAt, snapshot.computedAt)) {
+    return false;
+  }
+  await client.cashPositionState.upsert({
+    where: { tenantId: snapshot.tenantId },
+    create: {
+      tenantId: snapshot.tenantId,
+      cashBalance: toDecimalForPrisma(snapshot.cashBalance),
+      bankBalance: toDecimalForPrisma(snapshot.bankBalance),
+      total: toDecimalForPrisma(snapshot.total),
+      currency: snapshot.currency,
+      scale: snapshot.scale,
+      computedAt: snapshot.computedAt,
+    },
+    update: {
+      cashBalance: toDecimalForPrisma(snapshot.cashBalance),
+      bankBalance: toDecimalForPrisma(snapshot.bankBalance),
+      total: toDecimalForPrisma(snapshot.total),
+      currency: snapshot.currency,
+      scale: snapshot.scale,
+      computedAt: snapshot.computedAt,
+    },
+  });
+  return true;
+}
+
 async function writeMeta(
   client: PrismaProjectionDelegateClient,
   input: {
@@ -177,6 +216,11 @@ async function commitSnapshotsInClient(
       appliedFamilies += 1;
     }
   }
+  if (input.cashPosition) {
+    if (await writeCashPosition(client, input.cashPosition)) {
+      appliedFamilies += 1;
+    }
+  }
 
   if (appliedFamilies > 0 || input.rebuiltAt !== undefined) {
     await writeMeta(client, {
@@ -203,6 +247,10 @@ export function createPrismaBusinessStateProjectionRepository(
 
     async upsertSalesMomentum(snapshot) {
       await writeSalesMomentum(prisma, snapshot);
+    },
+
+    async upsertCashPosition(snapshot) {
+      await writeCashPosition(prisma, snapshot);
     },
 
     async touchMeta({ tenantId, schemaVersion, rebuiltAt }) {
@@ -234,6 +282,13 @@ export function createPrismaBusinessStateProjectionRepository(
         where: { tenantId },
       });
       return row ? mapSalesMomentum(row) : null;
+    },
+
+    async getCashPosition(tenantId) {
+      const row = await prisma.cashPositionState.findUnique({
+        where: { tenantId },
+      });
+      return row ? mapCashPosition(row) : null;
     },
 
     async getMeta(tenantId) {
@@ -305,6 +360,47 @@ function mapSalesMomentum(row: {
     salesTotal: moneyFromPrismaDecimal(row.salesTotal, row.currency),
     taxableTotal: moneyFromPrismaDecimal(row.taxableTotal, row.currency),
     currency: row.currency,
+    computedAt: row.computedAt,
+  };
+}
+
+function mapCashPosition(row: {
+  tenantId: string;
+  cashBalance: { toString(): string };
+  bankBalance: { toString(): string };
+  total: { toString(): string };
+  currency: string;
+  scale: number;
+  computedAt: Date;
+}): CashPositionSnapshot {
+  const cashBalance = moneyFromPrismaDecimal(
+    row.cashBalance,
+    row.currency,
+    row.scale
+  );
+  const bankBalance = moneyFromPrismaDecimal(
+    row.bankBalance,
+    row.currency,
+    row.scale
+  );
+  const total = moneyFromPrismaDecimal(row.total, row.currency, row.scale);
+  const nameFor = (code: string) =>
+    MVP_CHART_OF_ACCOUNTS.find((account) => account.code === code)?.name ??
+    code;
+
+  return {
+    tenantId: row.tenantId,
+    cashBalance,
+    bankBalance,
+    total,
+    currency: row.currency,
+    scale: row.scale,
+    accounts: CASH_POSITION_ACCOUNT_CODES.map((code) => ({
+      accountCode: code,
+      accountName: nameFor(code),
+      balance: code === ACCOUNT_CODES.CASH ? cashBalance : bankBalance,
+      factId: `cash-position:account:${code}`,
+    })),
     computedAt: row.computedAt,
   };
 }

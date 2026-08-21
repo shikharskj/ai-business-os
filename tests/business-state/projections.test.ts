@@ -20,6 +20,11 @@ import { createMemoryCatalogRepository } from "@/modules/catalog";
 import { createMemoryInventoryRepository } from "@/modules/inventory";
 import { createMemoryPaymentRepository } from "@/modules/payments";
 import { createMemorySalesRepository } from "@/modules/sales";
+import {
+  createMemoryAccountRepository,
+  createMemoryJournalRepository,
+  ensureChartOfAccounts,
+} from "@/modules/accounting";
 import type { SalesInvoice } from "@/modules/sales/domain/types";
 import { businessDate, todayInTimezone } from "@/modules/shared-kernel/dates";
 import { money, toMajorString } from "@/modules/shared-kernel/money";
@@ -88,6 +93,13 @@ function outboxEvent(
   };
 }
 
+async function seededAccounting(tenantId = "tenant-a") {
+  const accounts = createMemoryAccountRepository();
+  const journals = createMemoryJournalRepository();
+  await ensureChartOfAccounts({ tenantId, accountRepository: accounts });
+  return { accounts, journals };
+}
+
 describe("business state projections (post-mvp 02)", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -132,6 +144,7 @@ describe("business state projections (post-mvp 02)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      ...(await seededAccounting()),
       projections,
       markRebuilt: true,
     });
@@ -187,6 +200,7 @@ describe("business state projections (post-mvp 02)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      ...(await seededAccounting()),
       projections,
       families: ["salesMomentum"],
     });
@@ -224,6 +238,7 @@ describe("business state projections (post-mvp 02)", () => {
         payments: createMemoryPaymentRepository(),
         catalog: createMemoryCatalogRepository(),
         inventory: createMemoryInventoryRepository(),
+        ...(await seededAccounting()),
         projections,
         async resolveTenantContext(tenantId) {
           if (tenantId !== "tenant-a") return null;
@@ -289,6 +304,7 @@ describe("business state projections (post-mvp 02)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      ...(await seededAccounting()),
       projections,
     } as const;
 
@@ -420,6 +436,7 @@ describe("business state projections (post-mvp 02)", () => {
         payments: createMemoryPaymentRepository(),
         catalog: createMemoryCatalogRepository(),
         inventory: createMemoryInventoryRepository(),
+        ...(await seededAccounting()),
         projections,
         async resolveTenantContext(tenantId) {
           if (tenantId !== "tenant-a") return null;

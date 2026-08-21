@@ -4,6 +4,10 @@ import { createPrismaCatalogRepository } from "@/modules/catalog/infrastructure/
 import { createPrismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";
 import { createPrismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
 import { createPrismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
+import {
+  createPrismaAccountRepository,
+  createPrismaJournalRepository,
+} from "@/modules/accounting/infrastructure/prisma-accounting-repositories";
 import { createPrismaBusinessStateProjectionRepository } from "@/modules/business-state/infrastructure/prisma-projection-repository";
 import type { BusinessStateConsumerDeps } from "@/modules/business-state/consumers/business-state-consumer";
 
@@ -18,6 +22,8 @@ export function createPrismaBusinessStateConsumerDeps(
     payments: createPrismaPaymentRepository(prisma),
     catalog: createPrismaCatalogRepository(prisma),
     inventory: createPrismaInventoryRepository(prisma),
+    accounts: createPrismaAccountRepository(prisma),
+    journals: createPrismaJournalRepository(prisma),
     projections: createPrismaBusinessStateProjectionRepository(prisma),
     async resolveTenantContext(tenantId) {
       const business = await prisma.business.findUnique({

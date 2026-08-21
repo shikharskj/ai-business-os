@@ -43,6 +43,16 @@ export type JournalRepository = {
     tenantId: string,
     periodKey: string
   ): Promise<Array<Omit<TrialBalanceRow, "accountCode" | "accountName" | "accountType" | "normalBalance"> & { accountId: string }>>;
+  /**
+   * All-time debit/credit totals for the given accounts (tenant-scoped).
+   * Used to derive cash position from ledger truth, not from invoices.
+   */
+  accountTotals(
+    tenantId: string,
+    accountIds: string[]
+  ): Promise<
+    Array<{ accountId: string; debitTotal: Money; creditTotal: Money }>
+  >;
   findReversalOf(
     tenantId: string,
     originalJournalId: string
@@ -259,6 +269,36 @@ export function createMemoryJournalRepository(): JournalRepository & {
           continue;
         }
         for (const line of journal.lines) {
+          const current = byAccount.get(line.accountId) ?? {
+            debit: money(0n),
+            credit: money(0n),
+          };
+          byAccount.set(line.accountId, {
+            debit: addMoney(current.debit, line.debit),
+            credit: addMoney(current.credit, line.credit),
+          });
+        }
+      }
+      return [...byAccount.entries()].map(([accountId, totals]) => ({
+        accountId,
+        debitTotal: totals.debit,
+        creditTotal: totals.credit,
+      }));
+    },
+    async accountTotals(tenantId, accountIds) {
+      if (accountIds.length === 0) {
+        return [];
+      }
+      const wanted = new Set(accountIds);
+      const byAccount = new Map<string, { debit: Money; credit: Money }>();
+      for (const journal of journals) {
+        if (journal.tenantId !== tenantId) {
+          continue;
+        }
+        for (const line of journal.lines) {
+          if (!wanted.has(line.accountId)) {
+            continue;
+          }
           const current = byAccount.get(line.accountId) ?? {
             debit: money(0n),
             credit: money(0n),

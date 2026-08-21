@@ -26,6 +26,10 @@ import { createMemoryCatalogRepository } from "@/modules/catalog";
 import { createMemoryInventoryRepository } from "@/modules/inventory";
 import { createMemoryPaymentRepository } from "@/modules/payments";
 import { createMemorySalesRepository } from "@/modules/sales";
+import {
+  createMemoryAccountRepository,
+  createMemoryJournalRepository,
+} from "@/modules/accounting";
 
 function stubBusinessStateDeps(): BusinessStateConsumerDeps {
   return {
@@ -33,6 +37,8 @@ function stubBusinessStateDeps(): BusinessStateConsumerDeps {
     payments: createMemoryPaymentRepository(),
     catalog: createMemoryCatalogRepository(),
     inventory: createMemoryInventoryRepository(),
+    accounts: createMemoryAccountRepository(),
+    journals: createMemoryJournalRepository(),
     projections: createMemoryBusinessStateProjectionRepository(),
     async resolveTenantContext() {
       return {

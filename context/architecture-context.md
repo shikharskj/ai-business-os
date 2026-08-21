@@ -748,7 +748,33 @@ Rules:
 
 ## Cash model
 
-Cash position is defined from **ledger cash and bank account balances**. Payment methods (Cash, UPI, Bank Transfer, Card, Cheque) map into those accounts on posting. AI must not invent cash from invoice tables alone.
+Cash position is defined from **ledger cash and bank account balances**. Designated COA accounts:
+
+```text
+1000  Cash   (ASSET, debit-normal)
+1010  Bank   (ASSET, debit-normal)
+```
+
+Payment methods map into those accounts on posting (do not redesign journals):
+
+```text
+CASH                         → 1000 Cash
+UPI, BANK_TRANSFER, CARD, CHEQUE → 1010 Bank
+```
+
+Customer receipts debit cash/bank; supplier payments and expenses credit cash/bank. Sales invoices and purchase bills do **not** move cash.
+
+**Read path (the only cash path for AI/tools):**
+
+```text
+GET /api/business-state/cash     report:read   live ledger query (currency, scale, fact ids)
+GET /api/business-state          report:read   includes CashPosition projection
+get_cash_position tool           report:read   same getCashPosition query
+```
+
+AI must not invent cash from invoice tables, unpaid totals, or receipts-in-period. `get_business_metrics.receiptsInPeriod` is period movement, not cash on hand.
+
+Rebuild/backfill: `rebuildBusinessStateProjections` (family `cashPosition`) recomputes from journals. Outbox events `PaymentReceived`, `PaymentMade`, `ExpenseRecorded`, `JournalPosted`, `JournalReversed` refresh the projection.
 
 ---
 
@@ -1077,7 +1103,7 @@ get_expense_summary()
 get_gst_summary()
 ```
 
-Registered read tools (spec `27`):
+Registered read tools (spec `27`, cash in spec `03`):
 
 ```text
 get_sales_summary            report:read
@@ -1086,6 +1112,7 @@ get_outstanding_receivables report:read
 get_overdue_invoices        invoice:read
 get_low_stock_products      product:read
 get_business_metrics        report:read
+get_cash_position           report:read   ledger cash/bank only
 ```
 
 ## Action Tools
