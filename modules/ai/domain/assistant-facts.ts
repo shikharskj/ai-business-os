@@ -315,7 +315,7 @@ function reminderFacts(output: unknown): AiAssistantFact[] {
       key: `sent:${data.asOf}`,
       label: "Payment reminders sent",
       value: String(data.sentCount),
-      detail: `${data.requestedCount} requested · ${data.skippedCount} skipped, as of ${data.asOf}.`,
+      detail: `${data.requestedCount} requested · ${data.skippedCount} skipped · ${data.failedCount} failed, as of ${data.asOf}.`,
       href: "/app/sales/invoices",
     }),
   ];

@@ -72,12 +72,15 @@ export function runGenerativeUiMapper(input: {
       ? "No overdue invoices"
       : `${overview.overdueInvoiceCount} invoice${overview.overdueInvoiceCount === 1 ? "" : "s"} overdue`;
 
+  // Match Recent activity: include both invoice and expense lists. Period KPIs
+  // alone miss older expenses outside the selected range.
   const isEmpty =
     overview.revenue.amountMinor === 0n &&
     overview.expenses.amountMinor === 0n &&
     overview.receivables.amountMinor === 0n &&
     overview.payables.amountMinor === 0n &&
     overview.recentInvoices.length === 0 &&
+    overview.recentExpenses.length === 0 &&
     overview.alerts.length === 0;
 
   const insightComponents = input.anomalies.anomalies.slice(0, 4).map((a) => ({

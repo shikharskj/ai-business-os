@@ -47,13 +47,16 @@ function parseArguments(argumentsJson: string): unknown {
   }
 }
 
+type AiToolAuditOutcome = "started" | "success" | "denied" | "failed";
+
 async function recordInvocation(input: {
   context: AiToolContext;
   tool: AiToolDefinition | null;
   toolName: string;
-  outcome: "success" | "denied" | "failed";
+  outcome: AiToolAuditOutcome;
   errorCode?: string;
   durationMs: number;
+  startedAuditRecordId?: string;
 }): Promise<string> {
   const record = await input.context.audit.append({
     tenantId: input.context.tenantId,
@@ -70,6 +73,9 @@ async function recordInvocation(input: {
       policyVersion: AI_POLICY_VERSION,
       durationMs: input.durationMs,
       ...(input.errorCode ? { errorCode: input.errorCode } : {}),
+      ...(input.startedAuditRecordId
+        ? { startedAuditRecordId: input.startedAuditRecordId }
+        : {}),
     },
     correlationId: input.context.correlationId,
   });
@@ -91,6 +97,7 @@ export async function executeAiTool(
   const { context } = input;
 
   let tool: AiToolDefinition | null = null;
+  let startedAuditRecordId: string | undefined;
 
   try {
     if (!context.tenantId || !context.actorUserId) {
@@ -118,32 +125,75 @@ export async function executeAiTool(
       );
     }
 
+    // Action tools must leave an audit trail. Establish intent before mutation
+    // (append-only: a later success/failed row completes the record). Read tools
+    // keep best-effort post-run auditing.
+    if (tool.category === "action") {
+      try {
+        startedAuditRecordId = await recordInvocation({
+          context,
+          tool,
+          toolName: tool.name,
+          outcome: "started",
+          durationMs: Date.now() - startedAt,
+        });
+      } catch (auditError) {
+        console.error("AI action audit could not be established before run:", {
+          toolName: tool.name,
+          correlationId: context.correlationId,
+          auditError,
+        });
+        throw new AiToolError(
+          "TOOL_AUDIT_FAILED",
+          "This action could not be audited, so it was not started. No business data was changed."
+        );
+      }
+    }
+
     const output = await tool.run(rawInput, context);
 
-    let auditRecordId = "audit-unavailable";
     try {
-      auditRecordId = await recordInvocation({
+      const auditRecordId = await recordInvocation({
         context,
         tool,
         toolName: tool.name,
         outcome: "success",
         durationMs: Date.now() - startedAt,
+        startedAuditRecordId,
       });
+      return {
+        toolName: tool.name,
+        category: tool.category,
+        output,
+        auditRecordId,
+      };
     } catch (auditError) {
       console.error("AI tool audit failed after successful run:", {
         toolName: tool.name,
         correlationId: context.correlationId,
         auditError,
       });
+      if (tool.category === "action") {
+        throw new AiToolError(
+          "TOOL_AUDIT_FAILED",
+          "The action may have completed, but it could not be audited. Check recent activity before retrying."
+        );
+      }
+      return {
+        toolName: tool.name,
+        category: tool.category,
+        output,
+        auditRecordId: "audit-unavailable",
+      };
+    }
+  } catch (error) {
+    if (
+      error instanceof AiToolError &&
+      error.code === "TOOL_AUDIT_FAILED"
+    ) {
+      throw error;
     }
 
-    return {
-      toolName: tool.name,
-      category: tool.category,
-      output,
-      auditRecordId,
-    };
-  } catch (error) {
     const isAuthorizationFailure = error instanceof AiToolAuthorizationError;
     try {
       await recordInvocation({
@@ -153,6 +203,7 @@ export async function executeAiTool(
         outcome: isAuthorizationFailure ? "denied" : "failed",
         errorCode: error instanceof AiToolError ? error.code : "UNEXPECTED",
         durationMs: Date.now() - startedAt,
+        startedAuditRecordId,
       });
     } catch (auditError) {
       console.error("AI tool audit failed after tool error:", {

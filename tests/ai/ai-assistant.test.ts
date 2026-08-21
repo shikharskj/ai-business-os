@@ -214,9 +214,19 @@ describe("assistant mutation confirmation gate", () => {
       tenantId: context.tenantId,
       title: "Payment reminder",
     });
-    expect(
-      auditFor(context.auditRecords, "send_payment_reminders")[0]?.metadata
-    ).toMatchObject({ outcome: "success", category: "action" });
+    const reminderAudits = auditFor(
+      context.auditRecords,
+      "send_payment_reminders"
+    );
+    expect(reminderAudits.map((row) => row.metadata?.outcome)).toEqual([
+      "started",
+      "success",
+    ]);
+    expect(reminderAudits[1]?.metadata).toMatchObject({
+      outcome: "success",
+      category: "action",
+      startedAuditRecordId: expect.any(String),
+    });
   });
 
   it("is idempotent for the same invoice on the same business day", async () => {
@@ -277,6 +287,72 @@ describe("assistant mutation confirmation gate", () => {
 
     expect(context.notificationRecords).toHaveLength(0);
     expect(outcome.facts[0]?.value).toBe("0");
+  });
+
+  it("does not start an action when the audit trail cannot be established", async () => {
+    const context = toolContext();
+    context.audit.append = async () => {
+      throw new Error("audit unavailable");
+    };
+
+    await expect(
+      runConfirmedAiAction({
+        context,
+        toolName: "send_payment_reminders",
+        argumentsJson: JSON.stringify({ invoiceIds: ["inv-a1"] }),
+      })
+    ).rejects.toMatchObject({ code: "TOOL_AUDIT_FAILED" });
+
+    expect(context.notificationRecords).toHaveLength(0);
+  });
+
+  it("keeps failed reminder deliveries out of skipped counts in facts", () => {
+    const facts = factsFromToolResult({
+      toolName: "send_payment_reminders",
+      output: {
+        asOf: "2020-04-15",
+        requestedCount: 3,
+        sentCount: 1,
+        failedCount: 1,
+        skippedCount: 1,
+        reminders: [
+          {
+            invoiceId: "inv-a1",
+            invoiceNumber: "INV/1",
+            customerName: "Acme",
+            outstanding: {
+              amountMajor: "100.00",
+              currency: "INR",
+            },
+            daysOverdue: 5,
+            status: "sent",
+          },
+          {
+            invoiceId: "inv-a2",
+            invoiceNumber: "INV/2",
+            customerName: "Acme",
+            outstanding: {
+              amountMajor: "100.00",
+              currency: "INR",
+            },
+            daysOverdue: 5,
+            status: "failed",
+          },
+          {
+            invoiceId: "missing",
+            invoiceNumber: null,
+            customerName: null,
+            outstanding: null,
+            daysOverdue: null,
+            status: "not_found",
+          },
+        ],
+      },
+    });
+
+    expect(facts[0]?.detail).toMatch(/1 skipped/);
+    expect(facts[0]?.detail).toMatch(/1 failed/);
+    expect(facts[0]?.detail).not.toMatch(/2 skipped/);
   });
 });
 

@@ -239,6 +239,7 @@ export const paymentRemindersOutputSchema = z
     asOf: businessDateStringSchema,
     requestedCount: z.number().int().nonnegative(),
     sentCount: z.number().int().nonnegative(),
+    failedCount: z.number().int().nonnegative(),
     skippedCount: z.number().int().nonnegative(),
     reminders: z.array(
       z

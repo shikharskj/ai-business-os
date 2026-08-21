@@ -126,12 +126,14 @@ export const paymentRemindersTool = defineAiTool({
     }
 
     const sentCount = reminders.filter((row) => row.status === "sent").length;
+    const failedCount = reminders.filter((row) => row.status === "failed").length;
 
     return {
       asOf: report.asOf,
       requestedCount: requested.length,
       sentCount,
-      skippedCount: reminders.length - sentCount,
+      failedCount,
+      skippedCount: reminders.length - sentCount - failedCount,
       reminders,
     };
   },

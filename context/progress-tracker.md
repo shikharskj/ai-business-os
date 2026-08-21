@@ -122,6 +122,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
   * Chat routes reach data through tools only (no Prisma import); SDK confined to route + `lib/ai` bridge + client hooks; provider outages become a contained assistant error state.
   * Tests: `tests/ai/ai-assistant.test.ts`, `ai-gateway.test.ts`, `ai-safety.test.ts` (tools/confirm/facts, config, no SDK in `modules/ai`).
   * Hardening: SDK tool results fenced with `UNTRUSTED-CONTENT`; client history sanitized to user/assistant text only; second confirmation proposals rejected; stub mode requires tenant context; overdue metrics facts no longer mix low-stock copy. Follow-up: app-relative href schema, derived action signing secret, `@/modules/ai/server` barrel split, currency-aware receivables zeros, resilient reminder delivery, isolated audit writes, Zod chat message limits, confirm outcome safeParse.
+  * Review fixes: skip non-array chat `parts` without throwing; action tools append `started` then success/failed audit (no silent success without audit); payment-reminder `failedCount` separate from `skippedCount`.
 
 * Notifications (`26-notifications.md`):
   * `modules/notifications/` — in-app channel abstraction (email/SMS/WhatsApp later), idempotent outbox consumer, overdue scheduled check, mark read/unread. Tenant-scoped `Notification` table with unique `(tenantId, idempotencyKey)`.
@@ -153,6 +154,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
 * Dashboard Phase B (surface unused overview data):
   * Second KPI row: Payables, Overdue, Cash in, Cash out (cited money facts + report/payment hrefs).
   * Recent activity merges invoices + expenses; data fetcher emits `fact.expense.*`.
+  * Welcome empty state also requires `recentExpenses` empty (aligned with merged activity; avoids “no expenses yet” with an expense list).
   * Low stock remains Alerts-only via anomaly scout (not a money KPI).
 
 * Dashboard canvas visual polish (UI-only):

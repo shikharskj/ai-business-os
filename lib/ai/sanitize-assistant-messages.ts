@@ -22,6 +22,11 @@ export function sanitizeAssistantUiMessages(
       continue;
     }
 
+    // Malformed client payloads must be skipped, not throw into the chat route.
+    if (!Array.isArray(message.parts)) {
+      continue;
+    }
+
     const textParts = message.parts
       .filter(
         (part): part is { type: "text"; text: string } =>

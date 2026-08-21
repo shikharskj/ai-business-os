@@ -230,4 +230,51 @@ describe("supervisor-led dashboard", () => {
     expect(expenseFact?.kind).toBe("money");
     expect(expenseFact?.href).toBe("/app/expenses/exp-1");
   });
+
+  it("does not show Welcome empty state when only recent expenses exist", async () => {
+    // Quiet period (zero KPIs) but older expenses still appear in activity.
+    const quietRangeDeps = {
+      ...deps(),
+      range: resolveDashboardDateRange({
+        timezone: "Asia/Kolkata",
+        preset: "custom",
+        from: "2026-07-01",
+        to: "2026-07-31",
+      }),
+      sales: createMemorySalesRepository([], []),
+      expenses: createMemoryExpenseRepository([
+        expenseFixture({
+          id: "exp-old",
+          tenantId: "tenant-a",
+          number: "EXP-OLD",
+          incurredOn: businessDate("2026-08-12"),
+        }),
+      ]),
+    };
+    const facts = await runDataFetcher({
+      tenantId: "tenant-a",
+      deps: quietRangeDeps,
+    });
+    expect(facts.overview.expenses.amountMinor).toBe(0n);
+    expect(facts.overview.recentInvoices).toHaveLength(0);
+    expect(facts.overview.recentExpenses).toHaveLength(1);
+
+    const view = runGenerativeUiMapper({
+      facts,
+      insights: runDataAnalyst(facts),
+      anomalies: runAnomalyScout(facts),
+      source: "fallback",
+    });
+
+    const emptyRegion = view.regions.find((r) => r.id === "empty");
+    expect(emptyRegion?.components).toEqual([]);
+
+    const activity = view.regions
+      .flatMap((r) => r.components)
+      .find((c) => c.type === "ActivityList");
+    expect(activity?.type).toBe("ActivityList");
+    if (activity?.type === "ActivityList") {
+      expect(activity.items.map((item) => item.id)).toContain("exp-old");
+    }
+  });
 });

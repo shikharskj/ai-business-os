@@ -45,6 +45,29 @@ describe("sanitizeAssistantUiMessages", () => {
       )
     ).toBe(false);
   });
+
+  it("skips messages whose parts value is not an array", () => {
+    const messages = [
+      {
+        id: "bad",
+        role: "user",
+        parts: null,
+      },
+      {
+        id: "u1",
+        role: "user",
+        parts: [{ type: "text", text: "Who owes me money?" }],
+      },
+    ] as unknown as UIMessage[];
+
+    expect(sanitizeAssistantUiMessages(messages)).toEqual([
+      {
+        id: "u1",
+        role: "user",
+        parts: [{ type: "text", text: "Who owes me money?" }],
+      },
+    ]);
+  });
 });
 
 describe("parseAssistantChatMessages", () => {
@@ -58,6 +81,14 @@ describe("parseAssistantChatMessages", () => {
     ]);
     expect(parsed).toHaveLength(1);
     expect(parsed?.[0]?.role).toBe("user");
+  });
+
+  it("rejects when only malformed parts remain after sanitization", () => {
+    expect(
+      parseAssistantChatMessages([
+        { id: "bad", role: "user", parts: { text: "not an array" } },
+      ])
+    ).toBeNull();
   });
 
   it("rejects oversized combined text", () => {
