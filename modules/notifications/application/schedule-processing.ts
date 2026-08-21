@@ -1,6 +1,7 @@
 import { after } from "next/server";
 
 import { prisma } from "@/lib/db/client";
+import { createPrismaBusinessStateConsumerDeps } from "@/modules/business-state/infrastructure/prisma-consumer-deps";
 import { runOutboxProcessing } from "@/modules/events/application/run-outbox-processing";
 import { createPrismaOutboxDispatchRepository } from "@/modules/events/infrastructure/prisma-outbox-dispatch";
 import { createInAppChannel } from "@/modules/notifications/infrastructure/in-app-channel";
@@ -22,6 +23,7 @@ export function scheduleNotificationOutboxProcessing(tenantId?: string): void {
         outbox: createPrismaOutboxDispatchRepository(prisma),
         context,
         channel: createInAppChannel(notifications),
+        businessState: createPrismaBusinessStateConsumerDeps(prisma),
         includeOverdueCheck: Boolean(tenantId),
       });
     } catch {

@@ -20,6 +20,29 @@ import {
   createMemoryNotificationContextRepository,
   createMemoryNotificationRepository,
 } from "@/modules/notifications";
+import { createMemoryBusinessStateProjectionRepository } from "@/modules/business-state";
+import type { BusinessStateConsumerDeps } from "@/modules/business-state";
+import { createMemoryCatalogRepository } from "@/modules/catalog";
+import { createMemoryInventoryRepository } from "@/modules/inventory";
+import { createMemoryPaymentRepository } from "@/modules/payments";
+import { createMemorySalesRepository } from "@/modules/sales";
+
+function stubBusinessStateDeps(): BusinessStateConsumerDeps {
+  return {
+    sales: createMemorySalesRepository(),
+    payments: createMemoryPaymentRepository(),
+    catalog: createMemoryCatalogRepository(),
+    inventory: createMemoryInventoryRepository(),
+    projections: createMemoryBusinessStateProjectionRepository(),
+    async resolveTenantContext() {
+      return {
+        timezone: "Asia/Kolkata",
+        currency: "INR",
+        lowStockThresholdMajor: "5.0000",
+      };
+    },
+  };
+}
 
 function event(
   partial: Partial<OutboxEventRecord> &
@@ -161,6 +184,7 @@ describe("typed domain events (post-mvp 01)", () => {
     registerDefaultOutboxConsumers({
       channel: createInAppChannel(notifications),
       context: createMemoryNotificationContextRepository(),
+      businessState: stubBusinessStateDeps(),
     });
 
     await processOutboxConsumers({ outbox });
@@ -268,6 +292,7 @@ describe("typed domain events (post-mvp 01)", () => {
           ],
         },
       }),
+      businessState: stubBusinessStateDeps(),
       // Cron first-50 sample does not include the tenant that had events.
       overdueTenantIds: ["tenant-in-sample"],
       includeOverdueCheck: true,

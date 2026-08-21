@@ -43,6 +43,10 @@ export async function processOutboxConsumers(
   input: ProcessOutboxConsumersInput
 ): Promise<ProcessOutboxConsumersResult> {
   const consumers = input.consumers ?? listOutboxConsumers();
+  // Legacy processedAt dual-write must require every *registered* consumer,
+  // not just this dispatch subset — otherwise a notifications-only catch-up
+  // could mark fully processed while projection consumers remain eligible.
+  const registeredConsumerNames = listOutboxConsumers().map((c) => c.name);
   const limit = input.limit ?? 100;
   const stats: ConsumerProcessStats[] = [];
   let totalAttempted = 0;
@@ -76,7 +80,7 @@ export async function processOutboxConsumers(
         consumerStats.skipped += 1;
         await maybeMarkFullyProcessed(
           input.outbox,
-          consumers.map((c) => c.name),
+          registeredConsumerNames,
           event.id
         );
         continue;
@@ -99,7 +103,7 @@ export async function processOutboxConsumers(
         }
         await maybeMarkFullyProcessed(
           input.outbox,
-          consumers.map((c) => c.name),
+          registeredConsumerNames,
           event.id
         );
       } catch (error) {

@@ -3,6 +3,7 @@ import { timingSafeEqual } from "crypto";
 
 import { prisma } from "@/lib/db/client";
 import { env } from "@/lib/env";
+import { createPrismaBusinessStateConsumerDeps } from "@/modules/business-state/infrastructure/prisma-consumer-deps";
 import { runOutboxProcessing } from "@/modules/events/application/run-outbox-processing";
 import { createPrismaOutboxDispatchRepository } from "@/modules/events/infrastructure/prisma-outbox-dispatch";
 import {
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
     outbox: createPrismaOutboxDispatchRepository(prisma),
     context,
     channel: createInAppChannel(notifications),
+    businessState: createPrismaBusinessStateConsumerDeps(prisma),
     overdueTenantIds,
     includeOverdueCheck: true,
     limit: 200,
