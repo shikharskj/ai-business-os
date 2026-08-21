@@ -18,6 +18,7 @@ import type {
 import type { ExpenseRepository } from "@/modules/expenses/infrastructure/repositories";
 import type { AuditRepository } from "@/modules/shared-kernel/audit";
 import type { OutboxRepository } from "@/modules/shared-kernel/outbox";
+import { persistDomainEvent } from "@/modules/events/application/persist-domain-event";
 import { toMajorString, type Money } from "@/modules/shared-kernel/money";
 import { calculateTax } from "@/modules/tax/application/calculate-tax";
 import { stateCodeFromName } from "@/modules/tax/domain/gstin";
@@ -150,7 +151,7 @@ export async function recordExpense(input: {
     },
   });
 
-  await input.outbox.persist({
+  await persistDomainEvent(input.outbox, {
     tenantId: input.tenantId,
     eventType: "ExpenseRecorded",
     aggregateType: "Expense",

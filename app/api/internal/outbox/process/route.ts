@@ -3,16 +3,16 @@ import { timingSafeEqual } from "crypto";
 
 import { prisma } from "@/lib/db/client";
 import { env } from "@/lib/env";
+import { runOutboxProcessing } from "@/modules/events/application/run-outbox-processing";
+import { createPrismaOutboxDispatchRepository } from "@/modules/events/infrastructure/prisma-outbox-dispatch";
 import {
   createInAppChannel,
   createPrismaNotificationContextRepository,
   createPrismaNotificationRepository,
-  createPrismaOutboxConsumerRepository,
-  processOutboxNotifications,
 } from "@/modules/notifications";
 
 /**
- * Background entrypoint for outbox → notification processing and overdue scans.
+ * Background entrypoint for outbox consumer fan-out and overdue scans.
  * Protect with CRON_SECRET when configured; otherwise allow in development only.
  */
 export async function POST(request: Request) {
@@ -21,7 +21,6 @@ export async function POST(request: Request) {
     const header = request.headers.get("authorization");
     const expected = `Bearer ${configured}`;
 
-    // Use timing-safe comparison to prevent timing attacks
     if (!header || header.length !== expected.length) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -42,8 +41,6 @@ export async function POST(request: Request) {
   const notifications = createPrismaNotificationRepository(prisma);
   const context = createPrismaNotificationContextRepository(prisma);
 
-  // Accept explicit tenant batch from request body to page through tenants,
-  // or use a bounded default sample to prevent unbounded work
   let overdueTenantIds: string[] = [];
   try {
     const body = await request.json();
@@ -51,18 +48,16 @@ export async function POST(request: Request) {
       overdueTenantIds = body.tenantIds;
     }
   } catch {
-    // No body or invalid JSON, fall back to bounded default
+    // No body or invalid JSON
   }
 
-  // If no explicit batch provided, fetch a bounded page of tenant IDs
   if (overdueTenantIds.length === 0) {
     const allTenantIds = await context.listAllTenantIds();
-    overdueTenantIds = allTenantIds.slice(0, 50); // Bounded to 50 tenants per cron invocation
+    overdueTenantIds = allTenantIds.slice(0, 50);
   }
 
-  const result = await processOutboxNotifications({
-    outbox: createPrismaOutboxConsumerRepository(prisma),
-    notifications,
+  const result = await runOutboxProcessing({
+    outbox: createPrismaOutboxDispatchRepository(prisma),
     context,
     channel: createInAppChannel(notifications),
     overdueTenantIds,

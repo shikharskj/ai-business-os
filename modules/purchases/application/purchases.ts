@@ -4,6 +4,7 @@ import type { InventoryRepository } from "@/modules/inventory/infrastructure/rep
 import { toMajorString, type Money } from "@/modules/shared-kernel/money";
 import type { AuditRepository } from "@/modules/shared-kernel/audit";
 import type { OutboxRepository } from "@/modules/shared-kernel/outbox";
+import { persistDomainEvent } from "@/modules/events/application/persist-domain-event";
 import { ensureChartOfAccounts } from "@/modules/accounting/application/seed-chart";
 import { postJournal } from "@/modules/accounting/application/post-journal";
 import type {
@@ -471,7 +472,7 @@ export async function postPurchase(input: {
     },
   });
 
-  await input.outbox.persist({
+  await persistDomainEvent(input.outbox, {
     tenantId: input.tenantId,
     eventType: "PurchasePosted",
     aggregateType: "Purchase",

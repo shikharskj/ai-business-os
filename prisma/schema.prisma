@@ -166,14 +166,32 @@ model OutboxEvent {
   aggregateId   String
   payload       Json
   correlationId String?
+  /** Legacy global cursor; prefer OutboxConsumerReceipt per consumer. */
   processedAt   DateTime?
   createdAt     DateTime @default(now())
 
-  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  business  Business               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  receipts  OutboxConsumerReceipt[]
 
   @@index([processedAt, createdAt])
   @@index([tenantId, eventType])
+  @@index([createdAt])
   @@map("outbox_events")
+}
+
+/// Per-consumer processing receipt for transactional outbox fan-out.
+/// Absence of a row means the consumer has not successfully handled the event.
+model OutboxConsumerReceipt {
+  id           String   @id @default(uuid())
+  eventId      String
+  consumerName String
+  processedAt  DateTime @default(now())
+
+  event OutboxEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, consumerName])
+  @@index([consumerName, processedAt])
+  @@map("outbox_consumer_receipts")
 }
 
 model Notification {

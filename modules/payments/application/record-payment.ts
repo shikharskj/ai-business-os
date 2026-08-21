@@ -26,6 +26,7 @@ import { assertInvoiceTransition, isReceivableInvoiceStatus } from "@/modules/sa
 import type { SalesRepository } from "@/modules/sales/infrastructure/repositories";
 import type { AuditRepository } from "@/modules/shared-kernel/audit";
 import type { OutboxRepository } from "@/modules/shared-kernel/outbox";
+import { persistDomainEvent } from "@/modules/events/application/persist-domain-event";
 import { money, toMajorString, type Money } from "@/modules/shared-kernel/money";
 
 export type RecordCustomerPaymentDeps = {
@@ -194,7 +195,7 @@ export async function recordCustomerPayment(input: {
     },
   });
 
-  await input.outbox.persist({
+  await persistDomainEvent(input.outbox, {
     tenantId: input.tenantId,
     eventType: "PaymentReceived",
     aggregateType: "CustomerPayment",

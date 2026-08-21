@@ -33,6 +33,7 @@ export {
   checkOverdueInvoices,
   processOutboxNotifications,
 } from "@/modules/notifications/application/process-outbox";
+export { deliverNotificationFromOutboxEvent } from "@/modules/notifications/application/deliver-from-outbox";
 export { scheduleNotificationOutboxProcessing } from "@/modules/notifications/application/schedule-processing";
 export { createInAppChannel } from "@/modules/notifications/infrastructure/in-app-channel";
 export { createPrismaNotificationRepository } from "@/modules/notifications/infrastructure/prisma-notification-repository";
