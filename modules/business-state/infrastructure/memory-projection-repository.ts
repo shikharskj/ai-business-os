@@ -4,6 +4,7 @@ import type {
 } from "@/modules/business-state/domain/projection-repository";
 import type {
   BusinessStateMetaSnapshot,
+  CashPositionSnapshot,
   InventoryRiskSnapshot,
   ReceivablesRiskSnapshot,
   SalesMomentumSnapshot,
@@ -21,6 +22,7 @@ export function createMemoryBusinessStateProjectionRepository(): BusinessStatePr
   receivables: Map<string, ReceivablesRiskSnapshot>;
   inventory: Map<string, InventoryRiskSnapshot>;
   sales: Map<string, SalesMomentumSnapshot>;
+  cash: Map<string, CashPositionSnapshot>;
   meta: Map<string, BusinessStateMetaSnapshot>;
   /** Test hook: throw after this many successful family writes inside commitSnapshots. */
   failCommitAfterFamilies: number | null;
@@ -28,6 +30,7 @@ export function createMemoryBusinessStateProjectionRepository(): BusinessStatePr
   const receivables = new Map<string, ReceivablesRiskSnapshot>();
   const inventory = new Map<string, InventoryRiskSnapshot>();
   const sales = new Map<string, SalesMomentumSnapshot>();
+  const cash = new Map<string, CashPositionSnapshot>();
   const meta = new Map<string, BusinessStateMetaSnapshot>();
 
   function applyReceivables(
@@ -66,6 +69,18 @@ export function createMemoryBusinessStateProjectionRepository(): BusinessStatePr
     return true;
   }
 
+  function applyCash(
+    target: Map<string, CashPositionSnapshot>,
+    snapshot: CashPositionSnapshot
+  ): boolean {
+    const existing = target.get(snapshot.tenantId);
+    if (!shouldApplySnapshot(existing?.computedAt, snapshot.computedAt)) {
+      return false;
+    }
+    target.set(snapshot.tenantId, snapshot);
+    return true;
+  }
+
   function applyMeta(
     target: Map<string, BusinessStateMetaSnapshot>,
     input: {
@@ -90,6 +105,7 @@ export function createMemoryBusinessStateProjectionRepository(): BusinessStatePr
     receivables,
     inventory,
     sales,
+    cash,
     meta,
     failCommitAfterFamilies: null as number | null,
 
@@ -101,6 +117,9 @@ export function createMemoryBusinessStateProjectionRepository(): BusinessStatePr
     },
     async upsertSalesMomentum(snapshot: SalesMomentumSnapshot) {
       applySales(sales, snapshot);
+    },
+    async upsertCashPosition(snapshot: CashPositionSnapshot) {
+      applyCash(cash, snapshot);
     },
     async touchMeta(input: {
       tenantId: string;
@@ -114,6 +133,7 @@ export function createMemoryBusinessStateProjectionRepository(): BusinessStatePr
       const nextReceivables = new Map(receivables);
       const nextInventory = new Map(inventory);
       const nextSales = new Map(sales);
+      const nextCash = new Map(cash);
       const nextMeta = new Map(meta);
       let appliedFamilies = 0;
 
@@ -150,6 +170,17 @@ export function createMemoryBusinessStateProjectionRepository(): BusinessStatePr
           }
         }
       }
+      if (input.cashPosition) {
+        if (applyCash(nextCash, input.cashPosition)) {
+          appliedFamilies += 1;
+          if (
+            repo.failCommitAfterFamilies !== null &&
+            appliedFamilies >= repo.failCommitAfterFamilies
+          ) {
+            throw new Error("Simulated commit failure");
+          }
+        }
+      }
 
       if (appliedFamilies > 0 || input.rebuiltAt !== undefined) {
         applyMeta(nextMeta, {
@@ -165,6 +196,8 @@ export function createMemoryBusinessStateProjectionRepository(): BusinessStatePr
       for (const [k, v] of nextInventory) inventory.set(k, v);
       sales.clear();
       for (const [k, v] of nextSales) sales.set(k, v);
+      cash.clear();
+      for (const [k, v] of nextCash) cash.set(k, v);
       meta.clear();
       for (const [k, v] of nextMeta) meta.set(k, v);
 
@@ -179,6 +212,9 @@ export function createMemoryBusinessStateProjectionRepository(): BusinessStatePr
     },
     async getSalesMomentum(tenantId: string) {
       return sales.get(tenantId) ?? null;
+    },
+    async getCashPosition(tenantId: string) {
+      return cash.get(tenantId) ?? null;
     },
     async getMeta(tenantId: string) {
       return meta.get(tenantId) ?? null;

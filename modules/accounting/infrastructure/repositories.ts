@@ -43,6 +43,18 @@ export type JournalRepository = {
     tenantId: string,
     periodKey: string
   ): Promise<Array<Omit<TrialBalanceRow, "accountCode" | "accountName" | "accountType" | "normalBalance"> & { accountId: string }>>;
+  /**
+   * All-time debit/credit totals for the given accounts (tenant-scoped).
+   * Amounts are tagged with `currency`. Scale comes from the ledger lines
+   * (not a default of 2); mixed-scale lines are rejected.
+   */
+  accountTotals(
+    tenantId: string,
+    accountIds: string[],
+    currency: string
+  ): Promise<
+    Array<{ accountId: string; debitTotal: Money; creditTotal: Money }>
+  >;
   findReversalOf(
     tenantId: string,
     originalJournalId: string
@@ -266,6 +278,48 @@ export function createMemoryJournalRepository(): JournalRepository & {
           byAccount.set(line.accountId, {
             debit: addMoney(current.debit, line.debit),
             credit: addMoney(current.credit, line.credit),
+          });
+        }
+      }
+      return [...byAccount.entries()].map(([accountId, totals]) => ({
+        accountId,
+        debitTotal: totals.debit,
+        creditTotal: totals.credit,
+      }));
+    },
+    async accountTotals(tenantId, accountIds, currency) {
+      if (accountIds.length === 0) {
+        return [];
+      }
+      const wanted = new Set(accountIds);
+      const byAccount = new Map<string, { debit: Money; credit: Money }>();
+      let scale: number | undefined;
+      for (const journal of journals) {
+        if (journal.tenantId !== tenantId) {
+          continue;
+        }
+        for (const line of journal.lines) {
+          if (!wanted.has(line.accountId)) {
+            continue;
+          }
+          if (scale === undefined) {
+            scale = line.debit.scale;
+          }
+          if (line.debit.scale !== scale || line.credit.scale !== scale) {
+            throw new Error(
+              `Scale mismatch: ${line.debit.scale} vs ${scale}`
+            );
+          }
+          const zero = money(0n, currency, scale);
+          const current = byAccount.get(line.accountId) ?? {
+            debit: zero,
+            credit: zero,
+          };
+          const debit = money(line.debit.amountMinor, currency, scale);
+          const credit = money(line.credit.amountMinor, currency, scale);
+          byAccount.set(line.accountId, {
+            debit: addMoney(current.debit, debit),
+            credit: addMoney(current.credit, credit),
           });
         }
       }

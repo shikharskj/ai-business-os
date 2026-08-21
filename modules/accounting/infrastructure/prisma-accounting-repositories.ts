@@ -307,6 +307,29 @@ export function createPrismaJournalRepository(
           : money(0n),
       }));
     },
+    async accountTotals(tenantId, accountIds, currency) {
+      if (accountIds.length === 0) {
+        return [];
+      }
+      const grouped = await client.journalLine.groupBy({
+        by: ["accountId"],
+        where: {
+          tenantId,
+          accountId: { in: accountIds },
+          journal: { tenantId },
+        },
+        _sum: { debit: true, credit: true },
+      });
+      return grouped.map((row) => ({
+        accountId: row.accountId,
+        debitTotal: row._sum.debit
+          ? moneyFromPrismaDecimal(row._sum.debit, currency)
+          : money(0n, currency),
+        creditTotal: row._sum.credit
+          ? moneyFromPrismaDecimal(row._sum.credit, currency)
+          : money(0n, currency),
+      }));
+    },
     async findReversalOf(tenantId, originalJournalId) {
       const row = await client.journal.findFirst({
         where: { tenantId, reversalOfJournalId: originalJournalId },

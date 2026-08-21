@@ -2,6 +2,7 @@ import type { AiAssistantFact } from "@/modules/ai/domain/assistant-types";
 import type { AiToolName } from "@/modules/ai/domain/tool-types";
 import {
   businessMetricsOutputSchema,
+  cashPositionOutputSchema,
   expensesSummaryOutputSchema,
   lowStockOutputSchema,
   overdueInvoicesOutputSchema,
@@ -70,6 +71,8 @@ export function factsFromToolResult(input: {
       return lowStockFacts(input.output);
     case "get_business_metrics":
       return metricsFacts(input.output);
+    case "get_cash_position":
+      return cashPositionFacts(input.output);
     case "send_payment_reminders":
       return reminderFacts(input.output);
     default:
@@ -297,6 +300,40 @@ function metricsFacts(output: unknown): AiAssistantFact[] {
       label: "Low stock products",
       value: String(data.lowStockCount),
       href: "/app/inventory/stock",
+    }),
+  ];
+}
+
+function cashPositionFacts(output: unknown): AiAssistantFact[] {
+  const parsed = cashPositionOutputSchema.safeParse(output);
+  if (!parsed.success) {
+    return [];
+  }
+  const data = parsed.data;
+  const source: AiToolName = "get_cash_position";
+
+  return [
+    fact({
+      sourceTool: source,
+      key: data.total.factId,
+      label: "Cash position",
+      value: formatMoneyView(data.total),
+      detail: "Ledger cash and bank account balances",
+      href: "/app/accounting/accounts",
+    }),
+    fact({
+      sourceTool: source,
+      key: data.cash.factId,
+      label: "Cash on hand",
+      value: formatMoneyView(data.cash),
+      href: "/app/accounting/ledger",
+    }),
+    fact({
+      sourceTool: source,
+      key: data.bank.factId,
+      label: "Bank",
+      value: formatMoneyView(data.bank),
+      href: "/app/accounting/ledger",
     }),
   ];
 }

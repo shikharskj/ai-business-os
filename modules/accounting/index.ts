@@ -1,5 +1,13 @@
 export { ACCOUNT_CODES, type Account, type PostedJournal } from "@/modules/accounting/domain/types";
 export { MVP_CHART_OF_ACCOUNTS } from "@/modules/accounting/domain/chart";
+export {
+  CASH_POSITION_ACCOUNT_CODES,
+  CASH_POSITION_FACT_IDS,
+  cashPositionAccountFactId,
+  cashPositionAccountName,
+  isCashPositionAccountCode,
+  type CashPositionAccountCode,
+} from "@/modules/accounting/domain/cash-accounts";
 export { assertBalancedJournalLines } from "@/modules/accounting/domain/balance";
 export {
   periodKeyFromDate,

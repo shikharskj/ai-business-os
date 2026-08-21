@@ -1,5 +1,9 @@
 import { toMajorString, type Money } from "@/modules/shared-kernel/money";
-import type { BusinessStateSummary } from "@/modules/business-state/domain/types";
+import { CASH_POSITION_FACT_IDS } from "@/modules/accounting/domain/cash-accounts";
+import type {
+  BusinessStateSummary,
+  CashPositionSnapshot,
+} from "@/modules/business-state/domain/types";
 
 function moneyDto(value: Money) {
   return {
@@ -46,5 +50,33 @@ export function businessStateSummaryToDto(summary: BusinessStateSummary) {
           computedAt: summary.salesMomentum.computedAt.toISOString(),
         }
       : null,
+    cashPosition: summary.cashPosition
+      ? cashPositionToDto(summary.cashPosition)
+      : null,
+  };
+}
+
+function moneyFactDto(value: Money, factId: string) {
+  return {
+    amount: toMajorString(value),
+    currency: value.currency,
+    scale: value.scale,
+    factId,
+  };
+}
+
+export function cashPositionToDto(snapshot: CashPositionSnapshot) {
+  return {
+    total: moneyFactDto(snapshot.total, CASH_POSITION_FACT_IDS.total),
+    cash: moneyFactDto(snapshot.cashBalance, CASH_POSITION_FACT_IDS.cash),
+    bank: moneyFactDto(snapshot.bankBalance, CASH_POSITION_FACT_IDS.bank),
+    currency: snapshot.currency,
+    scale: snapshot.scale,
+    accounts: snapshot.accounts.map((account) => ({
+      accountCode: account.accountCode,
+      accountName: account.accountName,
+      balance: moneyFactDto(account.balance, account.factId),
+    })),
+    computedAt: snapshot.computedAt.toISOString(),
   };
 }

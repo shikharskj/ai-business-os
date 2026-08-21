@@ -9,9 +9,9 @@ This file is the **single source of truth for implementation progress**. The AI 
 ## Current Phase
 
 * **Phase:** Post-MVP — Business Intelligence Spine (R1)
-* **Status:** Ready — next `03-cash-position-model.md`
+* **Status:** Ready — next `04-attention-queue.md`
 * **Active roadmap:** [`context/product-roadmap.md`](product-roadmap.md)
-* **Active specs:** [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) — next: `03-cash-position-model.md`
+* **Active specs:** [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) — next: `04-attention-queue.md`
 * **MVP archive:** [`context/feature-specs-mvp/`](feature-specs-mvp/)
 * **Deferred horizon:** [`context/future-scope.md`](future-scope.md) (do not schedule as current Next)
 * **Launch trust:** MVP `29` / `30` deferred until after Post-MVP + future-scope (not parallel)
@@ -38,7 +38,7 @@ Guardian (R6) → AI Ops (R7) — specs 16–17
 
 North star: an AI-native OS for Indian SMEs that records correctly, understands continuously, tells the owner what matters, and automates routine work under autonomy L0–L4.
 
-**Next implementation unit:** `context/feature-specs-post-mvp/03-cash-position-model.md`. Do not start R5 (`12`–`15`) before R2–R4 unless a metric pull is recorded here. Do not start MVP `29`/`30` until launch readiness.
+**Next implementation unit:** `context/feature-specs-post-mvp/04-attention-queue.md`. Do not start R5 (`12`–`15`) before R2–R4 unless a metric pull is recorded here. Do not start MVP `29`/`30` until launch readiness.
 
 The priority is **correctness, attention quality, and automation under guardrails** — not feature parity with billing ERPs.
 
@@ -92,7 +92,7 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 | Testing (`29`)        | Deferred until launch |
 | Security hardening (`30`) | Deferred until launch |
 | Production deployment | Not Started |
-| Intelligence Spine (R1) | In Progress (`02` done; next `03`) |
+| Intelligence Spine (R1) | In Progress (`03` done; next `04`) |
 | Operator / Daily Brief (R2) | Not Started |
 | Copilot Depth (R3)    | Not Started |
 | Automation Engine (R4)| Not Started |
@@ -104,10 +104,21 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 
 # Completed
 
+* **Cash position model (`03-cash-position-model.md`):**
+  * Cash = ledger balances of designated COA accounts Cash (`1000`) and Bank (`1010`). Payment methods map on posting: CASH → Cash; UPI / bank transfer / card / cheque → Bank.
+  * `CashPosition` BusinessState projection (migration `20260821220000_add_cash_position_state`); rebuild from journals; outbox events `PaymentReceived`, `PaymentMade`, `ExpenseRecorded`, `JournalPosted`, `JournalReversed`.
+  * Authz read APIs: `GET /api/business-state/cash` (live ledger query with currency, scale, fact ids) and `GET /api/business-state` (includes projection). `report:read`.
+  * AI tool `get_cash_position` uses the same `getCashPosition` query — no invoice-table cash heuristic. System policy forbids inventing cash from unpaid invoices.
+  * Tests: `tests/business-state/cash-position.test.ts` (receipt moves cash, invoices do not, rebuild matches ledger, outbox, tool facts; non-INR tenant with only Cash or only Bank activity; non-2-decimal currency; tenant-configured account names).
+  * Ledger totals for cash position are tagged with the tenant currency and the ledger line scale (`accountTotals` + `computeCashPosition`) so an inactive Cash/Bank zero does not currency- or scale-mismatch a live total.
+  * Prisma BusinessState writes apply `computedAt` atomically (`updateMany` where older, else `createMany` with `skipDuplicates`; retry guarded update if the insert was skipped). Do not `create` + catch unique conflicts inside `$transaction` — PostgreSQL aborts the transaction (25P02) and later families / `writeMeta` cannot commit.
+  * Cash-position projection persists tenant Cash/Bank account names (`cashAccountName` / `bankAccountName`) instead of reconstructing from the MVP chart template.
+  * Next: `04-attention-queue.md`.
+
 * **BusinessState projections (`02-business-state-projections.md`):**
   * `modules/business-state/` — ReceivablesRisk, InventoryRisk, SalesMomentum (30-day posted invoice rollup) + `BusinessStateMeta` envelope; Prisma migration `20260821120000_add_business_state_projections`.
   * Rebuild from domain truth (`rebuildBusinessStateProjections`); outbox consumer `business-state` replaces projection-stub in default registration.
-  * Write hardening: outbox page coalesce via `handleBatch`, `computedAt` guards, atomic `commitSnapshots` (+ meta).
+  * Write hardening: outbox page coalesce via `handleBatch`, `computedAt` guards, atomic `commitSnapshots` (+ meta). Family upserts inside the transaction use `createMany`/`skipDuplicates` (catching unique conflicts would abort PostgreSQL). Prisma coverage: `tests/business-state/prisma-projections.integration.test.ts`.
   * Read/rebuild APIs: `GET /api/business-state`, `POST /api/business-state/rebuild` (`report:read`).
   * Cron / `after()` wire `createPrismaBusinessStateConsumerDeps`; tests in `tests/business-state/projections.test.ts`.
   * Next: `03-cash-position-model.md`.
@@ -387,8 +398,8 @@ Nothing in progress. See **Next Up**.
 
 **Active product work** follows [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) one numbered file at a time.
 
-1. **Next implementable spec:** [`03-cash-position-model.md`](feature-specs-post-mvp/03-cash-position-model.md)
-2. Then `04` (attention) → `05`–`07` (brief, operator, copilot) → `08`–`11` (automation)
+1. **Next implementable spec:** [`04-attention-queue.md`](feature-specs-post-mvp/04-attention-queue.md)
+2. Then `05`–`07` (brief, operator, copilot) → `08`–`11` (automation)
 3. Specs `12`–`15` (R5) only after R2–R4 unless a metric pull is recorded here
 4. Then `16` Guardian → `17` AI Operations
 5. **Not now:** [`future-scope.md`](future-scope.md); MVP `29`/`30` until launch after Post-MVP + future-scope

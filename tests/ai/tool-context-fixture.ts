@@ -14,6 +14,10 @@ import {
 import { createMemoryPurchasesRepository } from "@/modules/purchases";
 import { createMemorySalesRepository } from "@/modules/sales";
 import type { SalesInvoice } from "@/modules/sales/domain/types";
+import {
+  createMemoryAccountRepository,
+  createMemoryJournalRepository,
+} from "@/modules/accounting";
 import { createMemoryAuditRepository } from "@/modules/shared-kernel/audit";
 import { businessDate } from "@/modules/shared-kernel/dates";
 import { money } from "@/modules/shared-kernel/money";
@@ -233,6 +237,8 @@ export function toolContext(options?: {
           name: "Other Business Co",
         }),
       ]),
+      accounts: createMemoryAccountRepository(),
+      journals: createMemoryJournalRepository(),
       notifications,
     },
     audit,

@@ -40,6 +40,7 @@ const TOOL_SUGGESTIONS: Partial<Record<AiToolName, AiAssistantSuggestion>> = {
     href: "/app/reports/expenses",
   },
   get_business_metrics: { label: "Open dashboard", href: "/app" },
+  get_cash_position: { label: "View accounts", href: "/app/accounting/accounts" },
   send_payment_reminders: {
     label: "View invoices",
     href: "/app/sales/invoices",

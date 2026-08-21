@@ -9,12 +9,13 @@ export async function getBusinessStateSummary(input: {
   tenantId: string;
   projections: BusinessStateProjectionRepository;
 }): Promise<BusinessStateSummary> {
-  const [meta, receivablesRisk, inventoryRisk, salesMomentum] =
+  const [meta, receivablesRisk, inventoryRisk, salesMomentum, cashPosition] =
     await Promise.all([
       input.projections.getMeta(input.tenantId),
       input.projections.getReceivablesRisk(input.tenantId),
       input.projections.getInventoryRisk(input.tenantId),
       input.projections.getSalesMomentum(input.tenantId),
+      input.projections.getCashPosition(input.tenantId),
     ]);
 
   if (meta && meta.tenantId !== input.tenantId) {
@@ -29,11 +30,15 @@ export async function getBusinessStateSummary(input: {
   if (salesMomentum && salesMomentum.tenantId !== input.tenantId) {
     throw new Error("Cross-tenant sales momentum projection access rejected");
   }
+  if (cashPosition && cashPosition.tenantId !== input.tenantId) {
+    throw new Error("Cross-tenant cash position projection access rejected");
+  }
 
   return {
     meta,
     receivablesRisk,
     inventoryRisk,
     salesMomentum,
+    cashPosition,
   };
 }

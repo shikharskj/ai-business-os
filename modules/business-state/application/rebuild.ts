@@ -11,10 +11,16 @@ import {
   type SalesRepository,
 } from "@/modules/sales";
 import { GST_SALES_STATUSES } from "@/modules/reporting/domain/gst-types";
+import type {
+  AccountRepository,
+  JournalRepository,
+} from "@/modules/accounting/infrastructure/repositories";
+import { computeCashPosition } from "@/modules/business-state/application/compute-cash-position";
 import type { BusinessStateProjectionRepository } from "@/modules/business-state/domain/projection-repository";
 import {
   BUSINESS_STATE_SCHEMA_VERSION,
   SALES_MOMENTUM_WINDOW_DAYS,
+  type CashPositionSnapshot,
   type InventoryRiskSnapshot,
   type ProjectionFamily,
   type ReceivablesRiskSnapshot,
@@ -40,6 +46,8 @@ export type RebuildBusinessStateDeps = {
   payments: PaymentRepository;
   catalog: CatalogRepository;
   inventory: InventoryRepository;
+  accounts: AccountRepository;
+  journals: JournalRepository;
   projections: BusinessStateProjectionRepository;
   families?: ProjectionFamily[];
   /** When true, stamps meta.rebuiltAt (full/backfill rebuild). */
@@ -176,10 +184,16 @@ export async function rebuildBusinessStateProjections(
   receivablesRisk: ReceivablesRiskSnapshot | null;
   inventoryRisk: InventoryRiskSnapshot | null;
   salesMomentum: SalesMomentumSnapshot | null;
+  cashPosition: CashPositionSnapshot | null;
 }> {
   const families = new Set(
     input.families?.includes("all") || !input.families || input.families.length === 0
-      ? (["receivablesRisk", "inventoryRisk", "salesMomentum"] as ProjectionFamily[])
+      ? ([
+          "receivablesRisk",
+          "inventoryRisk",
+          "salesMomentum",
+          "cashPosition",
+        ] as ProjectionFamily[])
       : input.families
   );
   const currency = input.currency ?? "INR";
@@ -187,6 +201,7 @@ export async function rebuildBusinessStateProjections(
   let receivablesRisk: ReceivablesRiskSnapshot | null = null;
   let inventoryRisk: InventoryRiskSnapshot | null = null;
   let salesMomentum: SalesMomentumSnapshot | null = null;
+  let cashPosition: CashPositionSnapshot | null = null;
 
   if (families.has("receivablesRisk")) {
     receivablesRisk = await computeReceivablesRisk({
@@ -216,6 +231,15 @@ export async function rebuildBusinessStateProjections(
     });
   }
 
+  if (families.has("cashPosition")) {
+    cashPosition = await computeCashPosition({
+      tenantId: input.tenantId,
+      currency,
+      accounts: input.accounts,
+      journals: input.journals,
+    });
+  }
+
   await input.projections.commitSnapshots({
     tenantId: input.tenantId,
     schemaVersion: BUSINESS_STATE_SCHEMA_VERSION,
@@ -223,7 +247,8 @@ export async function rebuildBusinessStateProjections(
     ...(receivablesRisk ? { receivablesRisk } : {}),
     ...(inventoryRisk ? { inventoryRisk } : {}),
     ...(salesMomentum ? { salesMomentum } : {}),
+    ...(cashPosition ? { cashPosition } : {}),
   });
 
-  return { receivablesRisk, inventoryRisk, salesMomentum };
+  return { receivablesRisk, inventoryRisk, salesMomentum, cashPosition };
 }

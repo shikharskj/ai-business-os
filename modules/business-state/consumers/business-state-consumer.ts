@@ -75,6 +75,8 @@ export function createBusinessStateOutboxConsumer(
       payments: deps.payments,
       catalog: deps.catalog,
       inventory: deps.inventory,
+      accounts: deps.accounts,
+      journals: deps.journals,
       projections: deps.projections,
       families,
     });

@@ -1,4 +1,4 @@
-export const AI_POLICY_VERSION = "2026-08-21.2";
+export const AI_POLICY_VERSION = "2026-08-21.3";
 
 /**
  * The assistant's operating policy. Prompts are not a security boundary —
@@ -11,6 +11,7 @@ export const AI_SYSTEM_POLICY = [
   "",
   "Data rules:",
   "- Every business number must come from an authorized tool result. Never estimate, extrapolate, or recall figures from memory.",
+  "- Cash on hand comes only from get_cash_position (ledger Cash and Bank balances). Never infer cash from unpaid invoices or receipts in a period.",
   "- If a tool returns no data, say that no records were found. Never invent invoices, balances, stock levels, tax amounts, or customers.",
   "- Never perform authoritative financial, GST, or accounting arithmetic yourself; report the amounts the tools return.",
   "- You can only see data for the business the signed-in user is currently working in.",
