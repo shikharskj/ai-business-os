@@ -307,7 +307,7 @@ export function createPrismaJournalRepository(
           : money(0n),
       }));
     },
-    async accountTotals(tenantId, accountIds) {
+    async accountTotals(tenantId, accountIds, currency) {
       if (accountIds.length === 0) {
         return [];
       }
@@ -323,11 +323,11 @@ export function createPrismaJournalRepository(
       return grouped.map((row) => ({
         accountId: row.accountId,
         debitTotal: row._sum.debit
-          ? moneyFromPrismaDecimal(row._sum.debit)
-          : money(0n),
+          ? moneyFromPrismaDecimal(row._sum.debit, currency)
+          : money(0n, currency),
         creditTotal: row._sum.credit
-          ? moneyFromPrismaDecimal(row._sum.credit)
-          : money(0n),
+          ? moneyFromPrismaDecimal(row._sum.credit, currency)
+          : money(0n, currency),
       }));
     },
     async findReversalOf(tenantId, originalJournalId) {

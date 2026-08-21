@@ -54,11 +54,16 @@ export async function computeCashPosition(input: {
       ? []
       : await input.journals.accountTotals(
           input.tenantId,
-          designated.map((account) => account.id)
+          designated.map((account) => account.id),
+          currency
         );
   const totalsByAccountId = new Map(
     totals.map((row) => [row.accountId, row])
   );
+
+  function inTenantCurrency(value: Money): Money {
+    return money(value.amountMinor, currency, value.scale);
+  }
 
   function balanceForCode(code: string): Money {
     const account = designated.find((row) => row.code === code);
@@ -70,7 +75,12 @@ export async function computeCashPosition(input: {
       return zero;
     }
     // Cash and bank are DEBIT-normal assets: balance = debit − credit.
-    return subtractMoney(totalsRow.debitTotal, totalsRow.creditTotal);
+    // Ledger amounts have no stored currency; express them in the tenant
+    // currency so an inactive Cash/Bank zero can be added to a live total.
+    return subtractMoney(
+      inTenantCurrency(totalsRow.debitTotal),
+      inTenantCurrency(totalsRow.creditTotal)
+    );
   }
 
   const cashBalance = balanceForCode(ACCOUNT_CODES.CASH);

@@ -192,6 +192,58 @@ describe("cash position model (post-mvp 03)", () => {
     expect(toMajorString(snapshot.total)).toBe("500.00");
   });
 
+  it("adds Cash and Bank in the tenant currency when only one account has activity", async () => {
+    const { accounts, journals } = await seededAccounting();
+    await postJournal({
+      tenantId: "tenant-a",
+      accountingDate: businessDate("2026-08-10"),
+      financialYearStartMonth: 4,
+      closedThroughPeriodKey: null,
+      sourceType: "CustomerPayment",
+      sourceId: "pay-usd",
+      lines: buildCustomerReceiptJournalLines({
+        paymentNumber: "REC/USD",
+        method: "CASH",
+        amount: money(2360_00n),
+      }),
+      accountRepository: accounts,
+      journalRepository: journals,
+    });
+
+    const snapshot = await getCashPosition({
+      tenantId: "tenant-a",
+      currency: "USD",
+      accounts,
+      journals,
+    });
+
+    expect(snapshot.currency).toBe("USD");
+    expect(snapshot.cashBalance.currency).toBe("USD");
+    expect(snapshot.bankBalance.currency).toBe("USD");
+    expect(snapshot.total.currency).toBe("USD");
+    expect(toMajorString(snapshot.cashBalance)).toBe("2360.00");
+    expect(toMajorString(snapshot.bankBalance)).toBe("0.00");
+    expect(toMajorString(snapshot.total)).toBe("2360.00");
+
+    const rebuilt = await rebuildBusinessStateProjections({
+      tenantId: "tenant-a",
+      timezone: "Asia/Kolkata",
+      currency: "USD",
+      lowStockThresholdMajor: "5.0000",
+      sales: createMemorySalesRepository(),
+      payments: createMemoryPaymentRepository(),
+      catalog: createMemoryCatalogRepository(),
+      inventory: createMemoryInventoryRepository(),
+      accounts,
+      journals,
+      projections: createMemoryBusinessStateProjectionRepository(),
+      families: ["cashPosition"],
+    });
+    expect(rebuilt.cashPosition!.total.currency).toBe("USD");
+    expect(toMajorString(rebuilt.cashPosition!.total)).toBe("2360.00");
+    expect(toMajorString(rebuilt.cashPosition!.bankBalance)).toBe("0.00");
+  });
+
   it("decreases cash when a supplier payment posts", async () => {
     const { accounts, journals } = await seededAccounting();
     await postJournal({

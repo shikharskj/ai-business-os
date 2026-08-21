@@ -109,7 +109,8 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
   * `CashPosition` BusinessState projection (migration `20260821220000_add_cash_position_state`); rebuild from journals; outbox events `PaymentReceived`, `PaymentMade`, `ExpenseRecorded`, `JournalPosted`, `JournalReversed`.
   * Authz read APIs: `GET /api/business-state/cash` (live ledger query with currency, scale, fact ids) and `GET /api/business-state` (includes projection). `report:read`.
   * AI tool `get_cash_position` uses the same `getCashPosition` query — no invoice-table cash heuristic. System policy forbids inventing cash from unpaid invoices.
-  * Tests: `tests/business-state/cash-position.test.ts` (receipt moves cash, invoices do not, rebuild matches ledger, outbox, tool facts).
+  * Tests: `tests/business-state/cash-position.test.ts` (receipt moves cash, invoices do not, rebuild matches ledger, outbox, tool facts; non-INR tenant with only Cash or only Bank activity).
+  * Ledger totals for cash position are tagged with the tenant currency (`accountTotals` + `computeCashPosition`) so an inactive Cash/Bank zero does not currency-mismatch a live total.
   * Next: `04-attention-queue.md`.
 
 * **BusinessState projections (`02-business-state-projections.md`):**

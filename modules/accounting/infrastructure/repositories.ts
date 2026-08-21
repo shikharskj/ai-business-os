@@ -45,11 +45,13 @@ export type JournalRepository = {
   ): Promise<Array<Omit<TrialBalanceRow, "accountCode" | "accountName" | "accountType" | "normalBalance"> & { accountId: string }>>;
   /**
    * All-time debit/credit totals for the given accounts (tenant-scoped).
-   * Used to derive cash position from ledger truth, not from invoices.
+   * Amounts are tagged with `currency` — journal lines do not store currency,
+   * and Prisma decimals must not default to INR when the tenant is not INR.
    */
   accountTotals(
     tenantId: string,
-    accountIds: string[]
+    accountIds: string[],
+    currency: string
   ): Promise<
     Array<{ accountId: string; debitTotal: Money; creditTotal: Money }>
   >;
@@ -285,12 +287,13 @@ export function createMemoryJournalRepository(): JournalRepository & {
         creditTotal: totals.credit,
       }));
     },
-    async accountTotals(tenantId, accountIds) {
+    async accountTotals(tenantId, accountIds, currency) {
       if (accountIds.length === 0) {
         return [];
       }
       const wanted = new Set(accountIds);
       const byAccount = new Map<string, { debit: Money; credit: Money }>();
+      const zero = money(0n, currency);
       for (const journal of journals) {
         if (journal.tenantId !== tenantId) {
           continue;
@@ -300,12 +303,18 @@ export function createMemoryJournalRepository(): JournalRepository & {
             continue;
           }
           const current = byAccount.get(line.accountId) ?? {
-            debit: money(0n),
-            credit: money(0n),
+            debit: zero,
+            credit: zero,
           };
+          const debit = money(line.debit.amountMinor, currency, line.debit.scale);
+          const credit = money(
+            line.credit.amountMinor,
+            currency,
+            line.credit.scale
+          );
           byAccount.set(line.accountId, {
-            debit: addMoney(current.debit, line.debit),
-            credit: addMoney(current.credit, line.credit),
+            debit: addMoney(current.debit, debit),
+            credit: addMoney(current.credit, credit),
           });
         }
       }
