@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
-  Bot,
   Building2,
   FileText,
   LayoutDashboard,
@@ -119,7 +118,6 @@ const operationsNav: NavItem[] = [
 ];
 
 const footerNav: NavItem[] = [
-  { label: "AI Assistant", href: "/app/assistant", icon: Bot },
   { label: "Settings", href: "/app/settings", icon: Settings },
 ];
 

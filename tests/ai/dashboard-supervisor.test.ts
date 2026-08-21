@@ -4,11 +4,13 @@ import {
   assertViewCitesFacts,
   FactCitationError,
   parseDashboardView,
+} from "@/modules/ai";
+import {
   runAnomalyScout,
   runDataAnalyst,
   runDashboardSupervisor,
   runGenerativeUiMapper,
-} from "@/modules/ai";
+} from "@/modules/ai/server";
 import { createMemoryCatalogRepository } from "@/modules/catalog";
 import { createMemoryExpenseRepository } from "@/modules/expenses";
 import type { Expense } from "@/modules/expenses/domain/types";
@@ -133,10 +135,45 @@ describe("supervisor-led dashboard", () => {
     expect(result.view.version).toBe(1);
     expect(result.view.source).toBe("supervisor");
     const kpi = result.view.regions.find((r) => r.id === "kpi");
-    expect(kpi?.components).toHaveLength(4);
+    expect(kpi?.components).toHaveLength(8);
     expect(kpi?.components.every((c) => c.type === "MetricCard")).toBe(true);
+    const kpiIds = kpi?.components.map((c) => c.id) ?? [];
+    expect(kpiIds).toEqual(
+      expect.arrayContaining([
+        "kpi.sales",
+        "kpi.expenses",
+        "kpi.profit",
+        "kpi.receivables",
+        "kpi.payables",
+        "kpi.overdue",
+        "kpi.receipts",
+        "kpi.paymentsOut",
+      ])
+    );
     expect(result.audit.factCount).toBeGreaterThan(0);
     expect(result.view.regions.some((r) => r.id === "insights")).toBe(true);
+
+    const activity = result.view.regions
+      .flatMap((r) => r.components)
+      .find((c) => c.type === "ActivityList");
+    expect(activity?.type).toBe("ActivityList");
+    if (activity?.type === "ActivityList") {
+      const ids = activity.items.map((item) => item.id);
+      expect(ids).toContain("inv-1");
+      expect(ids).toContain("exp-1");
+      expect(
+        activity.items.every(
+          (item) =>
+            item.amount?.factId === `fact.invoice.${item.id}` ||
+            item.amount?.factId === `fact.expense.${item.id}`
+        )
+      ).toBe(true);
+    }
+
+    assertViewCitesFacts(result.view, await runDataFetcher({
+      tenantId: "tenant-a",
+      deps: deps(),
+    }));
   });
 
   it("rejects views that invent uncited money facts", async () => {
@@ -182,5 +219,62 @@ describe("supervisor-led dashboard", () => {
     expect(anomalies.anomalies.some((a) => a.id === "anomaly.overdue")).toBe(
       true
     );
+  });
+
+  it("emits expense money facts for recent expenses", async () => {
+    const facts = await runDataFetcher({
+      tenantId: "tenant-a",
+      deps: deps(),
+    });
+    const expenseFact = facts.facts.find((f) => f.id === "fact.expense.exp-1");
+    expect(expenseFact?.kind).toBe("money");
+    expect(expenseFact?.href).toBe("/app/expenses/exp-1");
+  });
+
+  it("does not show Welcome empty state when only recent expenses exist", async () => {
+    // Quiet period (zero KPIs) but older expenses still appear in activity.
+    const quietRangeDeps = {
+      ...deps(),
+      range: resolveDashboardDateRange({
+        timezone: "Asia/Kolkata",
+        preset: "custom",
+        from: "2026-07-01",
+        to: "2026-07-31",
+      }),
+      sales: createMemorySalesRepository([], []),
+      expenses: createMemoryExpenseRepository([
+        expenseFixture({
+          id: "exp-old",
+          tenantId: "tenant-a",
+          number: "EXP-OLD",
+          incurredOn: businessDate("2026-08-12"),
+        }),
+      ]),
+    };
+    const facts = await runDataFetcher({
+      tenantId: "tenant-a",
+      deps: quietRangeDeps,
+    });
+    expect(facts.overview.expenses.amountMinor).toBe(0n);
+    expect(facts.overview.recentInvoices).toHaveLength(0);
+    expect(facts.overview.recentExpenses).toHaveLength(1);
+
+    const view = runGenerativeUiMapper({
+      facts,
+      insights: runDataAnalyst(facts),
+      anomalies: runAnomalyScout(facts),
+      source: "fallback",
+    });
+
+    const emptyRegion = view.regions.find((r) => r.id === "empty");
+    expect(emptyRegion?.components).toEqual([]);
+
+    const activity = view.regions
+      .flatMap((r) => r.components)
+      .find((c) => c.type === "ActivityList");
+    expect(activity?.type).toBe("ActivityList");
+    if (activity?.type === "ActivityList") {
+      expect(activity.items.map((item) => item.id)).toContain("exp-old");
+    }
   });
 });

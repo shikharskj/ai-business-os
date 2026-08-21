@@ -28,6 +28,18 @@ function sparkPoints(series: Array<{ value: number }>): number[] {
   return series.map((p) => p.value);
 }
 
+function moneyValue(
+  amount: { amountMinor: bigint; currency: string; scale: number },
+  factId: string
+) {
+  return {
+    amountMinor: amount.amountMinor.toString(),
+    currency: amount.currency,
+    scale: amount.scale,
+    factId,
+  };
+}
+
 /**
  * Generative UI Mapper — builds Dashboard-01 default layout from facts/insights/anomalies.
  * Deterministic (no LLM); every MetricCard/chart cites fact ids.
@@ -53,12 +65,22 @@ export function runGenerativeUiMapper(input: {
         ? ("danger" as const)
         : ("neutral" as const);
 
+  const overdueTone =
+    overview.overdueInvoiceCount > 0 ? ("danger" as const) : undefined;
+  const overdueCaption =
+    overview.overdueInvoiceCount === 0
+      ? "No overdue invoices"
+      : `${overview.overdueInvoiceCount} invoice${overview.overdueInvoiceCount === 1 ? "" : "s"} overdue`;
+
+  // Match Recent activity: include both invoice and expense lists. Period KPIs
+  // alone miss older expenses outside the selected range.
   const isEmpty =
     overview.revenue.amountMinor === 0n &&
     overview.expenses.amountMinor === 0n &&
     overview.receivables.amountMinor === 0n &&
     overview.payables.amountMinor === 0n &&
     overview.recentInvoices.length === 0 &&
+    overview.recentExpenses.length === 0 &&
     overview.alerts.length === 0;
 
   const insightComponents = input.anomalies.anomalies.slice(0, 4).map((a) => ({
@@ -88,6 +110,32 @@ export function runGenerativeUiMapper(input: {
       });
     }
   }
+
+  const activityItems = [
+    ...overview.recentInvoices.map((invoice) => ({
+      id: invoice.id,
+      date: invoice.issuedOn,
+      title: invoice.number,
+      subtitle: `${invoice.customerName} · ${invoice.issuedOn}`,
+      href: `/app/sales/invoices/${invoice.id}`,
+      amount: moneyValue(invoice.grandTotal, `fact.invoice.${invoice.id}`),
+      badge: invoice.status,
+      badgeTone: statusTone(invoice.status as SalesInvoiceStatus),
+    })),
+    ...overview.recentExpenses.map((expense) => ({
+      id: expense.id,
+      date: expense.incurredOn,
+      title: expense.number,
+      subtitle: `${expense.category} · ${expense.incurredOn}`,
+      href: `/app/expenses/${expense.id}`,
+      amount: moneyValue(expense.grandTotal, `fact.expense.${expense.id}`),
+      badge: "Expense",
+      badgeTone: "neutral" as const,
+    })),
+  ]
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    .slice(0, 8)
+    .map(({ date: _date, ...item }) => item);
 
   return {
     version: 1,
@@ -130,12 +178,8 @@ export function runGenerativeUiMapper(input: {
             type: "MetricCard",
             id: "kpi.sales",
             title: "Sales",
-            value: {
-              amountMinor: overview.revenue.amountMinor.toString(),
-              currency: overview.revenue.currency,
-              scale: overview.revenue.scale,
-              factId: "fact.revenue",
-            },
+            href: "/app/reports/sales",
+            value: moneyValue(overview.revenue, "fact.revenue"),
             caption: "Taxable sales in period",
             sparkline:
               salesSeries.length > 1
@@ -149,12 +193,8 @@ export function runGenerativeUiMapper(input: {
             type: "MetricCard",
             id: "kpi.expenses",
             title: "Expenses",
-            value: {
-              amountMinor: overview.expenses.amountMinor.toString(),
-              currency: overview.expenses.currency,
-              scale: overview.expenses.scale,
-              factId: "fact.expenses",
-            },
+            href: "/app/reports/expenses",
+            value: moneyValue(overview.expenses, "fact.expenses"),
             caption: "Expenses in period",
             sparkline:
               expenseSeries.length > 1
@@ -168,12 +208,8 @@ export function runGenerativeUiMapper(input: {
             type: "MetricCard",
             id: "kpi.profit",
             title: "Profit",
-            value: {
-              amountMinor: overview.profit.amountMinor.toString(),
-              currency: overview.profit.currency,
-              scale: overview.profit.scale,
-              factId: "fact.profit",
-            },
+            href: "/app/reports/profit",
+            value: moneyValue(overview.profit, "fact.profit"),
             caption: "Sales − expenses",
             tone: profitTone,
           },
@@ -181,13 +217,45 @@ export function runGenerativeUiMapper(input: {
             type: "MetricCard",
             id: "kpi.receivables",
             title: "Receivables",
-            value: {
-              amountMinor: overview.receivables.amountMinor.toString(),
-              currency: overview.receivables.currency,
-              scale: overview.receivables.scale,
-              factId: "fact.receivables",
-            },
+            href: "/app/reports/receivables",
+            value: moneyValue(overview.receivables, "fact.receivables"),
             caption: "Open customer balances",
+          },
+          {
+            type: "MetricCard",
+            id: "kpi.payables",
+            title: "Payables",
+            href: "/app/reports/payables",
+            value: moneyValue(overview.payables, "fact.payables"),
+            caption: "Open supplier balances",
+          },
+          {
+            type: "MetricCard",
+            id: "kpi.overdue",
+            title: "Overdue",
+            href: "/app/reports/receivables",
+            value: moneyValue(
+              overview.overdueOutstanding,
+              "fact.overdueOutstanding"
+            ),
+            caption: overdueCaption,
+            tone: overdueTone,
+          },
+          {
+            type: "MetricCard",
+            id: "kpi.receipts",
+            title: "Cash in",
+            href: "/app/sales/payments",
+            value: moneyValue(overview.receiptsInPeriod, "fact.receipts"),
+            caption: "Receipts in period",
+          },
+          {
+            type: "MetricCard",
+            id: "kpi.paymentsOut",
+            title: "Cash out",
+            href: "/app/purchases/payments",
+            value: moneyValue(overview.paymentsOutInPeriod, "fact.paymentsOut"),
+            caption: "Supplier payments in period",
           },
         ],
       },
@@ -219,23 +287,10 @@ export function runGenerativeUiMapper(input: {
           },
           {
             type: "ActivityList",
-            id: "activity.recent-invoices",
+            id: "activity.recent",
             title: "Recent activity",
-            description: "Latest posted sales invoices.",
-            items: overview.recentInvoices.map((invoice) => ({
-              id: invoice.id,
-              title: invoice.number,
-              subtitle: `${invoice.customerName} · ${invoice.issuedOn}`,
-              href: `/app/sales/invoices/${invoice.id}`,
-              amount: {
-                amountMinor: invoice.grandTotal.amountMinor.toString(),
-                currency: invoice.grandTotal.currency,
-                scale: invoice.grandTotal.scale,
-                factId: `fact.invoice.${invoice.id}`,
-              },
-              badge: invoice.status,
-              badgeTone: statusTone(invoice.status as SalesInvoiceStatus),
-            })),
+            description: "Latest posted invoices and expenses.",
+            items: activityItems,
           },
         ],
       },

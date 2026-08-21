@@ -455,8 +455,6 @@ Accounting
 Reports
 
 ─────────────────────
-AI Assistant
-
 Settings
 ```
 
@@ -467,7 +465,7 @@ Sidebar rules:
 - Use shadcn `Sidebar` primitives (`collapsible="icon"`).
 - Header: compact brand tile (icon on `--primary`) plus business name and “Workspace”.
 - Menu rows use comfortable height (`h-10` default, `h-9` nested items) at `text-base` with `size-5` icons. Sidebar width is `18rem`. Group labels use `text-sm`.
-- Group modules with labels/separators; keep Settings and AI Assistant in the footer.
+- Group modules with labels/separators; keep Settings in the footer. The AI assistant opens from the top bar sheet only (not a sidebar nav item).
 - Do not add fake Quick Create or unused dashboard shortcuts.
 - Clearly highlight the current section.
 - Avoid more than two levels of nesting.
@@ -1055,27 +1053,35 @@ Complex accounting/reporting workflows may remain optimized for desktop if neces
 
 AI should feel like a **business copilot**, not a separate chatbot product.
 
+**Entry point:** global top-bar sheet only (no dedicated `/app/assistant` page). Header: title, New chat, Close. Sheet uses `bg-sidebar` (same as the main left sidebar) and is ~`42rem` wide (`data-[side=right]:sm:max-w-[42rem]`), overriding the default sheet `max-w-sm`.
+
 Recommended experience:
 
 ```text
 ┌──────────────────────────────────────────────┐
-│ AI Business Assistant                       │
+│ Assistant                        New chat  × │
 ├──────────────────────────────────────────────┤
+│         [SVG] How can I help?                │  ← empty: animated welcome
 │                                              │
-│ You: Who owes me money?                      │
+│              Who owes me money?              │  ← user bubble (right)
 │                                              │
-│ AI: You have ₹2,45,000 outstanding...        │
-│                                              │
-│ [View Receivables] [Send Reminders]          │
-│                                              │
+│ ▸ Thinking → Checking receivables → Writing  │  ← activity timeline
+│ No customers currently owe you money.        │  ← lead (semibold)
+│ - Supporting point…                          │  ← bullets (normal weight)
+│ ┌─ fact card / table ──────────────────────┐ │
+│ │ Outstanding   ₹2,45,000                  │ │
+│ └──────────────────────────────────────────┘ │
+│ [View receivables]                           │
 ├──────────────────────────────────────────────┤
-│ Ask about your business...             [↑]   │
+│ Ask about your business…               [↑]   │
 └──────────────────────────────────────────────┘
 ```
 
+Loading uses an honest tool-activity timeline (Thinking / per-tool steps / Writing answer) from real stream events — not a lone circular spinner and not fake “Thought for N seconds.” Model prose is rendered with a light markdown subset (lead bold, lists); verified numbers stay in fact cards (stacked rows) or a 2-column table when there are 4+ facts. Errors are short and muted.
+
 The AI should be available through:
 
-- Global assistant.
+- Global assistant (top-bar sheet).
 - Contextual actions.
 - Suggested actions.
 - Inline insights.

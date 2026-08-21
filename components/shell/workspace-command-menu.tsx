@@ -30,7 +30,6 @@ const ROUTES = [
   { label: "Reports", href: "/app/reports", keywords: "gst summary" },
   { label: "Accounting", href: "/app/accounting", keywords: "ledger journals" },
   { label: "Settings", href: "/app/settings", keywords: "business profile" },
-  { label: "AI Assistant", href: "/app/assistant", keywords: "chat help" },
 ] as const;
 
 export function WorkspaceCommandMenu() {

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { money } from "@/modules/shared-kernel/money";
 import { MoneyDisplay } from "@/components/business/money-display";
 import {
@@ -57,10 +59,13 @@ export function DashboardMetricCard({
     component.value.scale
   );
 
-  return (
+  const card = (
     <Card
       size="sm"
-      className="border-border bg-gradient-to-b from-muted/50 to-card dark:from-muted/30"
+      className={cn(
+        "h-full min-h-28 border-border bg-gradient-to-b from-muted/50 to-card dark:from-muted/30",
+        component.href && "transition-opacity hover:opacity-95"
+      )}
     >
       <CardHeader className="gap-2">
         <div className="flex items-start justify-between gap-2">
@@ -93,4 +98,14 @@ export function DashboardMetricCard({
       </CardHeader>
     </Card>
   );
+
+  if (component.href) {
+    return (
+      <Link href={component.href} className="block h-full min-w-0 outline-none">
+        {card}
+      </Link>
+    );
+  }
+
+  return card;
 }

@@ -1,7 +1,7 @@
 import { DashboardCanvas } from "@/components/business/dashboard-canvas";
 import { PageHeader } from "@/components/shell/page-header";
 import { authorize } from "@/lib/security";
-import { runDashboardSupervisor } from "@/modules/ai";
+import { runDashboardSupervisor } from "@/modules/ai/server";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 import { prismaExpenseRepository } from "@/modules/expenses/infrastructure/prisma-expenses-repository";
 import { prismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";
@@ -73,15 +73,23 @@ export default async function DashboardPage({
         </div>
       ) : null}
 
-      <p className="text-base text-muted-foreground">
-        {result.view.period.label}
-        {" · "}
-        <span className="font-mono text-foreground">
-          {result.view.period.from} – {result.view.period.to}
-        </span>
-        {" · "}
-        Business timezone {tenant.business.timezone}
-      </p>
+      <div className="-mt-2 flex flex-col gap-1 border-b border-border/60 pb-4 text-sm text-muted-foreground">
+        <p>
+          <span>{result.view.period.label}</span>
+          <span className="mx-1.5 text-border">·</span>
+          <span className="font-mono text-xs text-foreground/80">
+            {result.view.period.from} – {result.view.period.to}
+          </span>
+          <span className="mx-1.5 text-border">·</span>
+          <span className="text-xs">{tenant.business.timezone}</span>
+        </p>
+        {result.view.source === "fallback" ? (
+          <p className="text-xs text-muted-foreground">
+            Showing deterministic overview (AI supervisor unavailable or
+            degraded).
+          </p>
+        ) : null}
+      </div>
 
       <DashboardCanvas view={result.view} chartRangePreset={range.preset} />
     </div>

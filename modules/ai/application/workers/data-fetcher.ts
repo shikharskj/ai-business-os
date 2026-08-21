@@ -86,6 +86,21 @@ function buildFacts(overview: DashboardOverview): DashboardFact[] {
     });
   }
 
+  for (const expense of overview.recentExpenses) {
+    facts.push({
+      ...moneyFact(
+        `fact.expense.${expense.id}`,
+        expense.number,
+        expense.grandTotal
+      ),
+      href: `/app/expenses/${expense.id}`,
+      meta: {
+        category: expense.category,
+        date: expense.incurredOn,
+      },
+    });
+  }
+
   for (const alert of overview.alerts) {
     facts.push({
       id: `fact.alert.${alert.kind}.${alert.href}`,

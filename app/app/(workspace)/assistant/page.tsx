@@ -1,5 +1,6 @@
-import { ComingSoon } from "@/components/shell/coming-soon";
+import { permanentRedirect } from "next/navigation";
 
-export default function AssistantPage() {
-  return <ComingSoon title="AI Assistant" module="AI Assistant" />;
+/** Former full-page assistant; the top-bar sheet is the only entry point. */
+export default function AssistantPageRedirect() {
+  permanentRedirect("/app");
 }

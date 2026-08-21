@@ -39,6 +39,7 @@ export const metricCardComponentSchema = z.object({
   title: z.string().min(1),
   value: dashboardMoneySchema,
   caption: z.string().optional(),
+  href: z.string().min(1).optional(),
   tone: z.enum(["neutral", "success", "danger", "warning"]).optional(),
   sparkline: dashboardSparklineSchema.optional(),
   trend: dashboardTrendSchema.optional(),

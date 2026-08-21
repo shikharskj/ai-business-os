@@ -17,6 +17,8 @@
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.48",
+    "@ai-sdk/react": "^4.0.74",
     "@aws-sdk/client-s3": "^3.1113.0",
     "@base-ui/react": "^1.7.0",
     "@clerk/nextjs": "^7.7.8",
@@ -24,9 +26,12 @@
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@emnapi/core": "1.11.3",
+    "@emnapi/runtime": "1.11.3",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "@tanstack/react-table": "^9.1.2",
+    "ai": "^7.0.71",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
