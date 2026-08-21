@@ -4,13 +4,11 @@ import { prisma } from "@/lib/db/client";
 import { authorize, AuthorizationError } from "@/lib/security/authorize";
 import {
   AttentionItemNotFoundError,
+  AttentionTenantMismatchError,
   attentionItemToDto,
   dismissAttentionItem,
   dismissAttentionSchema,
 } from "@/modules/business-state";
-import { createPrismaAttentionQueueRepository } from "@/modules/business-state/infrastructure/prisma-attention-repository";
-import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
-import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 import { TenantRequiredError } from "@/modules/tenant/domain/errors";
 
 /**
@@ -33,9 +31,7 @@ export async function POST(request: Request) {
       tenantId: tenant.tenantId,
       actorUserId: tenant.membership.userId,
       attentionItemId: parsed.data.attentionItemId,
-      attention: createPrismaAttentionQueueRepository(prisma),
-      audit: createPrismaAuditRepository(prisma),
-      outbox: createPrismaOutboxRepository(prisma),
+      prisma,
     });
 
     return NextResponse.json({
@@ -50,7 +46,7 @@ export async function POST(request: Request) {
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    if (error instanceof AttentionItemNotFoundError) {
+    if (error instanceof AttentionItemNotFoundError || error instanceof AttentionTenantMismatchError) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
     throw error;

@@ -22,7 +22,7 @@ import {
 
 type PrismaAttentionClient = Pick<
   PrismaClient,
-  "attentionItem" | "automationOutcome"
+  "attentionItem" | "automationOutcome" | "$transaction"
 >;
 
 const ATTENTION_TYPES = new Set<AttentionItemType>([
@@ -145,51 +145,53 @@ export function createPrismaAttentionQueueRepository(
 ): AttentionQueueRepository {
   return {
     async syncItems(input: SyncAttentionItemsInput) {
-      const keys = input.items.map((draft) => draft.naturalKey);
-      if (keys.length === 0) {
-        await prisma.attentionItem.deleteMany({
-          where: { tenantId: input.tenantId },
-        });
-        return;
-      }
+      await prisma.$transaction(async (tx) => {
+        const keys = input.items.map((draft) => draft.naturalKey);
+        if (keys.length === 0) {
+          await tx.attentionItem.deleteMany({
+            where: { tenantId: input.tenantId },
+          });
+          return;
+        }
 
-      await prisma.attentionItem.deleteMany({
-        where: {
-          tenantId: input.tenantId,
-          naturalKey: { notIn: keys },
-        },
-      });
-
-      for (const draft of input.items) {
-        const values = {
-          type: draft.type,
-          severity: draft.severity,
-          title: draft.title,
-          body: draft.body,
-          href: draft.href,
-          resourceType: draft.resourceType,
-          resourceId: draft.resourceId,
-          amount: draft.amount ? toDecimalForPrisma(draft.amount) : null,
-          currency: draft.currency,
-          factId: draft.factId,
-          computedAt: input.computedAt,
-        };
-        await prisma.attentionItem.upsert({
+        await tx.attentionItem.deleteMany({
           where: {
-            tenantId_naturalKey: {
+            tenantId: input.tenantId,
+            naturalKey: { notIn: keys },
+          },
+        });
+
+        for (const draft of input.items) {
+          const values = {
+            type: draft.type,
+            severity: draft.severity,
+            title: draft.title,
+            body: draft.body,
+            href: draft.href,
+            resourceType: draft.resourceType,
+            resourceId: draft.resourceId,
+            amount: draft.amount ? toDecimalForPrisma(draft.amount) : null,
+            currency: draft.currency,
+            factId: draft.factId,
+            computedAt: input.computedAt,
+          };
+          await tx.attentionItem.upsert({
+            where: {
+              tenantId_naturalKey: {
+                tenantId: input.tenantId,
+                naturalKey: draft.naturalKey,
+              },
+            },
+            create: {
               tenantId: input.tenantId,
               naturalKey: draft.naturalKey,
+              status: "OPEN",
+              ...values,
             },
-          },
-          create: {
-            tenantId: input.tenantId,
-            naturalKey: draft.naturalKey,
-            status: "OPEN",
-            ...values,
-          },
-          update: values,
-        });
-      }
+            update: values,
+          });
+        }
+      });
     },
 
     async listOpen(tenantId: string) {
