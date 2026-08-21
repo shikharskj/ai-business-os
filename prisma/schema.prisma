@@ -102,6 +102,10 @@ model Business {
   purchaseNumberSeries PurchaseNumberSeries[]
   listRowOrders ListRowOrder[]
   notifications Notification[]
+  businessStateMeta BusinessStateMeta?
+  receivablesRiskState ReceivablesRiskState?
+  inventoryRiskState InventoryRiskState?
+  salesMomentumState SalesMomentumState?
 
   @@map("businesses")
 }
@@ -192,6 +196,66 @@ model OutboxConsumerReceipt {
   @@unique([eventId, consumerName])
   @@index([consumerName, processedAt])
   @@map("outbox_consumer_receipts")
+}
+
+/// Projection envelope / schema version for BusinessState families (R1).
+model BusinessStateMeta {
+  tenantId      String   @id
+  schemaVersion Int      @default(1)
+  rebuiltAt     DateTime?
+  updatedAt     DateTime @updatedAt
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("business_state_meta")
+}
+
+/// Derived receivables risk summary — rebuildable from invoices + allocations.
+model ReceivablesRiskState {
+  tenantId              String   @id
+  openInvoiceCount      Int
+  overdueInvoiceCount   Int
+  totalOutstanding      Decimal  @db.Decimal(18, 2)
+  overdueOutstanding    Decimal  @db.Decimal(18, 2)
+  currency              String   @default("INR")
+  computedAt            DateTime
+  updatedAt             DateTime @updatedAt
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("receivables_risk_state")
+}
+
+/// Derived inventory / low-stock risk summary — rebuildable from stock movements.
+model InventoryRiskState {
+  tenantId       String   @id
+  lowStockCount  Int
+  thresholdMajor String
+  computedAt     DateTime
+  updatedAt      DateTime @updatedAt
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("inventory_risk_state")
+}
+
+/// Derived sales momentum for a rolling window — rebuildable from posted invoices.
+/// Formula: sum of posted invoice grand totals (and taxable) in [windowFrom, windowTo].
+model SalesMomentumState {
+  tenantId            String   @id
+  windowDays          Int
+  windowFrom          String
+  windowTo            String
+  postedInvoiceCount  Int
+  salesTotal          Decimal  @db.Decimal(18, 2)
+  taxableTotal        Decimal  @db.Decimal(18, 2)
+  currency            String   @default("INR")
+  computedAt          DateTime
+  updatedAt           DateTime @updatedAt
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("sales_momentum_state")
 }
 
 model Notification {

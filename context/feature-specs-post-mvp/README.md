@@ -61,7 +61,7 @@ Every spec uses this shape:
 | Spec | Unit | Roadmap | Status |
 | ---- | ---- | ------- | ------ |
 | 01 | Typed domain event catalog + outbox consumer registry | R1 | Complete |
-| 02 | BusinessState projections + rebuild | R1 | Not Started |
+| 02 | BusinessState projections + rebuild | R1 | Complete |
 | 03 | Cash position model (ledger cash/bank) | R1 | Not Started |
 | 04 | AttentionQueue + minimal outcome hooks | R1 | Not Started |
 | 05 | Needs attention / Daily Brief UI (deterministic) | R2 | Not Started |
@@ -78,4 +78,4 @@ Every spec uses this shape:
 | 16 | Business Guardian | R6 | Not Started |
 | 17 | AI Operations / document → prepared purchase | R7 | Not Started |
 
-**Next implementable spec:** `02-business-state-projections.md`
+**Next implementable spec:** `03-cash-position-model.md`

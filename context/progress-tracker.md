@@ -9,9 +9,9 @@ This file is the **single source of truth for implementation progress**. The AI 
 ## Current Phase
 
 * **Phase:** Post-MVP — Business Intelligence Spine (R1)
-* **Status:** Ready — next `02-business-state-projections.md`
+* **Status:** Ready — next `03-cash-position-model.md`
 * **Active roadmap:** [`context/product-roadmap.md`](product-roadmap.md)
-* **Active specs:** [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) — next: `02-business-state-projections.md`
+* **Active specs:** [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) — next: `03-cash-position-model.md`
 * **MVP archive:** [`context/feature-specs-mvp/`](feature-specs-mvp/)
 * **Deferred horizon:** [`context/future-scope.md`](future-scope.md) (do not schedule as current Next)
 * **Launch trust:** MVP `29` / `30` deferred until after Post-MVP + future-scope (not parallel)
@@ -38,7 +38,7 @@ Guardian (R6) → AI Ops (R7) — specs 16–17
 
 North star: an AI-native OS for Indian SMEs that records correctly, understands continuously, tells the owner what matters, and automates routine work under autonomy L0–L4.
 
-**Next implementation unit:** `context/feature-specs-post-mvp/02-business-state-projections.md`. Do not start R5 (`12`–`15`) before R2–R4 unless a metric pull is recorded here. Do not start MVP `29`/`30` until launch readiness.
+**Next implementation unit:** `context/feature-specs-post-mvp/03-cash-position-model.md`. Do not start R5 (`12`–`15`) before R2–R4 unless a metric pull is recorded here. Do not start MVP `29`/`30` until launch readiness.
 
 The priority is **correctness, attention quality, and automation under guardrails** — not feature parity with billing ERPs.
 
@@ -92,7 +92,7 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 | Testing (`29`)        | Deferred until launch |
 | Security hardening (`30`) | Deferred until launch |
 | Production deployment | Not Started |
-| Intelligence Spine (R1) | In Progress (`01` done; next `02`) |
+| Intelligence Spine (R1) | In Progress (`02` done; next `03`) |
 | Operator / Daily Brief (R2) | Not Started |
 | Copilot Depth (R3)    | Not Started |
 | Automation Engine (R4)| Not Started |
@@ -103,6 +103,14 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 ---
 
 # Completed
+
+* **BusinessState projections (`02-business-state-projections.md`):**
+  * `modules/business-state/` — ReceivablesRisk, InventoryRisk, SalesMomentum (30-day posted invoice rollup) + `BusinessStateMeta` envelope; Prisma migration `20260821120000_add_business_state_projections`.
+  * Rebuild from domain truth (`rebuildBusinessStateProjections`); outbox consumer `business-state` replaces projection-stub in default registration.
+  * Write hardening: outbox page coalesce via `handleBatch`, `computedAt` guards, atomic `commitSnapshots` (+ meta).
+  * Read/rebuild APIs: `GET /api/business-state`, `POST /api/business-state/rebuild` (`report:read`).
+  * Cron / `after()` wire `createPrismaBusinessStateConsumerDeps`; tests in `tests/business-state/projections.test.ts`.
+  * Next: `03-cash-position-model.md`.
 
 * **Typed domain events (`01-typed-domain-events.md`):**
   * `modules/events/` — typed catalog (`DOMAIN_EVENT_TYPES` + Zod payload schemas), consumer registry, `processOutboxConsumers` / `runOutboxProcessing`, `persistDomainEvent`.
@@ -379,8 +387,8 @@ Nothing in progress. See **Next Up**.
 
 **Active product work** follows [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) one numbered file at a time.
 
-1. **Next implementable spec:** [`02-business-state-projections.md`](feature-specs-post-mvp/02-business-state-projections.md)
-2. Then `03`–`04` (cash, attention) → `05`–`07` (brief, operator, copilot) → `08`–`11` (automation)
+1. **Next implementable spec:** [`03-cash-position-model.md`](feature-specs-post-mvp/03-cash-position-model.md)
+2. Then `04` (attention) → `05`–`07` (brief, operator, copilot) → `08`–`11` (automation)
 3. Specs `12`–`15` (R5) only after R2–R4 unless a metric pull is recorded here
 4. Then `16` Guardian → `17` AI Operations
 5. **Not now:** [`future-scope.md`](future-scope.md); MVP `29`/`30` until launch after Post-MVP + future-scope

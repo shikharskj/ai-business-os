@@ -29,6 +29,13 @@ export type OutboxEventConsumer = {
    */
   eventTypes?: ReadonlyArray<DomainEventType | string>;
   handle(event: OutboxEventRecord): Promise<OutboxConsumerHandleResult>;
+  /**
+   * Optional batch handler. When present, processOutboxConsumers groups one
+   * fetched page by tenantId and calls this once per tenant group.
+   */
+  handleBatch?(
+    events: OutboxEventRecord[]
+  ): Promise<OutboxConsumerHandleResult>;
 };
 
 export type OutboxDispatchRepository = {

@@ -1,6 +1,8 @@
 import { processOutboxConsumers } from "@/modules/events/application/process-outbox";
 import { registerDefaultOutboxConsumers } from "@/modules/events/application/register-default-consumers";
 import type { OutboxDispatchRepository } from "@/modules/events/domain/types";
+import type { BusinessStateConsumerDeps } from "@/modules/business-state/consumers/business-state-consumer";
+import { BUSINESS_STATE_CONSUMER_NAME } from "@/modules/business-state/consumers/business-state-consumer";
 import type { NotificationChannel } from "@/modules/notifications/domain/channel";
 import type { NotificationContextRepository } from "@/modules/notifications/domain/outbox-consumer-repository";
 import { checkOverdueInvoices } from "@/modules/notifications/application/process-outbox";
@@ -9,6 +11,7 @@ export type RunOutboxProcessingInput = {
   outbox: OutboxDispatchRepository;
   channel: NotificationChannel;
   context: NotificationContextRepository;
+  businessState: BusinessStateConsumerDeps;
   tenantId?: string;
   overdueTenantIds?: string[];
   limit?: number;
@@ -18,7 +21,7 @@ export type RunOutboxProcessingInput = {
 export type RunOutboxProcessingResult = {
   processedEvents: number;
   notificationsCreated: number;
-  projectionStubHandled: number;
+  businessStateHandled: number;
   overdueChecked: number;
   consumerFailures: number;
 };
@@ -33,6 +36,7 @@ export async function runOutboxProcessing(
   registerDefaultOutboxConsumers({
     channel: input.channel,
     context: input.context,
+    businessState: input.businessState,
   });
 
   const dispatch = await processOutboxConsumers({
@@ -44,14 +48,12 @@ export async function runOutboxProcessing(
   const notificationsStats = dispatch.consumers.find(
     (row) => row.consumerName === "notifications"
   );
-  const projectionStats = dispatch.consumers.find(
-    (row) => row.consumerName === "projection-stub"
+  const businessStateStats = dispatch.consumers.find(
+    (row) => row.consumerName === BUSINESS_STATE_CONSUMER_NAME
   );
 
   let overdueChecked = 0;
   if (input.includeOverdueCheck !== false) {
-    // Match legacy processOutboxNotifications: union tenants from the drained
-    // outbox batch with explicit tenantId / overdueTenantIds (cron sample).
     const tenantIds = new Set<string>(dispatch.tenantIdsTouched);
     if (input.tenantId) {
       tenantIds.add(input.tenantId);
@@ -69,12 +71,11 @@ export async function runOutboxProcessing(
   }
 
   return {
-    processedEvents: dispatch.totalAttempted + dispatch.consumers.reduce(
-      (sum, row) => sum + row.skipped,
-      0
-    ),
+    processedEvents:
+      dispatch.totalAttempted +
+      dispatch.consumers.reduce((sum, row) => sum + row.skipped, 0),
     notificationsCreated: notificationsStats?.succeeded ?? 0,
-    projectionStubHandled: projectionStats?.succeeded ?? 0,
+    businessStateHandled: businessStateStats?.succeeded ?? 0,
     overdueChecked,
     consumerFailures: dispatch.totalFailed,
   };
