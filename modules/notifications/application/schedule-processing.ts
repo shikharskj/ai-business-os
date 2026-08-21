@@ -1,31 +1,31 @@
 import { after } from "next/server";
 
 import { prisma } from "@/lib/db/client";
-import { processOutboxNotifications } from "@/modules/notifications/application/process-outbox";
+import { runOutboxProcessing } from "@/modules/events/application/run-outbox-processing";
+import { createPrismaOutboxDispatchRepository } from "@/modules/events/infrastructure/prisma-outbox-dispatch";
 import { createInAppChannel } from "@/modules/notifications/infrastructure/in-app-channel";
 import { createPrismaNotificationContextRepository } from "@/modules/notifications/infrastructure/prisma-notification-context";
 import { createPrismaNotificationRepository } from "@/modules/notifications/infrastructure/prisma-notification-repository";
-import { createPrismaOutboxConsumerRepository } from "@/modules/notifications/infrastructure/prisma-outbox-consumer";
 
 /**
- * Fire-and-forget outbox → notification processing after the HTTP/response
- * path. Uses Next.js `after()` so the original business transaction is
- * already committed and notification failure cannot roll it back.
+ * Fire-and-forget outbox fan-out after the HTTP/response path.
+ * Uses Next.js `after()` so the original business transaction is
+ * already committed and consumer failure cannot roll it back.
  */
 export function scheduleNotificationOutboxProcessing(tenantId?: string): void {
   after(async () => {
     try {
       const notifications = createPrismaNotificationRepository(prisma);
-      await processOutboxNotifications({
+      const context = createPrismaNotificationContextRepository(prisma);
+      await runOutboxProcessing({
         tenantId,
-        outbox: createPrismaOutboxConsumerRepository(prisma),
-        notifications,
-        context: createPrismaNotificationContextRepository(prisma),
+        outbox: createPrismaOutboxDispatchRepository(prisma),
+        context,
         channel: createInAppChannel(notifications),
         includeOverdueCheck: Boolean(tenantId),
       });
     } catch {
-      // Non-critical: outbox rows stay unprocessed for the next pass.
+      // Non-critical: unreceipted outbox rows stay for the next pass.
     }
   });
 }

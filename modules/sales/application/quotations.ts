@@ -2,6 +2,8 @@ import { isPositiveQuantity } from "@/modules/inventory/domain/quantity";
 import { toMajorString, type Money } from "@/modules/shared-kernel/money";
 import type { AuditRepository } from "@/modules/shared-kernel/audit";
 import type { OutboxRepository } from "@/modules/shared-kernel/outbox";
+import { persistDomainEvent } from "@/modules/events/application/persist-domain-event";
+import type { DomainEventType } from "@/modules/events/catalog";
 import { CatalogNotFoundError } from "@/modules/catalog/domain/errors";
 import type { CatalogRepository } from "@/modules/catalog/infrastructure/repositories";
 import { PartyInactiveError, PartyNotFoundError } from "@/modules/party/domain/errors";
@@ -343,7 +345,7 @@ async function transitionQuotation(input: {
   quotationId: string;
   status: QuotationStatus;
   action: string;
-  eventType: string;
+  eventType: DomainEventType;
 } & Pick<QuotationUseCaseDeps, "sales" | "audit" | "outbox">): Promise<Quotation> {
   const existing = await input.sales.findQuotationById(input.tenantId, input.quotationId);
   if (!existing) {
@@ -369,10 +371,10 @@ async function transitionQuotation(input: {
     metadata: { number: quotation.number, from: existing.status, to: quotation.status },
   });
 
-  await input.outbox.persist({
+  await persistDomainEvent(input.outbox, {
     tenantId: input.tenantId,
     eventType: input.eventType,
-    aggregateType: "quotation",
+    aggregateType: "Quotation",
     aggregateId: quotation.id,
     payload: { number: quotation.number, status: quotation.status },
   });

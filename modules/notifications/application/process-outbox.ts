@@ -1,17 +1,11 @@
 import type { NotificationChannel } from "@/modules/notifications/domain/channel";
-import {
-  draftFromOutboxEvent,
-  lowStockNotificationDraft,
-  overdueNotificationDraft,
-} from "@/modules/notifications/domain/event-mapping";
+import { overdueNotificationDraft } from "@/modules/notifications/domain/event-mapping";
+import { deliverNotificationFromOutboxEvent } from "@/modules/notifications/application/deliver-from-outbox";
 import type { NotificationRepository } from "@/modules/notifications/domain/notification-repository";
 import type {
   NotificationContextRepository,
   OutboxConsumerRepository,
 } from "@/modules/notifications/domain/outbox-consumer-repository";
-import { isLowStock } from "@/modules/inventory/domain/stock";
-import { parseLowStockThreshold } from "@/modules/inventory/application/stock";
-import { quantityFromMajor } from "@/modules/inventory/domain/quantity";
 import { todayInTimezone } from "@/modules/shared-kernel/dates";
 
 export type ProcessOutboxDeps = {
@@ -33,7 +27,11 @@ export type ProcessOutboxResult = {
 };
 
 /**
- * Consumes committed outbox events and delivers in-app notifications.
+ * Legacy single-consumer path (notifications-only) for unit tests and
+ * callers that inject OutboxConsumerRepository.
+ * Production cron / after() should prefer `runOutboxProcessing` from
+ * `@/modules/events` so all registered consumers run.
+ *
  * Failures here must not roll back the original business transaction
  * (this always runs after commit). Duplicate delivery is safe via
  * idempotency keys.
@@ -52,7 +50,7 @@ export async function processOutboxNotifications(
   for (const event of events) {
     tenantsTouched.add(event.tenantId);
     try {
-      const created = await handleOutboxEvent({
+      const created = await deliverNotificationFromOutboxEvent({
         event,
         channel: input.channel,
         context: input.context,
@@ -62,14 +60,11 @@ export async function processOutboxNotifications(
       }
       await input.outbox.markProcessed(event.id);
     } catch (error) {
-      // Isolate per-event failures: log and continue processing subsequent events.
-      // Mark as processed to prevent repeatedly failing events from blocking the queue.
-      // Consider implementing a dead-letter queue or attempt counter for production.
+      // Leave unprocessed for retry (do not mark on failure).
       console.error(
         `Failed to process outbox event ${event.id} (${event.eventType}):`,
         error
       );
-      await input.outbox.markProcessed(event.id);
     }
   }
 
@@ -96,60 +91,6 @@ export async function processOutboxNotifications(
     notificationsCreated,
     overdueChecked,
   };
-}
-
-async function handleOutboxEvent(input: {
-  event: Parameters<typeof draftFromOutboxEvent>[0];
-  channel: NotificationChannel;
-  context: NotificationContextRepository;
-}): Promise<boolean> {
-  const draft = draftFromOutboxEvent(input.event);
-  if (!draft) {
-    return false;
-  }
-
-  if (draft !== "check_low_stock") {
-    const delivered = await input.channel.deliver(draft);
-    return delivered !== null;
-  }
-
-  const productId = input.event.aggregateId;
-  const label = await input.context.getProductLabel({
-    tenantId: input.event.tenantId,
-    productId,
-  });
-  if (!label) {
-    return false;
-  }
-
-  const quantityMajor = await input.context.getProductStockQuantityMajor({
-    tenantId: input.event.tenantId,
-    productId,
-  });
-  if (quantityMajor === null) {
-    return false;
-  }
-
-  const thresholdMajor = await input.context.getLowStockThresholdMajor(
-    input.event.tenantId
-  );
-  const threshold = parseLowStockThreshold(thresholdMajor);
-  const quantity = quantityFromMajor(quantityMajor);
-  if (!isLowStock(quantity, threshold)) {
-    return false;
-  }
-
-  const delivered = await input.channel.deliver(
-    lowStockNotificationDraft({
-      tenantId: input.event.tenantId,
-      productId,
-      productName: label.name,
-      sku: label.sku,
-      quantityMajor,
-      outboxEventId: input.event.id,
-    })
-  );
-  return delivered !== null;
 }
 
 async function emitOverdueNotifications(input: {

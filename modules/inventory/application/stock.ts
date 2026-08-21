@@ -1,5 +1,7 @@
 import type { AuditRepository } from "@/modules/shared-kernel/audit";
 import type { OutboxRepository } from "@/modules/shared-kernel/outbox";
+import { persistDomainEvent } from "@/modules/events/application/persist-domain-event";
+import type { DomainEventType } from "@/modules/events/catalog";
 import type { CatalogRepository } from "@/modules/catalog/infrastructure/repositories";
 import type { Product } from "@/modules/catalog/domain/types";
 import {
@@ -143,10 +145,10 @@ export async function recordInventoryMovement(input: {
     },
   });
 
-  await input.outbox.persist({
+  await persistDomainEvent(input.outbox, {
     tenantId: input.tenantId,
     eventType: eventTypeForCause(input.movement.cause),
-    aggregateType: "inventory",
+    aggregateType: "Inventory",
     aggregateId: movement.productId,
     payload: {
       movementId: movement.id,
@@ -452,7 +454,7 @@ function auditActionForCause(cause: InventoryMovementCause): string {
   return "inventory.moved";
 }
 
-function eventTypeForCause(cause: InventoryMovementCause): string {
+function eventTypeForCause(cause: InventoryMovementCause): DomainEventType {
   if (cause === "OPENING") return "InventoryOpened";
   if (cause === "ADJUSTMENT") return "InventoryAdjusted";
   return "InventoryMoved";
