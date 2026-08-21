@@ -4,19 +4,63 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 
+import { StatusBadge } from "@/components/business/status-badge";
+import type { BadgeTone } from "@/components/business/status-badge";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { formatRelativeTime } from "@/lib/format-relative-time";
 import { cn } from "@/lib/utils";
-import type { NotificationListItem } from "@/modules/notifications/domain/types";
+import type {
+  NotificationListItem,
+  NotificationType,
+} from "@/modules/notifications/domain/types";
 
 type NotificationListResponse = {
   unreadCount: number;
   notifications: NotificationListItem[];
 };
+
+const TYPE_META: Record<
+  NotificationType,
+  { label: string; tone: BadgeTone; accent: string }
+> = {
+  INVOICE_OVERDUE: {
+    label: "Overdue",
+    tone: "danger",
+    accent:
+      "border-l-[var(--state-error)] bg-[var(--state-error-subtle)]/50",
+  },
+  LOW_STOCK: {
+    label: "Low stock",
+    tone: "warning",
+    accent:
+      "border-l-[var(--state-warning)] bg-[var(--state-warning-subtle)]/50",
+  },
+  PAYMENT_RECEIVED: {
+    label: "Payment",
+    tone: "success",
+    accent:
+      "border-l-[var(--state-success)] bg-[var(--state-success-subtle)]/40",
+  },
+  INVOICE_POSTED: {
+    label: "Invoice",
+    tone: "neutral",
+    accent: "border-l-border bg-muted/20",
+  },
+  INVOICE_CREATED: {
+    label: "Invoice",
+    tone: "neutral",
+    accent: "border-l-border bg-muted/20",
+  },
+};
+
+function unreadBadgeLabel(count: number): string {
+  return count > 9 ? "9+" : String(count);
+}
 
 export function NotificationInbox() {
   const [open, setOpen] = useState(false);
@@ -62,45 +106,78 @@ export function NotificationInbox() {
     const interval = window.setInterval(() => {
       void load({ quiet: true });
     }, 60_000);
+
+    function onVisibilityOrFocus() {
+      if (document.visibilityState === "visible") {
+        void load({ quiet: true });
+      }
+    }
+
+    window.addEventListener("focus", onVisibilityOrFocus);
+    document.addEventListener("visibilitychange", onVisibilityOrFocus);
+
     return () => {
       window.clearTimeout(boot);
       window.clearInterval(interval);
+      window.removeEventListener("focus", onVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", onVisibilityOrFocus);
     };
   }, [load]);
 
   async function markAllRead() {
+    const previousItems = items;
+    const previousUnread = unreadCount;
+    setItems((prev) => prev.map((item) => ({ ...item, read: true })));
+    setUnreadCount(0);
+
     try {
       const response = await fetch("/api/notifications/mark-read", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ markAll: true }),
       });
-      if (response.ok) {
-        await load();
-      } else {
+      if (!response.ok) {
+        setItems(previousItems);
+        setUnreadCount(previousUnread);
         if (open) {
           setError("Failed to mark notifications as read");
         }
+        await load({ quiet: true });
       }
     } catch (err) {
+      setItems(previousItems);
+      setUnreadCount(previousUnread);
       if (open) {
         setError("Failed to mark notifications as read");
       }
       console.error("Mark all read failed:", err);
+      await load({ quiet: true });
     }
   }
 
   async function markOneRead(notificationId: string) {
+    const target = items.find((item) => item.id === notificationId);
+    if (!target || target.read) return;
+
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === notificationId ? { ...item, read: true } : item
+      )
+    );
+    setUnreadCount((count) => Math.max(0, count - 1));
+
     try {
-      await fetch("/api/notifications/mark-read", {
+      const response = await fetch("/api/notifications/mark-read", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notificationId }),
       });
-      await load({ quiet: true });
+      if (!response.ok) {
+        await load({ quiet: true });
+      }
     } catch (err) {
-      // Silent failure for quiet mark-as-read
       console.error("Mark one read failed:", err);
+      await load({ quiet: true });
     }
   }
 
@@ -131,7 +208,9 @@ export function NotificationInbox() {
       >
         <Bell className="size-4" />
         {unreadCount > 0 ? (
-          <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-destructive" />
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-none font-medium tabular-nums text-destructive-foreground">
+            {unreadBadgeLabel(unreadCount)}
+          </span>
         ) : null}
       </PopoverTrigger>
       <PopoverContent
@@ -163,47 +242,54 @@ export function NotificationInbox() {
               Loading…
             </p>
           ) : items.length === 0 ? (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-              No notifications yet.
-            </p>
+            <div className="flex flex-col gap-1 px-3 py-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                No notifications yet.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Payments, overdue invoices, and low stock will show up here.
+              </p>
+            </div>
           ) : (
             <ul className="divide-y divide-border">
-              {items.map((item) => (
-                <li key={item.id}>
-                  {item.href ? (
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "block px-3 py-2.5 transition-colors hover:bg-muted/60",
-                        !item.read && "bg-muted/30"
-                      )}
-                      onClick={() => {
-                        if (!item.read) {
-                          void markOneRead(item.id);
-                        }
-                        setOpen(false);
-                      }}
-                    >
-                      <NotificationRow item={item} />
-                    </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      className={cn(
-                        "block w-full px-3 py-2.5 text-left transition-colors hover:bg-muted/60",
-                        !item.read && "bg-muted/30"
-                      )}
-                      onClick={() => {
-                        if (!item.read) {
-                          void markOneRead(item.id);
-                        }
-                      }}
-                    >
-                      <NotificationRow item={item} />
-                    </button>
-                  )}
-                </li>
-              ))}
+              {items.map((item) => {
+                const meta = TYPE_META[item.type];
+                const rowClass = cn(
+                  "block w-full border-l-2 px-3 py-2.5 text-left transition-colors hover:bg-muted/60",
+                  !item.read ? meta.accent : "border-l-transparent"
+                );
+
+                return (
+                  <li key={item.id}>
+                    {item.href ? (
+                      <Link
+                        href={item.href}
+                        className={rowClass}
+                        onClick={() => {
+                          if (!item.read) {
+                            void markOneRead(item.id);
+                          }
+                          setOpen(false);
+                        }}
+                      >
+                        <NotificationRow item={item} />
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        className={rowClass}
+                        onClick={() => {
+                          if (!item.read) {
+                            void markOneRead(item.id);
+                          }
+                        }}
+                      >
+                        <NotificationRow item={item} />
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -213,15 +299,34 @@ export function NotificationInbox() {
 }
 
 function NotificationRow({ item }: { item: NotificationListItem }) {
+  const meta = TYPE_META[item.type];
+  const relative = formatRelativeTime(item.createdAt);
+
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-1">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium text-foreground">{item.title}</p>
-        {!item.read ? (
-          <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary" />
-        ) : null}
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          <p className="text-sm font-medium text-foreground">{item.title}</p>
+          <StatusBadge size="sm" tone={meta.tone}>
+            {meta.label}
+          </StatusBadge>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {relative ? (
+            <time
+              className="text-xs text-muted-foreground"
+              dateTime={item.createdAt}
+              title={item.createdAt}
+            >
+              {relative}
+            </time>
+          ) : null}
+          {!item.read ? (
+            <span className="size-1.5 rounded-full bg-primary" aria-hidden />
+          ) : null}
+        </div>
       </div>
-      <p className="text-xs text-muted-foreground">{item.body}</p>
+      <p className="line-clamp-2 text-xs text-muted-foreground">{item.body}</p>
     </div>
   );
 }

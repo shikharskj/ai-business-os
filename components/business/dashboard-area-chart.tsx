@@ -47,9 +47,11 @@ export function DashboardAreaChartPanel({
 
   if (data.length === 0) {
     return (
-      <p className="text-base text-muted-foreground">
-        No sales or expenses in this period yet.
-      </p>
+      <div className="flex min-h-48 items-center">
+        <p className="text-sm text-muted-foreground">
+          No sales or expenses in this period yet.
+        </p>
+      </div>
     );
   }
 

@@ -135,10 +135,45 @@ describe("supervisor-led dashboard", () => {
     expect(result.view.version).toBe(1);
     expect(result.view.source).toBe("supervisor");
     const kpi = result.view.regions.find((r) => r.id === "kpi");
-    expect(kpi?.components).toHaveLength(4);
+    expect(kpi?.components).toHaveLength(8);
     expect(kpi?.components.every((c) => c.type === "MetricCard")).toBe(true);
+    const kpiIds = kpi?.components.map((c) => c.id) ?? [];
+    expect(kpiIds).toEqual(
+      expect.arrayContaining([
+        "kpi.sales",
+        "kpi.expenses",
+        "kpi.profit",
+        "kpi.receivables",
+        "kpi.payables",
+        "kpi.overdue",
+        "kpi.receipts",
+        "kpi.paymentsOut",
+      ])
+    );
     expect(result.audit.factCount).toBeGreaterThan(0);
     expect(result.view.regions.some((r) => r.id === "insights")).toBe(true);
+
+    const activity = result.view.regions
+      .flatMap((r) => r.components)
+      .find((c) => c.type === "ActivityList");
+    expect(activity?.type).toBe("ActivityList");
+    if (activity?.type === "ActivityList") {
+      const ids = activity.items.map((item) => item.id);
+      expect(ids).toContain("inv-1");
+      expect(ids).toContain("exp-1");
+      expect(
+        activity.items.every(
+          (item) =>
+            item.amount?.factId === `fact.invoice.${item.id}` ||
+            item.amount?.factId === `fact.expense.${item.id}`
+        )
+      ).toBe(true);
+    }
+
+    assertViewCitesFacts(result.view, await runDataFetcher({
+      tenantId: "tenant-a",
+      deps: deps(),
+    }));
   });
 
   it("rejects views that invent uncited money facts", async () => {
@@ -184,5 +219,15 @@ describe("supervisor-led dashboard", () => {
     expect(anomalies.anomalies.some((a) => a.id === "anomaly.overdue")).toBe(
       true
     );
+  });
+
+  it("emits expense money facts for recent expenses", async () => {
+    const facts = await runDataFetcher({
+      tenantId: "tenant-a",
+      deps: deps(),
+    });
+    const expenseFact = facts.facts.find((f) => f.id === "fact.expense.exp-1");
+    expect(expenseFact?.kind).toBe("money");
+    expect(expenseFact?.href).toBe("/app/expenses/exp-1");
   });
 });

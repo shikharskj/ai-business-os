@@ -126,8 +126,9 @@ Do not skip foundational dependencies merely to build visually impressive featur
 * Notifications (`26-notifications.md`):
   * `modules/notifications/` — in-app channel abstraction (email/SMS/WhatsApp later), idempotent outbox consumer, overdue scheduled check, mark read/unread. Tenant-scoped `Notification` table with unique `(tenantId, idempotencyKey)`.
   * Top-bar inbox (`NotificationInbox`) wired to `/api/notifications` + mark-read. Post-commit kick via Next.js `after()`; cron entry at `/api/internal/outbox/process`.
+  * Inbox polish: relative timestamps, type severity badge/accent, numeric unread badge, optimistic mark-read, focus/visibility refetch, clearer empty copy.
   * Events: invoice created/posted, payment received, low stock after inventory movements, invoice overdue (scheduled).
-  * Tests: `tests/notifications/notifications.test.ts` (idempotency, tenant isolation, overdue, low stock).
+  * Tests: `tests/notifications/notifications.test.ts` (idempotency, tenant isolation, overdue, low stock); `tests/shared-kernel/format-relative-time.test.ts`.
 
 * Search (`25-search.md`):
   * `modules/search/` — tenant-scoped PostgreSQL FTS (`to_tsvector` / `to_tsquery`) over customers, suppliers, products, invoices, purchases, payments, supplier payments, expenses. Permission-gated by existing `*:read` permissions. Derived GIN indexes via migration (no Elasticsearch).
@@ -142,8 +143,23 @@ Do not skip foundational dependencies merely to build visually impressive featur
 * Supervisor-led dashboard Generative UI (UX overhaul on top of `23-dashboard.md`):
   * `modules/ai/` Supervisor orchestrates Data Fetcher → Analyst → Anomaly Scout → Generative UI Mapper. KPIs cite fact ids only (Zod `DashboardViewSchema` + quality gate).
   * `DashboardCanvas` renders MetricCard / AreaChart / ActivityList / InsightBanner from validated JSON; AI-down uses `source: "fallback"`.
+  * Layout: left column = empty/KPI/charts; right column = Alerts (insights) stacked above Recent activity.
   * App top bar: Clerk `OrganizationSwitcher` + ⌘K route command palette (constrained to avoid horizontal overflow). Chart header period filters (7d / 30d / 3m); KPI card gradients; no Overview/Reports/Accounting tabs on `/app`.
   * Tests: `tests/ai/dashboard-supervisor.test.ts`.
+
+* Dashboard canvas height balance:
+  * KPI cards share `min-h-28` / `h-full`; lg grid pairs KPI↔Alerts and Chart↔Activity so row heights match.
+
+* Dashboard Phase B (surface unused overview data):
+  * Second KPI row: Payables, Overdue, Cash in, Cash out (cited money facts + report/payment hrefs).
+  * Recent activity merges invoices + expenses; data fetcher emits `fact.expense.*`.
+  * Low stock remains Alerts-only via anomaly scout (not a money KPI).
+
+* Dashboard canvas visual polish (UI-only):
+  * Shared right-rail `size="sm"` chrome for Alerts + Activity (scroll bodies, empty typography).
+  * Compact insights as severity accent list rows with `StatusBadge` (Fact / Recommendation); quieter icon dismiss.
+  * Activity `divide-y` rows + empty hint; chart card matches KPI `size="sm"`; empty chart `min-h` + `text-sm`.
+  * Period/timezone meta strip under `PageHeader` (fallback notice in same strip).
 
 * Dashboard chart / KPI polish:
   * Monochrome gradient area chart (`--chart-1` / `--chart-3`); URL `?range=` presets `last_7_days` | `last_30_days` | `last_3_months` (default 3 months).
