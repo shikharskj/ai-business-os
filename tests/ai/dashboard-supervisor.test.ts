@@ -4,11 +4,13 @@ import {
   assertViewCitesFacts,
   FactCitationError,
   parseDashboardView,
+} from "@/modules/ai";
+import {
   runAnomalyScout,
   runDataAnalyst,
   runDashboardSupervisor,
   runGenerativeUiMapper,
-} from "@/modules/ai";
+} from "@/modules/ai/server";
 import { createMemoryCatalogRepository } from "@/modules/catalog";
 import { createMemoryExpenseRepository } from "@/modules/expenses";
 import type { Expense } from "@/modules/expenses/domain/types";

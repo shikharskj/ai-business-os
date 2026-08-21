@@ -133,7 +133,15 @@ describe("ai module boundaries", () => {
     expect(sdkImporting.map((file) => path.basename(file)).sort()).toEqual([
       "assistant-sdk-tools.ts",
       "model.ts",
+      "sanitize-assistant-messages.ts",
     ]);
+
+    const sdkTools = readFileSync(
+      path.join(ROOT, "lib/ai/assistant-sdk-tools.ts"),
+      "utf8"
+    );
+    expect(sdkTools).toMatch(/wrapUntrustedContent/);
+    expect(sdkTools).toMatch(/UNTRUSTED|fencedToolPayload/);
 
     const chatRoute = readFileSync(
       path.join(ROOT, "app/api/assistant/chat/route.ts"),
@@ -141,5 +149,28 @@ describe("ai module boundaries", () => {
     );
     expect(chatRoute).toMatch(/from ["']ai["']/);
     expect(chatRoute).toMatch(/streamText/);
+    expect(chatRoute).toMatch(/parseAssistantChatMessages/);
+    expect(chatRoute).toMatch(/createAiToolContext/);
+    // Stub mode must not skip tenant resolution.
+    const contextCall = chatRoute.indexOf("await createAiToolContext");
+    const stubCall = chatRoute.indexOf("if (isAssistantStubMode())");
+    expect(contextCall).toBeGreaterThan(-1);
+    expect(stubCall).toBeGreaterThan(contextCall);
+  });
+
+  it("keeps tool execution off the client barrel", () => {
+    const clientBarrel = readFileSync(
+      path.join(ROOT, "modules/ai/index.ts"),
+      "utf8"
+    );
+    const serverBarrel = readFileSync(
+      path.join(ROOT, "modules/ai/server.ts"),
+      "utf8"
+    );
+
+    expect(clientBarrel).not.toMatch(/executeAiTool|runAiToolCall|runConfirmedAiAction|resolveAiToolPeriod/);
+    expect(serverBarrel).toMatch(/import ["']server-only["']/);
+    expect(serverBarrel).toMatch(/executeAiTool/);
+    expect(serverBarrel).toMatch(/runConfirmedAiAction/);
   });
 });

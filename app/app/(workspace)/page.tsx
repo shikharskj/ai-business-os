@@ -1,7 +1,7 @@
 import { DashboardCanvas } from "@/components/business/dashboard-canvas";
 import { PageHeader } from "@/components/shell/page-header";
 import { authorize } from "@/lib/security";
-import { runDashboardSupervisor } from "@/modules/ai";
+import { runDashboardSupervisor } from "@/modules/ai/server";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 import { prismaExpenseRepository } from "@/modules/expenses/infrastructure/prisma-expenses-repository";
 import { prismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";

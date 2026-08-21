@@ -1,19 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  AI_TOOL_AUDIT_ACTION,
   AI_TOOL_NAMES,
-  AI_TOOLS,
   AiToolAuthorizationError,
   AiToolIdentityOverrideError,
   AiToolInputError,
   AiToolNotFoundError,
   AiToolResourceNotFoundError,
+} from "@/modules/ai";
+import {
+  AI_TOOL_AUDIT_ACTION,
+  AI_TOOLS,
   executeAiTool,
   listAiToolSpecsForRole,
   listAiToolsForRole,
   runAiToolCall,
-} from "@/modules/ai";
+} from "@/modules/ai/server";
 import {
   CUSTOMER_A,
   CUSTOMER_B,
@@ -249,9 +251,19 @@ describe("ai tool authorization (27)", () => {
         toolName: "get_business_metrics",
         input: PERIOD,
       })
-    ).rejects.toBeInstanceOf(AiToolAuthorizationError);
+    ).rejects.toMatchObject({
+      name: "AiToolError",
+      code: "TOOL_CONTEXT_INVALID",
+    });
 
-    expect(unauthenticated.auditRecords).toHaveLength(0);
+    expect(unauthenticated.auditRecords).toHaveLength(1);
+    expect(unauthenticated.auditRecords[0]).toMatchObject({
+      action: AI_TOOL_AUDIT_ACTION,
+      metadata: expect.objectContaining({
+        outcome: "failed",
+        errorCode: "TOOL_CONTEXT_INVALID",
+      }),
+    });
   });
 
   it("refuses model-supplied identity and tenant fields", async () => {

@@ -4,8 +4,8 @@ import {
   assistantActionOutcomeSchema,
   assistantConfirmSchema,
   describeAssistantFailure,
-  runConfirmedAiAction,
 } from "@/modules/ai";
+import { runConfirmedAiAction } from "@/modules/ai/server";
 import { verifyAiActionToken } from "@/modules/ai/domain/action-token";
 import { resolveAiActionSecret } from "@/modules/ai/infrastructure/action-secret";
 import { createAiToolContext } from "@/modules/ai/infrastructure/tool-context";
@@ -55,7 +55,29 @@ export async function POST(request: Request) {
       argumentsJson: payload.argumentsJson,
     });
 
-    return NextResponse.json(assistantActionOutcomeSchema.parse(outcome), {
+    const validated = assistantActionOutcomeSchema.safeParse(outcome);
+    if (!validated.success) {
+      console.error("AI action outcome schema drift after successful run:", {
+        correlationId,
+        error: validated.error,
+      });
+      // Mutation already completed — do not convert success into a failure.
+      return NextResponse.json(
+        {
+          toolName: outcome.toolName,
+          status: "executed" as const,
+          title: outcome.title,
+          facts: Array.isArray(outcome.facts) ? outcome.facts : [],
+          auditRecordId:
+            typeof outcome.auditRecordId === "string"
+              ? outcome.auditRecordId
+              : "audit-unavailable",
+        },
+        { headers: { "Cache-Control": "private, no-store" } }
+      );
+    }
+
+    return NextResponse.json(validated.data, {
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch (error) {

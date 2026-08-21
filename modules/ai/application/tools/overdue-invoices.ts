@@ -19,6 +19,7 @@ export const overdueInvoicesTool = defineAiTool({
     const report = await getReceivablesReport({
       tenantId: context.tenantId,
       timezone: context.timezone,
+      currency: context.currency,
       sales: context.repositories.sales,
       payments: context.repositories.payments,
     });
@@ -43,7 +44,7 @@ export const overdueInvoicesTool = defineAiTool({
       })
       .sort((a, b) => b.daysOverdue - a.daysOverdue);
 
-    let totalOverdue = money(0n);
+    let totalOverdue = money(0n, context.currency);
     for (const row of overdue) {
       totalOverdue = addMoney(totalOverdue, row.outstanding);
     }

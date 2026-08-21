@@ -35,6 +35,23 @@ export const assistantConfirmSchema = z
 
 const toolNameSchema = z.enum(AI_TOOL_NAMES);
 
+/**
+ * In-app navigation only. Rejects absolute URLs, protocol-relative hosts, and
+ * anything outside `/app…` so facts/suggestions cannot send users off-site.
+ */
+export const assistantAppHrefSchema = z
+  .string()
+  .min(1)
+  .max(500)
+  .refine(
+    (value) =>
+      value === "/app" ||
+      (/^\/app\/[A-Za-z0-9/_-]+$/.test(value) &&
+        !value.includes("//") &&
+        !value.includes("\\")),
+    { message: "Must be an app-relative /app path" }
+  );
+
 export const assistantFactSchema = z
   .object({
     id: z.string().min(1),
@@ -42,7 +59,14 @@ export const assistantFactSchema = z
     value: z.string().min(1),
     detail: z.string().nullable(),
     sourceTool: toolNameSchema,
-    href: z.string().nullable(),
+    href: assistantAppHrefSchema.nullable(),
+  })
+  .strict();
+
+export const assistantSuggestionSchema = z
+  .object({
+    label: z.string().min(1),
+    href: assistantAppHrefSchema,
   })
   .strict();
 
@@ -73,11 +97,7 @@ export const assistantAnswerSchema = z
         })
         .strict()
     ),
-    suggestions: z.array(
-      z
-        .object({ label: z.string().min(1), href: z.string().min(1) })
-        .strict()
-    ),
+    suggestions: z.array(assistantSuggestionSchema),
     pendingAction: assistantPendingActionSchema.nullable(),
     grounded: z.boolean(),
     unverifiedFigures: z.boolean(),
@@ -99,3 +119,47 @@ export const assistantActionOutcomeSchema = z
 
 export type AssistantAskInput = z.infer<typeof assistantAskSchema>;
 export type AssistantConfirmInput = z.infer<typeof assistantConfirmSchema>;
+
+/** Max messages accepted from the client (history pairs + current turn). */
+export const MAX_ASSISTANT_CHAT_MESSAGES = MAX_ASSISTANT_HISTORY_TURNS * 2 + 1;
+
+/** Combined text budget across all chat message parts. */
+export const MAX_ASSISTANT_CHAT_TEXT_CHARS =
+  MAX_ASSISTANT_QUESTION_LENGTH * (MAX_ASSISTANT_HISTORY_TURNS + 1);
+
+/**
+ * Sanitized UI message shape after stripping tool/system parts. Only user and
+ * assistant text turns may reach convertToModelMessages.
+ */
+export const assistantUiTextPartSchema = z
+  .object({
+    type: z.literal("text"),
+    text: z.string().min(1).max(MAX_ASSISTANT_QUESTION_LENGTH * 4),
+  })
+  .strict();
+
+export const assistantUiMessageSchema = z
+  .object({
+    id: z.string().min(1).max(200),
+    role: z.enum(["user", "assistant"]),
+    parts: z.array(assistantUiTextPartSchema).min(1).max(20),
+  })
+  .strict();
+
+export const assistantChatMessagesSchema = z
+  .array(assistantUiMessageSchema)
+  .min(1)
+  .max(MAX_ASSISTANT_CHAT_MESSAGES)
+  .superRefine((messages, ctx) => {
+    const combined = messages.reduce(
+      (sum, message) =>
+        sum + message.parts.reduce((partSum, part) => partSum + part.text.length, 0),
+      0
+    );
+    if (combined > MAX_ASSISTANT_CHAT_TEXT_CHARS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Chat history exceeds the maximum combined text length.",
+      });
+    }
+  });

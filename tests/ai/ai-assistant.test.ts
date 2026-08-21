@@ -10,15 +10,17 @@ import {
   assistantAskSchema,
   containsFigures,
   describeAssistantFailure,
-  executeAiTool,
   factsFromToolResult,
-  listAiToolSpecsForRole,
   previewAiAction,
-  runAiToolCall,
-  runConfirmedAiAction,
   splitAssistantAnswer,
   UNTRUSTED_CONTENT_OPEN,
 } from "@/modules/ai";
+import {
+  executeAiTool,
+  listAiToolSpecsForRole,
+  runAiToolCall,
+  runConfirmedAiAction,
+} from "@/modules/ai/server";
 import {
   AI_ACTION_TOKEN_TTL_MS,
   signAiActionToken,
@@ -131,6 +133,27 @@ describe("assistant facts from tools", () => {
     expect(parts.analysis).not.toContain(UNTRUSTED_CONTENT_OPEN);
     expect(parts.analysis).toContain("system (quoted):");
     expect(containsFigures(parts.analysis)).toBe(true);
+  });
+
+  it("does not mix low-stock inventory into overdue invoice fact details", async () => {
+    const outcome = await runAiToolCall({
+      context: toolContext(),
+      toolName: "get_business_metrics",
+      argumentsJson: JSON.stringify({ preset: "this_month" }),
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const facts = factsFromToolResult({
+      toolName: outcome.toolName,
+      output: outcome.output,
+    });
+    const overdue = facts.find((fact) => fact.label === "Overdue invoices");
+    const lowStock = facts.find((fact) => fact.label === "Low stock products");
+
+    expect(overdue?.detail ?? "").not.toMatch(/low on stock/i);
+    expect(overdue?.detail ?? "").toMatch(/outstanding/i);
+    expect(lowStock?.value).toBeTruthy();
   });
 });
 

@@ -35,8 +35,8 @@ import {
   type Money,
 } from "@/modules/shared-kernel/money";
 
-function zero(): Money {
-  return money(0n);
+function zero(currency = "INR"): Money {
+  return money(0n, currency);
 }
 
 export type BusinessReportDeps = {
@@ -154,7 +154,9 @@ export async function getProfitReport(
 }
 
 export async function getReceivablesReport(
-  input: Pick<BusinessReportDeps, "tenantId" | "timezone" | "sales" | "payments">
+  input: Pick<BusinessReportDeps, "tenantId" | "timezone" | "sales" | "payments"> & {
+    currency?: string;
+  }
 ): Promise<ReceivablesReport> {
   const invoices = await input.sales.listInvoices({
     tenantId: input.tenantId,
@@ -165,7 +167,9 @@ export async function getReceivablesReport(
     invoices.map((invoice) => invoice.id)
   );
 
-  let totalOutstanding = zero();
+  const currency =
+    input.currency ?? invoices[0]?.grandTotal.currency ?? "INR";
+  let totalOutstanding = zero(currency);
   const rows = invoices
     .map((invoice) => {
       const allocatedAmount =

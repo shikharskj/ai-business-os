@@ -21,6 +21,7 @@ export default async function ReceivablesReportPage() {
   const report = await getReceivablesReport({
     tenantId: tenant.tenantId,
     timezone: tenant.business.timezone,
+    currency: tenant.business.currency,
     sales: prismaSalesRepository,
     payments: prismaPaymentRepository,
   });

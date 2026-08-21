@@ -15,6 +15,7 @@ import type {
   AiAssistantSource,
   AiAssistantSuggestion,
 } from "@/modules/ai/domain/assistant-types";
+import { wrapUntrustedContent } from "@/modules/ai/domain/untrusted-content";
 import { resolveAiActionSecret } from "@/modules/ai/infrastructure/action-secret";
 import { runAiToolCall } from "@/modules/ai/application/execute-tool";
 import { listAiToolsForRole } from "@/modules/ai/application/tools/registry";
@@ -53,9 +54,18 @@ export type AssistantStreamSideEffects = {
   notices: string[];
 };
 
+function fencedToolPayload(toolName: string, payload: unknown): string {
+  return wrapUntrustedContent({
+    label: toolName,
+    content:
+      typeof payload === "string" ? payload : JSON.stringify(payload),
+  });
+}
+
 /**
  * Builds AI SDK tools that always execute through modules/ai (authz, Zod, audit).
  * Confirmation-required tools never mutate; they attach a signed pending action.
+ * Tool payloads returned to the model are always UNTRUSTED-CONTENT fenced.
  */
 export function buildAssistantSdkTools(input: {
   context: AiToolContext;
@@ -69,6 +79,17 @@ export function buildAssistantSdkTools(input: {
       inputSchema: definition.inputSchema as z.ZodType,
       execute: async (rawInput: unknown) => {
         if (definition.requiresConfirmation) {
+          if (input.sideEffects.pendingAction) {
+            input.sideEffects.notices.push(
+              "Only one action can be confirmed at a time. Confirm or cancel the current proposal first."
+            );
+            return fencedToolPayload(definition.name, {
+              status: "rejected",
+              message:
+                "Another action is already awaiting confirmation. Confirm or cancel it before proposing another. Nothing was changed for this call.",
+            });
+          }
+
           const proposal = previewAiAction({
             toolName: definition.name,
             input: rawInput,
@@ -77,11 +98,11 @@ export function buildAssistantSdkTools(input: {
             input.sideEffects.notices.push(
               "The assistant proposed an action with invalid details, so nothing was prepared."
             );
-            return {
+            return fencedToolPayload(definition.name, {
               status: "rejected",
               message:
                 "This action could not be prepared because its arguments were invalid. Nothing was changed.",
-            };
+            });
           }
 
           const argumentsJson = JSON.stringify(rawInput ?? {});
@@ -94,27 +115,25 @@ export function buildAssistantSdkTools(input: {
             argumentsJson,
           };
 
-          if (!input.sideEffects.pendingAction) {
-            input.sideEffects.pendingAction = {
-              ...pending,
-              token: signAiActionToken({
-                secret: resolveAiActionSecret(),
-                payload: {
-                  tenantId: input.context.tenantId,
-                  actorUserId: input.context.actorUserId,
-                  toolName: pending.toolName,
-                  argumentsJson: pending.argumentsJson,
-                  expiresAt: Date.now() + AI_ACTION_TOKEN_TTL_MS,
-                },
-              }),
-            };
-          }
+          input.sideEffects.pendingAction = {
+            ...pending,
+            token: signAiActionToken({
+              secret: resolveAiActionSecret(),
+              payload: {
+                tenantId: input.context.tenantId,
+                actorUserId: input.context.actorUserId,
+                toolName: pending.toolName,
+                argumentsJson: pending.argumentsJson,
+                expiresAt: Date.now() + AI_ACTION_TOKEN_TTL_MS,
+              },
+            }),
+          };
 
-          return {
+          return fencedToolPayload(definition.name, {
             status: "confirmation_required",
             message: CONFIRMATION_REQUIRED_MESSAGE,
             preview: proposal,
-          };
+          });
         }
 
         const outcome = await runAiToolCall({
@@ -125,7 +144,11 @@ export function buildAssistantSdkTools(input: {
 
         if (!outcome.ok) {
           input.sideEffects.notices.push(outcome.message);
-          return { status: "error", code: outcome.code, message: outcome.message };
+          return fencedToolPayload(definition.name, {
+            status: "error",
+            code: outcome.code,
+            message: outcome.message,
+          });
         }
 
         const facts = factsFromToolResult({
@@ -149,7 +172,10 @@ export function buildAssistantSdkTools(input: {
           input.sideEffects.suggestions.push(suggestion);
         }
 
-        return { status: "ok", output: outcome.output };
+        return fencedToolPayload(definition.name, {
+          status: "ok",
+          output: outcome.output,
+        });
       },
     });
   }

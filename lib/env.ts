@@ -87,16 +87,12 @@ const envSchema = z.object({
   ),
   CRON_SECRET: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   AI_PROVIDER: z.preprocess((value) => {
-    const normalized = emptyToUndefined(value);
-    // OpenAI was removed; ignore leftover env so local boots still work.
-    if (normalized === "openai") {
-      return undefined;
-    }
-    return normalized;
-  }, z.enum(["gemini", "stub"]).optional()),
+    return emptyToUndefined(value);
+  }, z.enum(["gemini", "stub", "openai"]).optional()),
   GEMINI_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   GEMINI_MODEL: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
-  // Signs AI action confirmations. Falls back to CLERK_SECRET_KEY when unset.
+  // Signs AI action confirmations. When unset, a domain-separated key is
+  // derived from CLERK_SECRET_KEY (never used raw as the HMAC secret).
   AI_ACTION_SIGNING_SECRET: z.preprocess(
     emptyToUndefined,
     z.string().min(16).optional()

@@ -40,6 +40,7 @@ export const receivablesTool = defineAiTool({
     const report = await getReceivablesReport({
       tenantId: context.tenantId,
       timezone: context.timezone,
+      currency: context.currency,
       sales: context.repositories.sales,
       payments: context.repositories.payments,
     });
@@ -50,7 +51,7 @@ export const receivablesTool = defineAiTool({
 
     const byCustomer = new Map<string, CustomerOutstanding>();
     // Same zero basis as the receivables report so currency/scale always match.
-    let totalOutstanding = money(0n);
+    let totalOutstanding = money(0n, context.currency);
 
     for (const row of rows) {
       totalOutstanding = addMoney(totalOutstanding, row.outstanding);

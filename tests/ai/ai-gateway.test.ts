@@ -9,7 +9,7 @@ import {
 import {
   listAiToolSpecsForRole,
   runAiToolCall,
-} from "@/modules/ai";
+} from "@/modules/ai/server";
 import { toolContext } from "./tool-context-fixture";
 
 describe("ai provider configuration", () => {

@@ -14,6 +14,19 @@ export function hasPolicyPrecedence(messages: Array<{ role: string; content: str
   );
 }
 
+/** JSON.stringify that never throws for circular / non-serializable values. */
+function safeStringify(value: unknown): string {
+  if (value === undefined) {
+    return "undefined";
+  }
+  try {
+    const encoded = JSON.stringify(value);
+    return encoded === undefined ? "undefined" : encoded;
+  } catch {
+    return "[unserializable tool result]";
+  }
+}
+
 export function aiToolResultMessage(input: {
   toolCallId: string;
   toolName: string;
@@ -28,7 +41,7 @@ export function aiToolResultMessage(input: {
       content:
         typeof input.result === "string"
           ? input.result
-          : JSON.stringify(input.result),
+          : safeStringify(input.result),
     }),
   };
 }
@@ -45,7 +58,7 @@ export function aiToolFailureMessage(input: {
     toolName: input.toolName,
     content: wrapUntrustedContent({
       label: input.toolName,
-      content: JSON.stringify({ error: input.code, message: input.message }),
+      content: safeStringify({ error: input.code, message: input.message }),
     }),
   };
 }

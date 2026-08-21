@@ -6,7 +6,6 @@ import {
   createUIMessageStreamResponse,
   stepCountIs,
   streamText,
-  type UIMessage,
 } from "ai";
 
 import {
@@ -14,6 +13,7 @@ import {
   type AssistantStreamSideEffects,
 } from "@/lib/ai/assistant-sdk-tools";
 import { getAssistantLanguageModel, isAssistantStubMode } from "@/lib/ai/model";
+import { parseAssistantChatMessages } from "@/lib/ai/sanitize-assistant-messages";
 import { describeAssistantFailure } from "@/modules/ai/application/assistant-failures";
 import { AI_SYSTEM_POLICY } from "@/modules/ai/domain/system-policy";
 import { createAiToolContext } from "@/modules/ai/infrastructure/tool-context";
@@ -24,7 +24,7 @@ export const AI_ASSISTANT_MAX_OUTPUT_TOKENS = 900;
 export const AI_ASSISTANT_MAX_STEPS = 4;
 
 type ChatRequestBody = {
-  messages?: UIMessage[];
+  messages?: unknown;
   id?: string;
 };
 
@@ -37,20 +37,22 @@ export async function POST(request: Request) {
   const correlationId = crypto.randomUUID();
 
   try {
-    if (isAssistantStubMode()) {
-      return stubAssistantResponse();
-    }
-
     const body = (await request.json().catch(() => null)) as ChatRequestBody | null;
-    const messages = body?.messages ?? [];
-    if (!Array.isArray(messages) || messages.length === 0) {
+    const messages = parseAssistantChatMessages(body?.messages);
+    if (!messages) {
       return Response.json(
         { error: { code: "INVALID_QUESTION", message: "Send a question to continue." } },
         { status: 400 }
       );
     }
 
+    // Auth + tenant before stub or live model work (invariant: no tenantless chat).
     const context = await createAiToolContext({ correlationId });
+
+    if (isAssistantStubMode()) {
+      return stubAssistantResponse();
+    }
+
     const { languageModel, modelId, provider } = getAssistantLanguageModel();
 
     const sideEffects: AssistantStreamSideEffects = {

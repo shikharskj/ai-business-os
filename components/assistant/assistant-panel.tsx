@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { Plus, SendHorizonal } from "lucide-react";
+import { SendHorizonal } from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -293,19 +293,7 @@ export function AssistantPanel({
               )}
             />
 
-            <div className="flex items-center justify-between px-4 pb-3">
-              {/* Add */}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label="Add attachment"
-              >
-                <Plus className="size-4.5" />
-              </Button>
-
-              {/* Send */}
+            <div className="flex items-center justify-end px-4 pb-3">
               <Button
                 type="submit"
                 size="icon"

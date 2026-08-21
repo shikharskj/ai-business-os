@@ -121,6 +121,7 @@ Do not skip foundational dependencies merely to build visually impressive featur
   * Confirmation gate: `send_payment_reminders` is previewed but never executed during a chat turn. `/api/assistant/actions/confirm` verifies an HMAC token, then `executeAiTool` re-checks identity, permission, and schema before running and audits it.
   * Chat routes reach data through tools only (no Prisma import); SDK confined to route + `lib/ai` bridge + client hooks; provider outages become a contained assistant error state.
   * Tests: `tests/ai/ai-assistant.test.ts`, `ai-gateway.test.ts`, `ai-safety.test.ts` (tools/confirm/facts, config, no SDK in `modules/ai`).
+  * Hardening: SDK tool results fenced with `UNTRUSTED-CONTENT`; client history sanitized to user/assistant text only; second confirmation proposals rejected; stub mode requires tenant context; overdue metrics facts no longer mix low-stock copy. Follow-up: app-relative href schema, derived action signing secret, `@/modules/ai/server` barrel split, currency-aware receivables zeros, resilient reminder delivery, isolated audit writes, Zod chat message limits, confirm outcome safeParse.
 
 * Notifications (`26-notifications.md`):
   * `modules/notifications/` — in-app channel abstraction (email/SMS/WhatsApp later), idempotent outbox consumer, overdue scheduled check, mark read/unread. Tenant-scoped `Notification` table with unique `(tenantId, idempotencyKey)`.

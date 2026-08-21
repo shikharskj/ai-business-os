@@ -231,6 +231,7 @@ export const PAYMENT_REMINDER_STATUSES = [
   "already_sent",
   "not_overdue",
   "not_found",
+  "failed",
 ] as const;
 
 export const paymentRemindersOutputSchema = z

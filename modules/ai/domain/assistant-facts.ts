@@ -288,11 +288,15 @@ function metricsFacts(output: unknown): AiAssistantFact[] {
       key: "overdue",
       label: "Overdue invoices",
       value: String(data.overdueInvoiceCount),
-      detail: `${formatMoneyView(data.overdueOutstanding)} outstanding · ${plural(
-        data.lowStockCount,
-        "product"
-      )} low on stock`,
+      detail: `${formatMoneyView(data.overdueOutstanding)} outstanding`,
       href: "/app/sales/invoices",
+    }),
+    fact({
+      sourceTool: source,
+      key: "low-stock",
+      label: "Low stock products",
+      value: String(data.lowStockCount),
+      href: "/app/inventory/stock",
     }),
   ];
 }
@@ -324,7 +328,8 @@ function reminderFacts(output: unknown): AiAssistantFact[] {
         label: reminder.invoiceNumber
           ? `${reminder.invoiceNumber} · ${reminder.customerName ?? "Customer"}`
           : reminder.invoiceId,
-        value: REMINDER_STATUS_LABEL[reminder.status],
+        value:
+          REMINDER_STATUS_LABEL[reminder.status] ?? "Reminder status unknown",
         detail: reminder.outstanding
           ? `${formatMoneyView(reminder.outstanding)} outstanding`
           : null,
@@ -341,4 +346,5 @@ const REMINDER_STATUS_LABEL: Record<string, string> = {
   already_sent: "Already reminded today",
   not_overdue: "Not overdue — skipped",
   not_found: "Not found — skipped",
+  failed: "Reminder failed",
 };

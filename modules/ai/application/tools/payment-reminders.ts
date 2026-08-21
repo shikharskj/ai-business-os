@@ -8,7 +8,12 @@ import { createInAppChannel } from "@/modules/notifications";
 import { getReceivablesReport } from "@/modules/reporting";
 import { formatINR } from "@/modules/shared-kernel/format-money";
 
-type ReminderStatus = "sent" | "already_sent" | "not_overdue" | "not_found";
+type ReminderStatus =
+  | "sent"
+  | "already_sent"
+  | "not_overdue"
+  | "not_found"
+  | "failed";
 
 /**
  * The assistant's only mutation, and the reason the confirmation gate is
@@ -33,6 +38,7 @@ export const paymentRemindersTool = defineAiTool({
     const report = await getReceivablesReport({
       tenantId: context.tenantId,
       timezone: context.timezone,
+      currency: context.currency,
       sales: context.repositories.sales,
       payments: context.repositories.payments,
     });
@@ -83,29 +89,40 @@ export const paymentRemindersTool = defineAiTool({
           ? formatINR(row.outstanding)
           : `${outstanding.currency} ${outstanding.amountMajor}`;
 
-      const delivered = await channel.deliver({
-        tenantId: context.tenantId,
-        channel: "IN_APP",
-        type: "INVOICE_OVERDUE",
-        title: "Payment reminder",
-        body: `${row.invoiceNumber} — ${row.customerName} owes ${amount}, overdue by ${daysOverdue} day${
-          daysOverdue === 1 ? "" : "s"
-        }.`,
-        href: `/app/sales/invoices/${row.invoiceId}`,
-        resourceType: "SalesInvoice",
-        resourceId: row.invoiceId,
-        // Same invoice, same business day, one reminder.
-        idempotencyKey: `ai-payment-reminder:${row.invoiceId}:${report.asOf}`,
-      });
+      try {
+        const delivered = await channel.deliver({
+          tenantId: context.tenantId,
+          channel: "IN_APP",
+          type: "INVOICE_OVERDUE",
+          title: "Payment reminder",
+          body: `${row.invoiceNumber} — ${row.customerName} owes ${amount}, overdue by ${daysOverdue} day${
+            daysOverdue === 1 ? "" : "s"
+          }.`,
+          href: `/app/sales/invoices/${row.invoiceId}`,
+          resourceType: "SalesInvoice",
+          resourceId: row.invoiceId,
+          // Same invoice, same business day, one reminder.
+          idempotencyKey: `ai-payment-reminder:${row.invoiceId}:${report.asOf}`,
+        });
 
-      reminders.push({
-        invoiceId,
-        invoiceNumber: row.invoiceNumber,
-        customerName: row.customerName,
-        outstanding,
-        daysOverdue,
-        status: delivered ? "sent" : "already_sent",
-      });
+        reminders.push({
+          invoiceId,
+          invoiceNumber: row.invoiceNumber,
+          customerName: row.customerName,
+          outstanding,
+          daysOverdue,
+          status: delivered ? "sent" : "already_sent",
+        });
+      } catch {
+        reminders.push({
+          invoiceId,
+          invoiceNumber: row.invoiceNumber,
+          customerName: row.customerName,
+          outstanding,
+          daysOverdue,
+          status: "failed",
+        });
+      }
     }
 
     const sentCount = reminders.filter((row) => row.status === "sent").length;

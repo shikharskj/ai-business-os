@@ -1,5 +1,5 @@
 import { roleHasPermission } from "@/lib/security/permissions";
-import { requireAiTool } from "@/modules/ai/application/tools/registry";
+import { findAiTool, requireAiTool } from "@/modules/ai/application/tools/registry";
 import {
   AiToolAuthorizationError,
   AiToolError,
@@ -90,13 +90,16 @@ export async function executeAiTool(
   const startedAt = Date.now();
   const { context } = input;
 
-  if (!context.tenantId || !context.actorUserId) {
-    throw new AiToolAuthorizationError("report:read");
-  }
-
   let tool: AiToolDefinition | null = null;
 
   try {
+    if (!context.tenantId || !context.actorUserId) {
+      throw new AiToolError(
+        "TOOL_CONTEXT_INVALID",
+        "AI tool context is missing tenant or actor identity."
+      );
+    }
+
     tool = requireAiTool(input.toolName);
     const rawInput =
       input.argumentsJson === undefined
@@ -116,13 +119,23 @@ export async function executeAiTool(
     }
 
     const output = await tool.run(rawInput, context);
-    const auditRecordId = await recordInvocation({
-      context,
-      tool,
-      toolName: tool.name,
-      outcome: "success",
-      durationMs: Date.now() - startedAt,
-    });
+
+    let auditRecordId = "audit-unavailable";
+    try {
+      auditRecordId = await recordInvocation({
+        context,
+        tool,
+        toolName: tool.name,
+        outcome: "success",
+        durationMs: Date.now() - startedAt,
+      });
+    } catch (auditError) {
+      console.error("AI tool audit failed after successful run:", {
+        toolName: tool.name,
+        correlationId: context.correlationId,
+        auditError,
+      });
+    }
 
     return {
       toolName: tool.name,
@@ -132,14 +145,22 @@ export async function executeAiTool(
     };
   } catch (error) {
     const isAuthorizationFailure = error instanceof AiToolAuthorizationError;
-    await recordInvocation({
-      context,
-      tool,
-      toolName: input.toolName,
-      outcome: isAuthorizationFailure ? "denied" : "failed",
-      errorCode: error instanceof AiToolError ? error.code : "UNEXPECTED",
-      durationMs: Date.now() - startedAt,
-    });
+    try {
+      await recordInvocation({
+        context,
+        tool,
+        toolName: input.toolName,
+        outcome: isAuthorizationFailure ? "denied" : "failed",
+        errorCode: error instanceof AiToolError ? error.code : "UNEXPECTED",
+        durationMs: Date.now() - startedAt,
+      });
+    } catch (auditError) {
+      console.error("AI tool audit failed after tool error:", {
+        toolName: input.toolName,
+        correlationId: context.correlationId,
+        auditError,
+      });
+    }
     throw error;
   }
 }
@@ -172,12 +193,17 @@ export async function runAiToolCall(input: {
       };
     }
 
+    const tool = findAiTool(input.toolName);
+    const mutating = tool?.category === "action";
+
     // Infrastructure failures must not leak internals to the model.
     return {
       ok: false,
       toolName: input.toolName,
       code: "TOOL_FAILED",
-      message: "The tool could not be completed. No business data was changed.",
+      message: mutating
+        ? "The tool could not be completed. The action may not have finished; check recent activity before retrying."
+        : "The tool could not be completed. No business data was changed.",
     };
   }
 }
