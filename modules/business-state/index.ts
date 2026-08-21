@@ -10,7 +10,10 @@ export {
   BUSINESS_STATE_SCHEMA_VERSION,
   SALES_MOMENTUM_WINDOW_DAYS,
 } from "@/modules/business-state/domain/types";
-export type { BusinessStateProjectionRepository } from "@/modules/business-state/domain/projection-repository";
+export type {
+  BusinessStateProjectionRepository,
+  CommitBusinessStateSnapshotsInput,
+} from "@/modules/business-state/domain/projection-repository";
 export {
   rebuildBusinessStateProjections,
   computeReceivablesRisk,

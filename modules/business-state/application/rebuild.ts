@@ -46,8 +46,8 @@ export type RebuildBusinessStateDeps = {
   markRebuilt?: boolean;
 };
 
-function zeroMoney(): Money {
-  return money(0n);
+function zeroMoney(currency: string): Money {
+  return money(0n, currency);
 }
 
 function addDays(date: BusinessDate, days: number): BusinessDate {
@@ -74,13 +74,13 @@ export async function computeReceivablesRisk(input: {
     scoped.map((row) => row.id)
   );
 
-  let totalOutstanding = zeroMoney();
-  let overdueOutstanding = zeroMoney();
+  let totalOutstanding = zeroMoney(input.currency);
+  let overdueOutstanding = zeroMoney(input.currency);
   let openInvoiceCount = 0;
   let overdueInvoiceCount = 0;
 
   for (const invoice of scoped) {
-    const paid = allocated.get(invoice.id) ?? zeroMoney();
+    const paid = allocated.get(invoice.id) ?? zeroMoney(input.currency);
     const outstanding = remainingOutstanding(invoice.grandTotal, paid);
     if (outstanding.amountMinor <= 0n) continue;
     openInvoiceCount += 1;
@@ -142,8 +142,8 @@ export async function computeSalesMomentum(input: {
     toDate: windowTo,
   });
 
-  let salesTotal = zeroMoney();
-  let taxableTotal = zeroMoney();
+  let salesTotal = zeroMoney(input.currency);
+  let taxableTotal = zeroMoney(input.currency);
   let postedInvoiceCount = 0;
 
   for (const invoice of invoices) {
@@ -188,7 +188,7 @@ export async function rebuildBusinessStateProjections(
   let inventoryRisk: InventoryRiskSnapshot | null = null;
   let salesMomentum: SalesMomentumSnapshot | null = null;
 
-  if (families.has("receivablesRisk") || families.has("all")) {
+  if (families.has("receivablesRisk")) {
     receivablesRisk = await computeReceivablesRisk({
       tenantId: input.tenantId,
       timezone: input.timezone,
@@ -196,33 +196,33 @@ export async function rebuildBusinessStateProjections(
       sales: input.sales,
       payments: input.payments,
     });
-    await input.projections.upsertReceivablesRisk(receivablesRisk);
   }
 
-  if (families.has("inventoryRisk") || families.has("all")) {
+  if (families.has("inventoryRisk")) {
     inventoryRisk = await computeInventoryRisk({
       tenantId: input.tenantId,
       lowStockThresholdMajor: input.lowStockThresholdMajor,
       catalog: input.catalog,
       inventory: input.inventory,
     });
-    await input.projections.upsertInventoryRisk(inventoryRisk);
   }
 
-  if (families.has("salesMomentum") || families.has("all")) {
+  if (families.has("salesMomentum")) {
     salesMomentum = await computeSalesMomentum({
       tenantId: input.tenantId,
       timezone: input.timezone,
       currency,
       sales: input.sales,
     });
-    await input.projections.upsertSalesMomentum(salesMomentum);
   }
 
-  await input.projections.touchMeta({
+  await input.projections.commitSnapshots({
     tenantId: input.tenantId,
     schemaVersion: BUSINESS_STATE_SCHEMA_VERSION,
     rebuiltAt: input.markRebuilt ? new Date() : undefined,
+    ...(receivablesRisk ? { receivablesRisk } : {}),
+    ...(inventoryRisk ? { inventoryRisk } : {}),
+    ...(salesMomentum ? { salesMomentum } : {}),
   });
 
   return { receivablesRisk, inventoryRisk, salesMomentum };

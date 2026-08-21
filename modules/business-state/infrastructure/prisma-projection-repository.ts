@@ -1,6 +1,9 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 
-import type { BusinessStateProjectionRepository } from "@/modules/business-state/domain/projection-repository";
+import type {
+  BusinessStateProjectionRepository,
+  CommitBusinessStateSnapshotsInput,
+} from "@/modules/business-state/domain/projection-repository";
 import type {
   BusinessStateMetaSnapshot,
   InventoryRiskSnapshot,
@@ -13,7 +16,7 @@ import {
   toDecimalForPrisma,
 } from "@/modules/shared-kernel/money";
 
-type PrismaProjectionClient = Pick<
+type PrismaProjectionDelegateClient = Pick<
   PrismaClient,
   | "businessStateMeta"
   | "receivablesRiskState"
@@ -21,98 +24,195 @@ type PrismaProjectionClient = Pick<
   | "salesMomentumState"
 >;
 
+type PrismaProjectionClient = PrismaProjectionDelegateClient &
+  Pick<PrismaClient, "$transaction">;
+
+function shouldApplySnapshot(
+  existingComputedAt: Date | undefined,
+  incoming: Date
+): boolean {
+  return !existingComputedAt || existingComputedAt < incoming;
+}
+
+async function writeReceivablesRisk(
+  client: PrismaProjectionDelegateClient,
+  snapshot: ReceivablesRiskSnapshot
+): Promise<boolean> {
+  const existing = await client.receivablesRiskState.findUnique({
+    where: { tenantId: snapshot.tenantId },
+    select: { computedAt: true },
+  });
+  if (!shouldApplySnapshot(existing?.computedAt, snapshot.computedAt)) {
+    return false;
+  }
+  await client.receivablesRiskState.upsert({
+    where: { tenantId: snapshot.tenantId },
+    create: {
+      tenantId: snapshot.tenantId,
+      openInvoiceCount: snapshot.openInvoiceCount,
+      overdueInvoiceCount: snapshot.overdueInvoiceCount,
+      totalOutstanding: toDecimalForPrisma(snapshot.totalOutstanding),
+      overdueOutstanding: toDecimalForPrisma(snapshot.overdueOutstanding),
+      currency: snapshot.currency,
+      computedAt: snapshot.computedAt,
+    },
+    update: {
+      openInvoiceCount: snapshot.openInvoiceCount,
+      overdueInvoiceCount: snapshot.overdueInvoiceCount,
+      totalOutstanding: toDecimalForPrisma(snapshot.totalOutstanding),
+      overdueOutstanding: toDecimalForPrisma(snapshot.overdueOutstanding),
+      currency: snapshot.currency,
+      computedAt: snapshot.computedAt,
+    },
+  });
+  return true;
+}
+
+async function writeInventoryRisk(
+  client: PrismaProjectionDelegateClient,
+  snapshot: InventoryRiskSnapshot
+): Promise<boolean> {
+  const existing = await client.inventoryRiskState.findUnique({
+    where: { tenantId: snapshot.tenantId },
+    select: { computedAt: true },
+  });
+  if (!shouldApplySnapshot(existing?.computedAt, snapshot.computedAt)) {
+    return false;
+  }
+  await client.inventoryRiskState.upsert({
+    where: { tenantId: snapshot.tenantId },
+    create: {
+      tenantId: snapshot.tenantId,
+      lowStockCount: snapshot.lowStockCount,
+      thresholdMajor: snapshot.thresholdMajor,
+      computedAt: snapshot.computedAt,
+    },
+    update: {
+      lowStockCount: snapshot.lowStockCount,
+      thresholdMajor: snapshot.thresholdMajor,
+      computedAt: snapshot.computedAt,
+    },
+  });
+  return true;
+}
+
+async function writeSalesMomentum(
+  client: PrismaProjectionDelegateClient,
+  snapshot: SalesMomentumSnapshot
+): Promise<boolean> {
+  const existing = await client.salesMomentumState.findUnique({
+    where: { tenantId: snapshot.tenantId },
+    select: { computedAt: true },
+  });
+  if (!shouldApplySnapshot(existing?.computedAt, snapshot.computedAt)) {
+    return false;
+  }
+  await client.salesMomentumState.upsert({
+    where: { tenantId: snapshot.tenantId },
+    create: {
+      tenantId: snapshot.tenantId,
+      windowDays: snapshot.windowDays,
+      windowFrom: snapshot.windowFrom,
+      windowTo: snapshot.windowTo,
+      postedInvoiceCount: snapshot.postedInvoiceCount,
+      salesTotal: toDecimalForPrisma(snapshot.salesTotal),
+      taxableTotal: toDecimalForPrisma(snapshot.taxableTotal),
+      currency: snapshot.currency,
+      computedAt: snapshot.computedAt,
+    },
+    update: {
+      windowDays: snapshot.windowDays,
+      windowFrom: snapshot.windowFrom,
+      windowTo: snapshot.windowTo,
+      postedInvoiceCount: snapshot.postedInvoiceCount,
+      salesTotal: toDecimalForPrisma(snapshot.salesTotal),
+      taxableTotal: toDecimalForPrisma(snapshot.taxableTotal),
+      currency: snapshot.currency,
+      computedAt: snapshot.computedAt,
+    },
+  });
+  return true;
+}
+
+async function writeMeta(
+  client: PrismaProjectionDelegateClient,
+  input: {
+    tenantId: string;
+    schemaVersion: number;
+    rebuiltAt?: Date | null;
+  }
+): Promise<void> {
+  await client.businessStateMeta.upsert({
+    where: { tenantId: input.tenantId },
+    create: {
+      tenantId: input.tenantId,
+      schemaVersion: input.schemaVersion,
+      rebuiltAt: input.rebuiltAt ?? null,
+    },
+    update: {
+      schemaVersion: input.schemaVersion,
+      ...(input.rebuiltAt !== undefined ? { rebuiltAt: input.rebuiltAt } : {}),
+    },
+  });
+}
+
+async function commitSnapshotsInClient(
+  client: PrismaProjectionDelegateClient,
+  input: CommitBusinessStateSnapshotsInput
+): Promise<{ appliedFamilies: number }> {
+  let appliedFamilies = 0;
+
+  if (input.receivablesRisk) {
+    if (await writeReceivablesRisk(client, input.receivablesRisk)) {
+      appliedFamilies += 1;
+    }
+  }
+  if (input.inventoryRisk) {
+    if (await writeInventoryRisk(client, input.inventoryRisk)) {
+      appliedFamilies += 1;
+    }
+  }
+  if (input.salesMomentum) {
+    if (await writeSalesMomentum(client, input.salesMomentum)) {
+      appliedFamilies += 1;
+    }
+  }
+
+  if (appliedFamilies > 0 || input.rebuiltAt !== undefined) {
+    await writeMeta(client, {
+      tenantId: input.tenantId,
+      schemaVersion: input.schemaVersion,
+      rebuiltAt: input.rebuiltAt,
+    });
+  }
+
+  return { appliedFamilies };
+}
+
 export function createPrismaBusinessStateProjectionRepository(
   prisma: PrismaProjectionClient
 ): BusinessStateProjectionRepository {
   return {
     async upsertReceivablesRisk(snapshot) {
-      await prisma.receivablesRiskState.upsert({
-        where: { tenantId: snapshot.tenantId },
-        create: {
-          tenantId: snapshot.tenantId,
-          openInvoiceCount: snapshot.openInvoiceCount,
-          overdueInvoiceCount: snapshot.overdueInvoiceCount,
-          totalOutstanding: toDecimalForPrisma(snapshot.totalOutstanding),
-          overdueOutstanding: toDecimalForPrisma(snapshot.overdueOutstanding),
-          currency: snapshot.currency,
-          computedAt: snapshot.computedAt,
-        },
-        update: {
-          openInvoiceCount: snapshot.openInvoiceCount,
-          overdueInvoiceCount: snapshot.overdueInvoiceCount,
-          totalOutstanding: toDecimalForPrisma(snapshot.totalOutstanding),
-          overdueOutstanding: toDecimalForPrisma(snapshot.overdueOutstanding),
-          currency: snapshot.currency,
-          computedAt: snapshot.computedAt,
-        },
-      });
+      await writeReceivablesRisk(prisma, snapshot);
     },
 
     async upsertInventoryRisk(snapshot) {
-      await prisma.inventoryRiskState.upsert({
-        where: { tenantId: snapshot.tenantId },
-        create: {
-          tenantId: snapshot.tenantId,
-          lowStockCount: snapshot.lowStockCount,
-          thresholdMajor: snapshot.thresholdMajor,
-          computedAt: snapshot.computedAt,
-        },
-        update: {
-          lowStockCount: snapshot.lowStockCount,
-          thresholdMajor: snapshot.thresholdMajor,
-          computedAt: snapshot.computedAt,
-        },
-      });
+      await writeInventoryRisk(prisma, snapshot);
     },
 
     async upsertSalesMomentum(snapshot) {
-      await prisma.salesMomentumState.upsert({
-        where: { tenantId: snapshot.tenantId },
-        create: {
-          tenantId: snapshot.tenantId,
-          windowDays: snapshot.windowDays,
-          windowFrom: snapshot.windowFrom,
-          windowTo: snapshot.windowTo,
-          postedInvoiceCount: snapshot.postedInvoiceCount,
-          salesTotal: toDecimalForPrisma(snapshot.salesTotal),
-          taxableTotal: toDecimalForPrisma(snapshot.taxableTotal),
-          currency: snapshot.currency,
-          computedAt: snapshot.computedAt,
-        },
-        update: {
-          windowDays: snapshot.windowDays,
-          windowFrom: snapshot.windowFrom,
-          windowTo: snapshot.windowTo,
-          postedInvoiceCount: snapshot.postedInvoiceCount,
-          salesTotal: toDecimalForPrisma(snapshot.salesTotal),
-          taxableTotal: toDecimalForPrisma(snapshot.taxableTotal),
-          currency: snapshot.currency,
-          computedAt: snapshot.computedAt,
-        },
-      });
+      await writeSalesMomentum(prisma, snapshot);
     },
 
     async touchMeta({ tenantId, schemaVersion, rebuiltAt }) {
-      const existing = await prisma.businessStateMeta.findUnique({
-        where: { tenantId },
-      });
-      if (!existing) {
-        await prisma.businessStateMeta.create({
-          data: {
-            tenantId,
-            schemaVersion,
-            rebuiltAt: rebuiltAt ?? null,
-          },
-        });
-        return;
-      }
-      await prisma.businessStateMeta.update({
-        where: { tenantId },
-        data: {
-          schemaVersion,
-          ...(rebuiltAt !== undefined ? { rebuiltAt } : {}),
-        },
-      });
+      await writeMeta(prisma, { tenantId, schemaVersion, rebuiltAt });
+    },
+
+    async commitSnapshots(input) {
+      return prisma.$transaction((tx) =>
+        commitSnapshotsInClient(tx, input)
+      );
     },
 
     async getReceivablesRisk(tenantId) {
@@ -158,8 +258,14 @@ function mapReceivables(row: {
     tenantId: row.tenantId,
     openInvoiceCount: row.openInvoiceCount,
     overdueInvoiceCount: row.overdueInvoiceCount,
-    totalOutstanding: moneyFromPrismaDecimal(row.totalOutstanding),
-    overdueOutstanding: moneyFromPrismaDecimal(row.overdueOutstanding),
+    totalOutstanding: moneyFromPrismaDecimal(
+      row.totalOutstanding,
+      row.currency
+    ),
+    overdueOutstanding: moneyFromPrismaDecimal(
+      row.overdueOutstanding,
+      row.currency
+    ),
     currency: row.currency,
     computedAt: row.computedAt,
   };
@@ -196,8 +302,8 @@ function mapSalesMomentum(row: {
     windowFrom: businessDate(row.windowFrom),
     windowTo: businessDate(row.windowTo),
     postedInvoiceCount: row.postedInvoiceCount,
-    salesTotal: moneyFromPrismaDecimal(row.salesTotal),
-    taxableTotal: moneyFromPrismaDecimal(row.taxableTotal),
+    salesTotal: moneyFromPrismaDecimal(row.salesTotal, row.currency),
+    taxableTotal: moneyFromPrismaDecimal(row.taxableTotal, row.currency),
     currency: row.currency,
     computedAt: row.computedAt,
   };

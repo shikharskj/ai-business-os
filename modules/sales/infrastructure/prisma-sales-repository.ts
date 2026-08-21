@@ -692,10 +692,19 @@ export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRep
             ? undefined
             : [filter.status];
 
+      const issuedOn =
+        filter.fromDate || filter.toDate
+          ? {
+              ...(filter.fromDate ? { gte: filter.fromDate } : {}),
+              ...(filter.toDate ? { lte: filter.toDate } : {}),
+            }
+          : undefined;
+
       const where: Prisma.SalesInvoiceWhereInput = {
         tenantId: filter.tenantId,
         customerId: filter.customerId,
         status: statuses ? { in: statuses } : undefined,
+        issuedOn,
         ...(query
           ? {
               OR: [

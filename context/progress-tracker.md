@@ -107,6 +107,7 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 * **BusinessState projections (`02-business-state-projections.md`):**
   * `modules/business-state/` — ReceivablesRisk, InventoryRisk, SalesMomentum (30-day posted invoice rollup) + `BusinessStateMeta` envelope; Prisma migration `20260821120000_add_business_state_projections`.
   * Rebuild from domain truth (`rebuildBusinessStateProjections`); outbox consumer `business-state` replaces projection-stub in default registration.
+  * Write hardening: outbox page coalesce via `handleBatch`, `computedAt` guards, atomic `commitSnapshots` (+ meta).
   * Read/rebuild APIs: `GET /api/business-state`, `POST /api/business-state/rebuild` (`report:read`).
   * Cron / `after()` wire `createPrismaBusinessStateConsumerDeps`; tests in `tests/business-state/projections.test.ts`.
   * Next: `03-cash-position-model.md`.

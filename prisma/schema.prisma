@@ -223,7 +223,6 @@ model ReceivablesRiskState {
 
   business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([tenantId, overdueInvoiceCount])
   @@map("receivables_risk_state")
 }
 
@@ -237,7 +236,6 @@ model InventoryRiskState {
 
   business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([tenantId, lowStockCount])
   @@map("inventory_risk_state")
 }
 
@@ -257,7 +255,6 @@ model SalesMomentumState {
 
   business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([tenantId, windowTo])
   @@map("sales_momentum_state")
 }
 

@@ -49,15 +49,6 @@ CREATE TABLE "sales_momentum_state" (
     CONSTRAINT "sales_momentum_state_pkey" PRIMARY KEY ("tenantId")
 );
 
--- CreateIndex
-CREATE INDEX "receivables_risk_state_tenantId_overdueInvoiceCount_idx" ON "receivables_risk_state"("tenantId", "overdueInvoiceCount");
-
--- CreateIndex
-CREATE INDEX "inventory_risk_state_tenantId_lowStockCount_idx" ON "inventory_risk_state"("tenantId", "lowStockCount");
-
--- CreateIndex
-CREATE INDEX "sales_momentum_state_tenantId_windowTo_idx" ON "sales_momentum_state"("tenantId", "windowTo");
-
 -- AddForeignKey
 ALTER TABLE "business_state_meta" ADD CONSTRAINT "business_state_meta_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "businesses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

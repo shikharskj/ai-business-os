@@ -38,6 +38,9 @@ export type ProcessOutboxConsumersResult = {
  * Each consumer advances via its own receipts — one failing consumer does not
  * block others. Failures leave no receipt so the next pass can retry.
  * Never called inside the domain mutation transaction.
+ *
+ * Consumers with `handleBatch` receive one call per tenant group within the
+ * fetched page (coalesce); others are invoked per event.
  */
 export async function processOutboxConsumers(
   input: ProcessOutboxConsumersInput
@@ -69,50 +72,112 @@ export async function processOutboxConsumers(
       limit,
     });
 
-    for (const event of events) {
-      tenantIdsTouched.add(event.tenantId);
-
-      if (!consumerAcceptsEvent(consumer, event)) {
-        await input.outbox.recordReceipt({
-          eventId: event.id,
-          consumerName: consumer.name,
-        });
-        consumerStats.skipped += 1;
-        await maybeMarkFullyProcessed(
-          input.outbox,
-          registeredConsumerNames,
-          event.id
-        );
-        continue;
-      }
-
-      consumerStats.attempted += 1;
-      totalAttempted += 1;
-
-      try {
-        const result = await consumer.handle(event);
-        await input.outbox.recordReceipt({
-          eventId: event.id,
-          consumerName: consumer.name,
-        });
-        if (result.handled) {
-          consumerStats.succeeded += 1;
-          totalSucceeded += 1;
-        } else {
-          consumerStats.skipped += 1;
+    if (consumer.handleBatch) {
+      const groups = groupEventsByTenant(events);
+      for (const group of groups) {
+        for (const event of group) {
+          tenantIdsTouched.add(event.tenantId);
         }
-        await maybeMarkFullyProcessed(
-          input.outbox,
-          registeredConsumerNames,
-          event.id
-        );
-      } catch (error) {
-        consumerStats.failed += 1;
-        totalFailed += 1;
-        console.error(
-          `Outbox consumer "${consumer.name}" failed on event ${event.id} (${event.eventType}):`,
-          error
-        );
+
+        const accepted: OutboxEventRecord[] = [];
+        for (const event of group) {
+          if (!consumerAcceptsEvent(consumer, event)) {
+            await input.outbox.recordReceipt({
+              eventId: event.id,
+              consumerName: consumer.name,
+            });
+            consumerStats.skipped += 1;
+            await maybeMarkFullyProcessed(
+              input.outbox,
+              registeredConsumerNames,
+              event.id
+            );
+            continue;
+          }
+          accepted.push(event);
+        }
+
+        if (accepted.length === 0) {
+          continue;
+        }
+
+        consumerStats.attempted += accepted.length;
+        totalAttempted += accepted.length;
+
+        try {
+          const result = await consumer.handleBatch(accepted);
+          for (const event of accepted) {
+            await input.outbox.recordReceipt({
+              eventId: event.id,
+              consumerName: consumer.name,
+            });
+            await maybeMarkFullyProcessed(
+              input.outbox,
+              registeredConsumerNames,
+              event.id
+            );
+          }
+          if (result.handled) {
+            consumerStats.succeeded += accepted.length;
+            totalSucceeded += accepted.length;
+          } else {
+            consumerStats.skipped += accepted.length;
+          }
+        } catch (error) {
+          consumerStats.failed += accepted.length;
+          totalFailed += accepted.length;
+          console.error(
+            `Outbox consumer "${consumer.name}" failed on batch for tenant ${accepted[0]?.tenantId} (${accepted.length} events):`,
+            error
+          );
+        }
+      }
+    } else {
+      for (const event of events) {
+        tenantIdsTouched.add(event.tenantId);
+
+        if (!consumerAcceptsEvent(consumer, event)) {
+          await input.outbox.recordReceipt({
+            eventId: event.id,
+            consumerName: consumer.name,
+          });
+          consumerStats.skipped += 1;
+          await maybeMarkFullyProcessed(
+            input.outbox,
+            registeredConsumerNames,
+            event.id
+          );
+          continue;
+        }
+
+        consumerStats.attempted += 1;
+        totalAttempted += 1;
+
+        try {
+          const result = await consumer.handle(event);
+          await input.outbox.recordReceipt({
+            eventId: event.id,
+            consumerName: consumer.name,
+          });
+          if (result.handled) {
+            consumerStats.succeeded += 1;
+            totalSucceeded += 1;
+          } else {
+            consumerStats.skipped += 1;
+          }
+          await maybeMarkFullyProcessed(
+            input.outbox,
+            registeredConsumerNames,
+            event.id
+          );
+        } catch (error) {
+          consumerStats.failed += 1;
+          totalFailed += 1;
+          console.error(
+            `Outbox consumer "${consumer.name}" failed on event ${event.id} (${event.eventType}):`,
+            error
+          );
+        }
       }
     }
 
@@ -126,6 +191,24 @@ export async function processOutboxConsumers(
     totalFailed,
     tenantIdsTouched: [...tenantIdsTouched],
   };
+}
+
+/** Groups events by tenantId, preserving first-seen tenant order. */
+function groupEventsByTenant(
+  events: OutboxEventRecord[]
+): OutboxEventRecord[][] {
+  const order: string[] = [];
+  const byTenant = new Map<string, OutboxEventRecord[]>();
+  for (const event of events) {
+    const existing = byTenant.get(event.tenantId);
+    if (!existing) {
+      order.push(event.tenantId);
+      byTenant.set(event.tenantId, [event]);
+    } else {
+      existing.push(event);
+    }
+  }
+  return order.map((tenantId) => byTenant.get(tenantId)!);
 }
 
 function consumerAcceptsEvent(
