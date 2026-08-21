@@ -1,3 +1,4 @@
+import { MVP_CHART_OF_ACCOUNTS } from "@/modules/accounting/domain/chart";
 import { ACCOUNT_CODES } from "@/modules/accounting/domain/types";
 
 /**
@@ -32,4 +33,18 @@ export const CASH_POSITION_FACT_IDS = {
 
 export function cashPositionAccountFactId(accountCode: string): string {
   return `cash-position:account:${accountCode}`;
+}
+
+export function cashPositionAccountName(
+  code: string,
+  tenantName?: string | null
+): string {
+  const configured = tenantName?.trim();
+  if (configured) {
+    return configured;
+  }
+  return (
+    MVP_CHART_OF_ACCOUNTS.find((account) => account.code === code)?.name ??
+    code
+  );
 }

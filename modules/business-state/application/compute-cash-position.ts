@@ -1,7 +1,7 @@
-import { MVP_CHART_OF_ACCOUNTS } from "@/modules/accounting/domain/chart";
 import {
   CASH_POSITION_ACCOUNT_CODES,
   cashPositionAccountFactId,
+  cashPositionAccountName,
   isCashPositionAccountCode,
 } from "@/modules/accounting/domain/cash-accounts";
 import { ACCOUNT_CODES } from "@/modules/accounting/domain/types";
@@ -20,17 +20,6 @@ import {
   type Money,
 } from "@/modules/shared-kernel/money";
 
-function zeroMoney(currency: string): Money {
-  return money(0n, currency);
-}
-
-function chartNameForCode(code: string): string {
-  return (
-    MVP_CHART_OF_ACCOUNTS.find((account) => account.code === code)?.name ??
-    code
-  );
-}
-
 /**
  * Cash position from designated cash/bank ledger balances.
  * Does not read invoices, allocations, or payment document tables.
@@ -42,7 +31,6 @@ export async function computeCashPosition(input: {
   journals: JournalRepository;
 }): Promise<CashPositionSnapshot> {
   const currency = input.currency;
-  const zero = zeroMoney(currency);
   const chart = await input.accounts.listForTenant(input.tenantId);
   const designated = chart.filter(
     (account) =>
@@ -60,9 +48,11 @@ export async function computeCashPosition(input: {
   const totalsByAccountId = new Map(
     totals.map((row) => [row.accountId, row])
   );
+  const ledgerScale = totals[0]?.debitTotal.scale ?? 2;
+  const zero = money(0n, currency, ledgerScale);
 
   function inTenantCurrency(value: Money): Money {
-    return money(value.amountMinor, currency, value.scale);
+    return money(value.amountMinor, currency, ledgerScale);
   }
 
   function balanceForCode(code: string): Money {
@@ -92,7 +82,7 @@ export async function computeCashPosition(input: {
       const account = designated.find((row) => row.code === code);
       return {
         accountCode: code,
-        accountName: account?.name ?? chartNameForCode(code),
+        accountName: cashPositionAccountName(code, account?.name),
         balance: balanceForCode(code),
         factId: cashPositionAccountFactId(code),
       };

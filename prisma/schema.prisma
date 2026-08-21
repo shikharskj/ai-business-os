@@ -262,14 +262,16 @@ model SalesMomentumState {
 /// Derived cash position — ledger balances of designated cash/bank COA accounts.
 /// Never unpaid invoices. Rebuildable from journals.
 model CashPositionState {
-  tenantId     String   @id
-  cashBalance  Decimal  @db.Decimal(18, 2)
-  bankBalance  Decimal  @db.Decimal(18, 2)
-  total        Decimal  @db.Decimal(18, 2)
-  currency     String   @default("INR")
-  scale        Int      @default(2)
-  computedAt   DateTime
-  updatedAt    DateTime @updatedAt
+  tenantId        String   @id
+  cashBalance     Decimal  @db.Decimal(18, 2)
+  bankBalance     Decimal  @db.Decimal(18, 2)
+  total           Decimal  @db.Decimal(18, 2)
+  currency        String   @default("INR")
+  scale           Int      @default(2)
+  cashAccountName String   @default("Cash")
+  bankAccountName String   @default("Bank")
+  computedAt      DateTime
+  updatedAt       DateTime @updatedAt
 
   business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 

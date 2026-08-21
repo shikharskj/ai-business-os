@@ -4,6 +4,7 @@ export {
   CASH_POSITION_ACCOUNT_CODES,
   CASH_POSITION_FACT_IDS,
   cashPositionAccountFactId,
+  cashPositionAccountName,
   isCashPositionAccountCode,
   type CashPositionAccountCode,
 } from "@/modules/accounting/domain/cash-accounts";

@@ -11,8 +11,10 @@ import type {
   ReceivablesRiskSnapshot,
   SalesMomentumSnapshot,
 } from "@/modules/business-state/domain/types";
-import { CASH_POSITION_ACCOUNT_CODES } from "@/modules/accounting/domain/cash-accounts";
-import { MVP_CHART_OF_ACCOUNTS } from "@/modules/accounting/domain/chart";
+import {
+  CASH_POSITION_ACCOUNT_CODES,
+  cashPositionAccountName,
+} from "@/modules/accounting/domain/cash-accounts";
 import { ACCOUNT_CODES } from "@/modules/accounting/domain/types";
 import { businessDate } from "@/modules/shared-kernel/dates";
 import {
@@ -32,145 +34,162 @@ type PrismaProjectionDelegateClient = Pick<
 type PrismaProjectionClient = PrismaProjectionDelegateClient &
   Pick<PrismaClient, "$transaction">;
 
-function shouldApplySnapshot(
-  existingComputedAt: Date | undefined,
-  incoming: Date
-): boolean {
-  return !existingComputedAt || existingComputedAt < incoming;
+function isPrismaUniqueConflict(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2002"
+  );
+}
+
+/**
+ * Apply a snapshot only when missing or stored.computedAt is older.
+ * The computedAt predicate lives in the UPDATE so a concurrent write cannot
+ * overwrite newer state after a stale read.
+ */
+async function insertOrUpdateIfNewer(input: {
+  updateNewer: () => Promise<{ count: number }>;
+  insert: () => Promise<unknown>;
+}): Promise<boolean> {
+  const updated = await input.updateNewer();
+  if (updated.count > 0) {
+    return true;
+  }
+  try {
+    await input.insert();
+    return true;
+  } catch (error) {
+    if (!isPrismaUniqueConflict(error)) {
+      throw error;
+    }
+    const retried = await input.updateNewer();
+    return retried.count > 0;
+  }
 }
 
 async function writeReceivablesRisk(
   client: PrismaProjectionDelegateClient,
   snapshot: ReceivablesRiskSnapshot
 ): Promise<boolean> {
-  const existing = await client.receivablesRiskState.findUnique({
-    where: { tenantId: snapshot.tenantId },
-    select: { computedAt: true },
+  const values = {
+    openInvoiceCount: snapshot.openInvoiceCount,
+    overdueInvoiceCount: snapshot.overdueInvoiceCount,
+    totalOutstanding: toDecimalForPrisma(snapshot.totalOutstanding),
+    overdueOutstanding: toDecimalForPrisma(snapshot.overdueOutstanding),
+    currency: snapshot.currency,
+    computedAt: snapshot.computedAt,
+  };
+  return insertOrUpdateIfNewer({
+    updateNewer: () =>
+      client.receivablesRiskState.updateMany({
+        where: {
+          tenantId: snapshot.tenantId,
+          computedAt: { lt: snapshot.computedAt },
+        },
+        data: values,
+      }),
+    insert: () =>
+      client.receivablesRiskState.create({
+        data: { tenantId: snapshot.tenantId, ...values },
+      }),
   });
-  if (!shouldApplySnapshot(existing?.computedAt, snapshot.computedAt)) {
-    return false;
-  }
-  await client.receivablesRiskState.upsert({
-    where: { tenantId: snapshot.tenantId },
-    create: {
-      tenantId: snapshot.tenantId,
-      openInvoiceCount: snapshot.openInvoiceCount,
-      overdueInvoiceCount: snapshot.overdueInvoiceCount,
-      totalOutstanding: toDecimalForPrisma(snapshot.totalOutstanding),
-      overdueOutstanding: toDecimalForPrisma(snapshot.overdueOutstanding),
-      currency: snapshot.currency,
-      computedAt: snapshot.computedAt,
-    },
-    update: {
-      openInvoiceCount: snapshot.openInvoiceCount,
-      overdueInvoiceCount: snapshot.overdueInvoiceCount,
-      totalOutstanding: toDecimalForPrisma(snapshot.totalOutstanding),
-      overdueOutstanding: toDecimalForPrisma(snapshot.overdueOutstanding),
-      currency: snapshot.currency,
-      computedAt: snapshot.computedAt,
-    },
-  });
-  return true;
 }
 
 async function writeInventoryRisk(
   client: PrismaProjectionDelegateClient,
   snapshot: InventoryRiskSnapshot
 ): Promise<boolean> {
-  const existing = await client.inventoryRiskState.findUnique({
-    where: { tenantId: snapshot.tenantId },
-    select: { computedAt: true },
+  const values = {
+    lowStockCount: snapshot.lowStockCount,
+    thresholdMajor: snapshot.thresholdMajor,
+    computedAt: snapshot.computedAt,
+  };
+  return insertOrUpdateIfNewer({
+    updateNewer: () =>
+      client.inventoryRiskState.updateMany({
+        where: {
+          tenantId: snapshot.tenantId,
+          computedAt: { lt: snapshot.computedAt },
+        },
+        data: values,
+      }),
+    insert: () =>
+      client.inventoryRiskState.create({
+        data: { tenantId: snapshot.tenantId, ...values },
+      }),
   });
-  if (!shouldApplySnapshot(existing?.computedAt, snapshot.computedAt)) {
-    return false;
-  }
-  await client.inventoryRiskState.upsert({
-    where: { tenantId: snapshot.tenantId },
-    create: {
-      tenantId: snapshot.tenantId,
-      lowStockCount: snapshot.lowStockCount,
-      thresholdMajor: snapshot.thresholdMajor,
-      computedAt: snapshot.computedAt,
-    },
-    update: {
-      lowStockCount: snapshot.lowStockCount,
-      thresholdMajor: snapshot.thresholdMajor,
-      computedAt: snapshot.computedAt,
-    },
-  });
-  return true;
 }
 
 async function writeSalesMomentum(
   client: PrismaProjectionDelegateClient,
   snapshot: SalesMomentumSnapshot
 ): Promise<boolean> {
-  const existing = await client.salesMomentumState.findUnique({
-    where: { tenantId: snapshot.tenantId },
-    select: { computedAt: true },
+  const values = {
+    windowDays: snapshot.windowDays,
+    windowFrom: snapshot.windowFrom,
+    windowTo: snapshot.windowTo,
+    postedInvoiceCount: snapshot.postedInvoiceCount,
+    salesTotal: toDecimalForPrisma(snapshot.salesTotal),
+    taxableTotal: toDecimalForPrisma(snapshot.taxableTotal),
+    currency: snapshot.currency,
+    computedAt: snapshot.computedAt,
+  };
+  return insertOrUpdateIfNewer({
+    updateNewer: () =>
+      client.salesMomentumState.updateMany({
+        where: {
+          tenantId: snapshot.tenantId,
+          computedAt: { lt: snapshot.computedAt },
+        },
+        data: values,
+      }),
+    insert: () =>
+      client.salesMomentumState.create({
+        data: { tenantId: snapshot.tenantId, ...values },
+      }),
   });
-  if (!shouldApplySnapshot(existing?.computedAt, snapshot.computedAt)) {
-    return false;
-  }
-  await client.salesMomentumState.upsert({
-    where: { tenantId: snapshot.tenantId },
-    create: {
-      tenantId: snapshot.tenantId,
-      windowDays: snapshot.windowDays,
-      windowFrom: snapshot.windowFrom,
-      windowTo: snapshot.windowTo,
-      postedInvoiceCount: snapshot.postedInvoiceCount,
-      salesTotal: toDecimalForPrisma(snapshot.salesTotal),
-      taxableTotal: toDecimalForPrisma(snapshot.taxableTotal),
-      currency: snapshot.currency,
-      computedAt: snapshot.computedAt,
-    },
-    update: {
-      windowDays: snapshot.windowDays,
-      windowFrom: snapshot.windowFrom,
-      windowTo: snapshot.windowTo,
-      postedInvoiceCount: snapshot.postedInvoiceCount,
-      salesTotal: toDecimalForPrisma(snapshot.salesTotal),
-      taxableTotal: toDecimalForPrisma(snapshot.taxableTotal),
-      currency: snapshot.currency,
-      computedAt: snapshot.computedAt,
-    },
-  });
-  return true;
+}
+
+function storedCashAccountName(
+  snapshot: CashPositionSnapshot,
+  code: string
+): string {
+  return cashPositionAccountName(
+    code,
+    snapshot.accounts.find((account) => account.accountCode === code)
+      ?.accountName
+  );
 }
 
 async function writeCashPosition(
   client: PrismaProjectionDelegateClient,
   snapshot: CashPositionSnapshot
 ): Promise<boolean> {
-  const existing = await client.cashPositionState.findUnique({
-    where: { tenantId: snapshot.tenantId },
-    select: { computedAt: true },
+  const values = {
+    cashBalance: toDecimalForPrisma(snapshot.cashBalance),
+    bankBalance: toDecimalForPrisma(snapshot.bankBalance),
+    total: toDecimalForPrisma(snapshot.total),
+    currency: snapshot.currency,
+    scale: snapshot.scale,
+    cashAccountName: storedCashAccountName(snapshot, ACCOUNT_CODES.CASH),
+    bankAccountName: storedCashAccountName(snapshot, ACCOUNT_CODES.BANK),
+    computedAt: snapshot.computedAt,
+  };
+  return insertOrUpdateIfNewer({
+    updateNewer: () =>
+      client.cashPositionState.updateMany({
+        where: {
+          tenantId: snapshot.tenantId,
+          computedAt: { lt: snapshot.computedAt },
+        },
+        data: values,
+      }),
+    insert: () =>
+      client.cashPositionState.create({
+        data: { tenantId: snapshot.tenantId, ...values },
+      }),
   });
-  if (!shouldApplySnapshot(existing?.computedAt, snapshot.computedAt)) {
-    return false;
-  }
-  await client.cashPositionState.upsert({
-    where: { tenantId: snapshot.tenantId },
-    create: {
-      tenantId: snapshot.tenantId,
-      cashBalance: toDecimalForPrisma(snapshot.cashBalance),
-      bankBalance: toDecimalForPrisma(snapshot.bankBalance),
-      total: toDecimalForPrisma(snapshot.total),
-      currency: snapshot.currency,
-      scale: snapshot.scale,
-      computedAt: snapshot.computedAt,
-    },
-    update: {
-      cashBalance: toDecimalForPrisma(snapshot.cashBalance),
-      bankBalance: toDecimalForPrisma(snapshot.bankBalance),
-      total: toDecimalForPrisma(snapshot.total),
-      currency: snapshot.currency,
-      scale: snapshot.scale,
-      computedAt: snapshot.computedAt,
-    },
-  });
-  return true;
 }
 
 async function writeMeta(
@@ -371,6 +390,8 @@ function mapCashPosition(row: {
   total: { toString(): string };
   currency: string;
   scale: number;
+  cashAccountName: string;
+  bankAccountName: string;
   computedAt: Date;
 }): CashPositionSnapshot {
   const cashBalance = moneyFromPrismaDecimal(
@@ -384,9 +405,6 @@ function mapCashPosition(row: {
     row.scale
   );
   const total = moneyFromPrismaDecimal(row.total, row.currency, row.scale);
-  const nameFor = (code: string) =>
-    MVP_CHART_OF_ACCOUNTS.find((account) => account.code === code)?.name ??
-    code;
 
   return {
     tenantId: row.tenantId,
@@ -397,7 +415,10 @@ function mapCashPosition(row: {
     scale: row.scale,
     accounts: CASH_POSITION_ACCOUNT_CODES.map((code) => ({
       accountCode: code,
-      accountName: nameFor(code),
+      accountName: cashPositionAccountName(
+        code,
+        code === ACCOUNT_CODES.CASH ? row.cashAccountName : row.bankAccountName
+      ),
       balance: code === ACCOUNT_CODES.CASH ? cashBalance : bankBalance,
       factId: `cash-position:account:${code}`,
     })),

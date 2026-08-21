@@ -244,6 +244,88 @@ describe("cash position model (post-mvp 03)", () => {
     expect(toMajorString(rebuilt.cashPosition!.bankBalance)).toBe("0.00");
   });
 
+  it("aggregates a non-2-decimal currency without mixing scale-2 zeros", async () => {
+    const { accounts, journals } = await seededAccounting();
+    await postJournal({
+      tenantId: "tenant-a",
+      accountingDate: businessDate("2026-08-10"),
+      financialYearStartMonth: 4,
+      closedThroughPeriodKey: null,
+      sourceType: "CustomerPayment",
+      sourceId: "pay-jpy",
+      lines: buildCustomerReceiptJournalLines({
+        paymentNumber: "REC/JPY",
+        method: "CASH",
+        amount: money(2360n, "JPY", 0),
+      }),
+      accountRepository: accounts,
+      journalRepository: journals,
+    });
+
+    const snapshot = await getCashPosition({
+      tenantId: "tenant-a",
+      currency: "JPY",
+      accounts,
+      journals,
+    });
+
+    expect(snapshot.scale).toBe(0);
+    expect(snapshot.cashBalance.amountMinor).toBe(2360n);
+    expect(snapshot.cashBalance.scale).toBe(0);
+    expect(snapshot.bankBalance.amountMinor).toBe(0n);
+    expect(snapshot.bankBalance.scale).toBe(0);
+    expect(snapshot.total.amountMinor).toBe(2360n);
+    expect(snapshot.total.scale).toBe(0);
+  });
+
+  it("uses tenant-configured Cash and Bank names with chart fallback", async () => {
+    const { accounts, journals } = await seededAccounting();
+    const cash = accounts.accounts.find(
+      (account) => account.code === ACCOUNT_CODES.CASH
+    );
+    const bank = accounts.accounts.find(
+      (account) => account.code === ACCOUNT_CODES.BANK
+    );
+    expect(cash).toBeDefined();
+    expect(bank).toBeDefined();
+    cash!.name = "Shop till";
+    bank!.name = "Current account";
+
+    const snapshot = await getCashPosition({
+      tenantId: "tenant-a",
+      currency: "INR",
+      accounts,
+      journals,
+    });
+    expect(
+      snapshot.accounts.map((account) => [
+        account.accountCode,
+        account.accountName,
+      ])
+    ).toEqual([
+      [ACCOUNT_CODES.CASH, "Shop till"],
+      [ACCOUNT_CODES.BANK, "Current account"],
+    ]);
+
+    const projections = createMemoryBusinessStateProjectionRepository();
+    await rebuildBusinessStateProjections({
+      tenantId: "tenant-a",
+      timezone: "Asia/Kolkata",
+      lowStockThresholdMajor: "5.0000",
+      sales: createMemorySalesRepository(),
+      payments: createMemoryPaymentRepository(),
+      catalog: createMemoryCatalogRepository(),
+      inventory: createMemoryInventoryRepository(),
+      accounts,
+      journals,
+      projections,
+      families: ["cashPosition"],
+    });
+    expect(
+      projections.cash.get("tenant-a")?.accounts.map((account) => account.accountName)
+    ).toEqual(["Shop till", "Current account"]);
+  });
+
   it("decreases cash when a supplier payment posts", async () => {
     const { accounts, journals } = await seededAccounting();
     await postJournal({
