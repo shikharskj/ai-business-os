@@ -71,6 +71,7 @@ describe("buildDailyBriefView", () => {
       collections,
       expenses,
       items: [],
+      canPreparePaymentReminder: true,
     });
 
     expect(view.yesterday).toBe("2026-08-21");
@@ -101,6 +102,7 @@ describe("buildDailyBriefView", () => {
       collections,
       expenses,
       items: [],
+      canPreparePaymentReminder: true,
     });
     expect(view.greeting).toBe("Good morning, Shikhar 🙂");
   });
@@ -115,6 +117,7 @@ describe("buildDailyBriefView", () => {
       collections,
       expenses,
       items: [],
+      canPreparePaymentReminder: true,
       overview: {
         revenue: money(100_00n),
         expenses: money(95_00n),
@@ -158,6 +161,7 @@ describe("buildDailyBriefView", () => {
       collections,
       expenses,
       items,
+      canPreparePaymentReminder: true,
     });
 
     expect(view.items.map((row) => row.id)).toEqual(["att-1", "att-2"]);
@@ -181,6 +185,26 @@ describe("buildDailyBriefView", () => {
     });
     expect(ATTENTION_TYPE_LABELS.OVERDUE_RECEIVABLE).toBe("Overdue");
     expect(ATTENTION_RECORD_LABELS.SalesInvoice).toBe("View invoice");
+  });
+
+  it("omits prepare reminder when the member cannot update invoices", () => {
+    const view = buildDailyBriefView({
+      timezone: "Asia/Kolkata",
+      quiet: true,
+      yesterday,
+      sales,
+      collections,
+      expenses,
+      items: [
+        itemFixture({
+          id: "att-1",
+          type: "OVERDUE_RECEIVABLE",
+        }),
+      ],
+      canPreparePaymentReminder: false,
+    });
+
+    expect(view.items[0]?.actions.map((a) => a.kind)).toEqual(["recommend"]);
   });
 });
 
@@ -262,18 +286,32 @@ describe("buildDailyBriefPeriodNotes", () => {
 });
 
 describe("briefActionsForAttentionType", () => {
-  it("maps overdue to remind + prepare reminder", () => {
-    const actions = briefActionsForAttentionType("OVERDUE_RECEIVABLE");
+  it("maps overdue to remind + prepare reminder when the member can update invoices", () => {
+    const actions = briefActionsForAttentionType("OVERDUE_RECEIVABLE", {
+      canPrepareReminder: true,
+    });
     expect(actions.map((a) => a.kind)).toEqual(["recommend", "prepare"]);
     expect(actions[1]?.prepareToolName).toBe("send_payment_reminders");
   });
 
-  it("maps low stock and idle quote to recommend only", () => {
-    expect(briefActionsForAttentionType("LOW_STOCK").map((a) => a.label)).toEqual([
-      "Review stock",
-    ]);
+  it("omits prepare reminder without invoice:update", () => {
     expect(
-      briefActionsForAttentionType("IDLE_QUOTATION").map((a) => a.label)
+      briefActionsForAttentionType("OVERDUE_RECEIVABLE", {
+        canPrepareReminder: false,
+      }).map((a) => a.kind)
+    ).toEqual(["recommend"]);
+  });
+
+  it("maps low stock and idle quote to recommend only", () => {
+    expect(
+      briefActionsForAttentionType("LOW_STOCK", {
+        canPrepareReminder: true,
+      }).map((a) => a.label)
+    ).toEqual(["Review stock"]);
+    expect(
+      briefActionsForAttentionType("IDLE_QUOTATION", {
+        canPrepareReminder: false,
+      }).map((a) => a.label)
     ).toEqual(["Follow up"]);
   });
 });

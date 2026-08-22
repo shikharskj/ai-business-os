@@ -34,14 +34,7 @@ export function PendingActionCard({
     return <p className="text-sm text-muted-foreground">Cancelled.</p>;
   }
 
-  if (action.status === "failed") {
-    return (
-      <p className="flex items-start gap-2 text-sm text-destructive">
-        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-        {action.message}
-      </p>
-    );
-  }
+  const isRunning = action.status === "running";
 
   return (
     <section className="rounded-xl border border-border bg-card p-3 shadow-sm">
@@ -68,25 +61,31 @@ export function PendingActionCard({
         ))}
       </ul>
       <p className="mb-3 text-sm text-muted-foreground">{pending.impact}</p>
+      {action.status === "failed" ? (
+        <p className="mb-3 flex items-start gap-2 text-sm text-destructive">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          {action.message}
+        </p>
+      ) : null}
       <div className="flex items-center gap-2">
         <Button
           type="button"
           size="sm"
-          disabled={action.status === "running"}
+          disabled={isRunning}
           onClick={onConfirm}
         >
-          {action.status === "running" ? (
+          {isRunning ? (
             <Spinner className="size-3.5" />
           ) : (
             <Check className="size-3.5" />
           )}
-          Confirm
+          {action.status === "failed" ? "Try again" : "Confirm"}
         </Button>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          disabled={action.status === "running"}
+          disabled={isRunning}
           onClick={onCancel}
         >
           <X className="size-3.5" />

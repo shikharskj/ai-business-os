@@ -10,27 +10,39 @@ export type BriefRowAction = {
   prepareToolName?: "send_payment_reminders";
 };
 
+export type BriefActionOptions = {
+  /**
+   * Prepare reminder mutates via send_payment_reminders (`invoice:update`).
+   * Hide the control when the member cannot confirm it.
+   */
+  canPrepareReminder: boolean;
+};
+
 /**
  * Deterministic L1/L2 actions for Needs attention rows (spec 06).
  * No LLM copy; no invented numbers.
  */
 export function briefActionsForAttentionType(
-  type: AttentionItemType
+  type: AttentionItemType,
+  options: BriefActionOptions
 ): BriefRowAction[] {
   if (type === "OVERDUE_RECEIVABLE") {
-    return [
+    const actions: BriefRowAction[] = [
       {
         kind: "recommend",
         cue: "recommend",
         label: "Remind customer",
       },
-      {
+    ];
+    if (options.canPrepareReminder) {
+      actions.push({
         kind: "prepare",
         cue: "prepare",
         label: "Prepare reminder",
         prepareToolName: "send_payment_reminders",
-      },
-    ];
+      });
+    }
+    return actions;
   }
   if (type === "LOW_STOCK") {
     return [

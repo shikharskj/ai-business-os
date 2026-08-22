@@ -104,6 +104,8 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 
 # Completed
 
+* **Needs attention prepare + confirm recovery:** Overdue Prepare reminder is omitted unless the member has `invoice:update` (dashboard is `report:read`; ACCOUNTANT no longer sees a control that 403s). Failed confirm keeps the pending card with Try again / Cancel and leaves View / Dismiss on the row so `router.refresh()` client state cannot trap the item. Tests: `tests/business-state/daily-brief.test.ts`. Next remains `07-copilot-depth.md`.
+
 * **Tax invoice theme alignment:** Live preview uses semantic tokens (`card` / `foreground` / `muted-foreground` / `border` / `primary` lettermark square). PDF export mirrors the same layout via light paper palette in `invoice-document-theme.ts` (always light for print). Stronger totals row; party hairline dividers. Tests: `tests/sales/invoice-document.test.ts`. Next remains `07-copilot-depth.md`.
 
 * **Invoice detail polish:** Responsive sticky tax-invoice preview (~47% scale, 15% shorter than prior preview) with Activity timeline underneath; Details + GST before Lines; Payments always shown (empty state + Record payment); allocated/outstanding + View journal (`report:read`); customer link; `formatDisplayDate` on business dates. Shared `EntityActivityPanel` (vertical rail timeline) + `AuditRepository.listForResource` for invoice.* audit events. Tests: `tests/shared-kernel/audit.test.ts`, `tests/shared-kernel/entity-activity-label.test.ts`. Next remains `07-copilot-depth.md`.
@@ -118,7 +120,7 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 * **Dashboard brief height polish:** Needs attention is content-sized beside KPIs (`lg:self-start`; no `h-full` / `min-h-48` on the brief card). Period notes + queue scroll under a fixed header (`max-h-[min(28rem,50vh)]`). Recent activity still stretches to the chart. Next remains `07-copilot-depth.md`.
 
 * **Operator recommendations (`06-operator-recommendations.md`):**
-  * Deterministic L1/L2 on Needs attention rows: overdue → Remind customer + Prepare reminder; low stock → Review stock; idle quote → Follow up. Quiet autonomy cues (Recommend / Prepare / Confirm).
+  * Deterministic L1/L2 on Needs attention rows: overdue → Remind customer + Prepare reminder (Prepare only with `invoice:update`); low stock → Review stock; idle quote → Follow up. Quiet autonomy cues (Recommend / Prepare / Confirm).
   * `POST /api/assistant/actions/propose` (`invoice:update`) builds HMAC-signed `send_payment_reminders` pending action from an overdue AttentionQueue row; confirm still uses existing `/api/assistant/actions/confirm`. Shared `PendingActionCard`.
   * Dashboard polish: show-more after 5 rows; header counts from visible (non-dismissed) rows; yesterday vs KPI range cue; `ensureAttentionQueueFresh` rebuilds when `rebuiltAt` older than 6h; supervisor `insights` region left empty (brief owns notes/queue).
   * Tests: `tests/business-state/daily-brief.test.ts`, `propose-brief-reminder.test.ts`, attention ensure-fresh TTL, dashboard-supervisor empty insights. Next: `07-copilot-depth.md`.

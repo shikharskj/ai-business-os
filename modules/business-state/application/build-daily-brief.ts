@@ -170,6 +170,8 @@ export function buildDailyBriefView(input: {
   collections: Money;
   expenses: Money;
   items: AttentionItem[];
+  /** Same capability as propose/confirm (`invoice:update`). */
+  canPreparePaymentReminder: boolean;
   overview?: Pick<
     DashboardOverview,
     "revenue" | "expenses" | "profit" | "receivables" | "payables"
@@ -194,7 +196,9 @@ export function buildDailyBriefView(input: {
       : [],
     items: input.items.map((item) => ({
       ...attentionItemToDto(item),
-      actions: briefActionsForAttentionType(item.type),
+      actions: briefActionsForAttentionType(item.type, {
+        canPrepareReminder: input.canPreparePaymentReminder,
+      }),
     })),
   };
 }

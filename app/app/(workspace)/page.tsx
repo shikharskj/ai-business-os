@@ -4,6 +4,7 @@ import { DashboardCanvas } from "@/components/business/dashboard-canvas";
 import { PageHeader } from "@/components/shell/page-header";
 import { prisma } from "@/lib/db/client";
 import { authorize } from "@/lib/security";
+import { roleHasPermission } from "@/lib/security/permissions";
 import { runDashboardSupervisor } from "@/modules/ai/server";
 import {
   buildDailyBriefView,
@@ -122,6 +123,10 @@ export default async function DashboardPage({
     collections: yesterdayActivity.collections,
     expenses: yesterdayActivity.expenses,
     items,
+    canPreparePaymentReminder: roleHasPermission(
+      tenant.membership.role,
+      "invoice:update"
+    ),
     overview: result.overview,
   });
 

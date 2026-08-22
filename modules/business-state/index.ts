@@ -82,6 +82,7 @@ export {
   BRIEF_AUTONOMY_CUE_LABELS,
   type BriefRowAction,
   type BriefAutonomyCue,
+  type BriefActionOptions,
 } from "@/modules/business-state/application/brief-actions";
 export { proposeBriefPaymentReminder } from "@/modules/business-state/application/propose-brief-reminder";
 export {

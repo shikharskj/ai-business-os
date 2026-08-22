@@ -401,8 +401,8 @@ export function DailyBriefPanel({ brief }: { brief: DailyBriefView }) {
                             />
                           </p>
                         ) : null}
-                        {pending ? (
-                          <div className="mt-2">
+                        <div className="mt-2 flex flex-col gap-2">
+                          {pending ? (
                             <PendingActionCard
                               pending={pending}
                               action={action}
@@ -413,10 +413,9 @@ export function DailyBriefPanel({ brief }: { brief: DailyBriefView }) {
                                 cancelPending(item.id);
                               }}
                             />
-                          </div>
-                        ) : (
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            {prepareAction ? (
+                          ) : null}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {!pending && prepareAction ? (
                               <Button
                                 type="button"
                                 variant="default"
@@ -452,7 +451,7 @@ export function DailyBriefPanel({ brief }: { brief: DailyBriefView }) {
                               Dismiss
                             </Button>
                           </div>
-                        )}
+                        </div>
                       </div>
                     </div>
                   </li>
