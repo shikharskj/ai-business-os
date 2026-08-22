@@ -32,11 +32,9 @@ export function createQuotationFollowUpWorkflow(): WorkflowDefinition {
     eventTypes: ["QuotationIdle"],
     autonomyLevel: "L1",
     mode: "dry_run",
-    idempotencyKey(event) {
-      return quotationFollowUpIdempotencyKey(
-        event.aggregateId,
-        expansionAsOf(event) ?? "unknown"
-      );
+    idempotencyKey(event, context) {
+      const asOf = asOfFor(event, context);
+      return quotationFollowUpIdempotencyKey(event.aggregateId, asOf);
     },
     concurrencyKey(event) {
       return quotationFollowUpConcurrencyKey(event.aggregateId);

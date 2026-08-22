@@ -28,6 +28,7 @@ import {
   type AttentionItemDraft,
 } from "@/modules/business-state/domain/types";
 import {
+  addBusinessDays,
   todayInTimezone,
   type BusinessDate,
 } from "@/modules/shared-kernel/dates";
@@ -245,8 +246,11 @@ async function computeUnusualExpenseItems(input: {
   today: BusinessDate;
   expenses: ExpenseRepository;
 }): Promise<AttentionItemDraft[]> {
+  const fromDate = addBusinessDays(input.today, -90);
   const expenses = await input.expenses.listExpenses({
     tenantId: input.tenantId,
+    fromDate,
+    toDate: input.today,
   });
   const matches = findUnusualExpenses({
     expenses,

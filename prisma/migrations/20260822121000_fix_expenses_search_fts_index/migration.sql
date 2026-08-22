@@ -1,7 +1,14 @@
 -- Expenses FTS GIN index was skipped on databases where
 -- 20260821010000_add_search_fts_indexes was marked applied: ExpenseCategory::text
 -- is not IMMUTABLE. Recreate with an immutable CASE of enum labels.
-CREATE INDEX IF NOT EXISTS expenses_search_fts_idx ON expenses
+--
+-- IMPORTANT: This migration uses CREATE INDEX CONCURRENTLY which cannot run in a transaction.
+-- Prisma Migrate runs migrations in transactions by default. To apply this migration:
+-- 1. Mark it as applied without running: prisma migrate resolve --applied 20260822121000_fix_expenses_search_fts_index
+-- 2. Run the CREATE INDEX statement manually outside a transaction
+-- Or use a custom migration script that executes statements without BEGIN/COMMIT
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS expenses_search_fts_idx ON expenses
   USING GIN (
     to_tsvector(
       'simple',

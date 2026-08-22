@@ -39,5 +39,8 @@ CREATE INDEX "workflow_runs_tenantId_createdAt_idx" ON "workflow_runs"("tenantId
 -- CreateIndex
 CREATE INDEX "workflow_runs_tenantId_concurrencyKey_status_idx" ON "workflow_runs"("tenantId", "concurrencyKey", "status");
 
+-- CreateIndex - Partial unique constraint to enforce one RUNNING workflow per (tenantId, concurrencyKey)
+CREATE UNIQUE INDEX "workflow_runs_tenantId_concurrencyKey_running_uniq" ON "workflow_runs"("tenantId", "concurrencyKey") WHERE status = 'RUNNING';
+
 -- AddForeignKey
 ALTER TABLE "workflow_runs" ADD CONSTRAINT "workflow_runs_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "businesses"("id") ON DELETE CASCADE ON UPDATE CASCADE;

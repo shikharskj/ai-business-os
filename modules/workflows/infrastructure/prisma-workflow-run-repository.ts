@@ -181,35 +181,37 @@ export function createPrismaWorkflowRunRepository(
       for (const row of due) {
         if (claimed.length >= take) break;
 
-        const running = await client.workflowRun.count({
-          where: {
-            tenantId: row.tenantId,
-            concurrencyKey: row.concurrencyKey,
-            status: "RUNNING",
-            id: { not: row.id },
-          },
-        });
-        if (running > 0) continue;
+        try {
+          const updated = await client.workflowRun.updateMany({
+            where: {
+              id: row.id,
+              tenantId: row.tenantId,
+              status: { in: ["PENDING", "RETRY"] },
+            },
+            data: {
+              status: "RUNNING",
+              attemptCount: { increment: 1 },
+              startedAt: input.now,
+            },
+          });
+          if (updated.count !== 1) continue;
 
-        const updated = await client.workflowRun.updateMany({
-          where: {
-            id: row.id,
-            tenantId: row.tenantId,
-            status: { in: ["PENDING", "RETRY"] },
-          },
-          data: {
-            status: "RUNNING",
-            attemptCount: { increment: 1 },
-            startedAt: input.now,
-          },
-        });
-        if (updated.count !== 1) continue;
-
-        const locked = await client.workflowRun.findUnique({
-          where: { id: row.id },
-        });
-        if (locked) {
-          claimed.push(mapRun(locked));
+          const locked = await client.workflowRun.findUnique({
+            where: { id: row.id },
+          });
+          if (locked) {
+            claimed.push(mapRun(locked));
+          }
+        } catch (error) {
+          const code =
+            error && typeof error === "object" && "code" in error
+              ? String(error.code)
+              : "";
+          if (code === "P2002") {
+            // Uniqueness conflict: another worker claimed this concurrency key
+            continue;
+          }
+          throw error;
         }
       }
 

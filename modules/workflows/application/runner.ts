@@ -211,13 +211,17 @@ export async function executeWorkflowRun(input: {
         result: { skipReason: "automation_disabled" },
         outcomeKind: "AUTOMATION_SKIPPED",
       });
-      await recordOutcome({
-        kind: "AUTOMATION_SKIPPED",
-        run: updated,
-        attention: input.deps.attention,
-        outbox: input.deps.outbox,
-        payload: { reason: "automation_disabled" },
-      });
+      try {
+        await recordOutcome({
+          kind: "AUTOMATION_SKIPPED",
+          run: updated,
+          attention: input.deps.attention,
+          outbox: input.deps.outbox,
+          payload: { reason: "automation_disabled" },
+        });
+      } catch {
+        // Outcome recording failed, but run is already persisted as SKIPPED
+      }
       metrics?.increment("skip", {
         workflowId: workflow.id,
         tenantId: input.run.tenantId,
@@ -236,13 +240,17 @@ export async function executeWorkflowRun(input: {
         result: { skipReason: condition.reason },
         outcomeKind: "AUTOMATION_SKIPPED",
       });
-      await recordOutcome({
-        kind: "AUTOMATION_SKIPPED",
-        run: updated,
-        attention: input.deps.attention,
-        outbox: input.deps.outbox,
-        payload: { reason: condition.reason },
-      });
+      try {
+        await recordOutcome({
+          kind: "AUTOMATION_SKIPPED",
+          run: updated,
+          attention: input.deps.attention,
+          outbox: input.deps.outbox,
+          payload: { reason: condition.reason },
+        });
+      } catch {
+        // Outcome recording failed, but run is already persisted as SKIPPED
+      }
       metrics?.increment("skip", {
         workflowId: workflow.id,
         tenantId: input.run.tenantId,
@@ -288,13 +296,17 @@ export async function executeWorkflowRun(input: {
             },
             outcomeKind: "AUTOMATION_SKIPPED",
           });
-          await recordOutcome({
-            kind: "AUTOMATION_SKIPPED",
-            run: updated,
-            attention: input.deps.attention,
-            outbox: input.deps.outbox,
-            payload: { reason: decision.reason },
-          });
+          try {
+            await recordOutcome({
+              kind: "AUTOMATION_SKIPPED",
+              run: updated,
+              attention: input.deps.attention,
+              outbox: input.deps.outbox,
+              payload: { reason: decision.reason },
+            });
+          } catch {
+            // Outcome recording failed, but run is already persisted as SKIPPED
+          }
           metrics?.increment("skip", {
             workflowId: workflow.id,
             tenantId: input.run.tenantId,
@@ -324,17 +336,21 @@ export async function executeWorkflowRun(input: {
       result,
       outcomeKind: "AUTOMATION_SUCCEEDED",
     });
-    await recordOutcome({
-      kind: "AUTOMATION_SUCCEEDED",
-      run: updated,
-      attention: input.deps.attention,
-      outbox: input.deps.outbox,
-      payload: {
-        dryRun: result.dryRun,
-        executed: actionResult.executed,
-        message: actionResult.message,
-      },
-    });
+    try {
+      await recordOutcome({
+        kind: "AUTOMATION_SUCCEEDED",
+        run: updated,
+        attention: input.deps.attention,
+        outbox: input.deps.outbox,
+        payload: {
+          dryRun: result.dryRun,
+          executed: actionResult.executed,
+          message: actionResult.message,
+        },
+      });
+    } catch {
+      // Outcome recording failed, but run is already persisted as SUCCEEDED
+    }
     metrics?.increment("success", {
       workflowId: workflow.id,
       tenantId: input.run.tenantId,
@@ -357,16 +373,20 @@ export async function executeWorkflowRun(input: {
       nextAttemptAt:
         status === "RETRY" ? nextWorkflowAttemptAt(input.run.attemptCount, now) : now,
     });
-    await recordOutcome({
-      kind: "AUTOMATION_FAILED",
-      run: updated,
-      attention: input.deps.attention,
-      outbox: input.deps.outbox,
-      payload: {
-        reason: status === "DEAD_LETTER" ? "dead_letter" : "retry",
-        error: errorMessage(error),
-      },
-    });
+    try {
+      await recordOutcome({
+        kind: "AUTOMATION_FAILED",
+        run: updated,
+        attention: input.deps.attention,
+        outbox: input.deps.outbox,
+        payload: {
+          reason: status === "DEAD_LETTER" ? "dead_letter" : "retry",
+          error: errorMessage(error),
+        },
+      });
+    } catch {
+      // Outcome recording failed, but run is already persisted with terminal status
+    }
     metrics?.increment("fail", {
       workflowId: workflow.id,
       tenantId: input.run.tenantId,

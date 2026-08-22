@@ -229,6 +229,7 @@ export async function updateAutonomyPolicyAction(
       update,
       policies: prismaAutonomyPolicyRepository,
       audit: createPrismaAuditRepository(prisma),
+      prisma,
     });
   } catch (error) {
     if (error instanceof ZodError) {

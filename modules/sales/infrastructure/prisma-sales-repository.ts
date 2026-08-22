@@ -526,9 +526,19 @@ export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRep
       const statusFilter =
         !filter.status || filter.status === "ALL" ? undefined : filter.status;
 
+      const issuedOn =
+        filter.fromDate || filter.toDate
+          ? {
+              ...(filter.fromDate ? { gte: filter.fromDate } : {}),
+              ...(filter.toDate ? { lte: filter.toDate } : {}),
+            }
+          : undefined;
+
       const where: Prisma.QuotationWhereInput = {
         tenantId: filter.tenantId,
+        ...(filter.customerId ? { customerId: filter.customerId } : {}),
         status: statusFilter,
+        issuedOn,
         ...(query
           ? {
               OR: [

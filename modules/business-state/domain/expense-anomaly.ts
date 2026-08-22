@@ -30,14 +30,15 @@ function averageGrandTotal(
   expenses: readonly Expense[],
   currency: string
 ): Money | null {
-  if (expenses.length === 0) {
+  const matching = expenses.filter((e) => e.grandTotal.currency === currency);
+  if (matching.length === 0) {
     return null;
   }
   let totalMinor = 0n;
-  for (const expense of expenses) {
+  for (const expense of matching) {
     totalMinor += expense.grandTotal.amountMinor;
   }
-  return money(totalMinor / BigInt(expenses.length), currency);
+  return money(totalMinor / BigInt(matching.length), currency);
 }
 
 /**

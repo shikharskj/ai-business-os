@@ -75,6 +75,13 @@ function classifyDriver(input: {
       summary: "Profit fell because sales were lower versus the previous period.",
     };
   }
+  if (input.profitDelta.amountMinor > 0n && salesRose && expensesFell) {
+    return {
+      kind: "both",
+      summary:
+        "Profit rose because sales were higher and expenses were lower versus the previous period.",
+    };
+  }
   if (input.profitDelta.amountMinor > 0n && salesRose && !expensesRose) {
     return {
       kind: "sales",

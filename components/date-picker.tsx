@@ -36,12 +36,6 @@ function isoFromCalendarDate(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-function moveDateToMonth(date: Date, month: Date): Date {
-  const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
-  const day = Math.min(date.getDate(), lastDay)
-  return new Date(month.getFullYear(), month.getMonth(), day)
-}
-
 interface DatePickerProps {
   id?: string
   name?: string
@@ -100,10 +94,6 @@ export function DatePicker({
 
   const handleMonthChange = (nextMonth: Date) => {
     setVisibleMonth(nextMonth)
-    if (!selectedDate) {
-      return
-    }
-    commitDate(moveDateToMonth(selectedDate, nextMonth), false)
   }
 
   const handleOpenChange = (

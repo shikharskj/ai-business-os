@@ -1,10 +1,10 @@
 -- CreateTable
 CREATE TABLE "tenant_autonomy_policies" (
     "tenantId" TEXT NOT NULL,
-    "allowedActionClasses" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "allowedActionClasses" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
     "amountThresholds" JSONB NOT NULL DEFAULT '{}',
     "requireConfirmationAbove" JSONB NOT NULL DEFAULT '{}',
-    "disabledAutomations" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "disabledAutomations" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
