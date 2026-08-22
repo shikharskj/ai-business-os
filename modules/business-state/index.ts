@@ -96,6 +96,9 @@ export {
 } from "@/modules/business-state/consumers/business-state-consumer";
 export { createPrismaBusinessStateProjectionRepository } from "@/modules/business-state/infrastructure/prisma-projection-repository";
 export { createMemoryBusinessStateProjectionRepository } from "@/modules/business-state/infrastructure/memory-projection-repository";
-export { createPrismaAttentionQueueRepository } from "@/modules/business-state/infrastructure/prisma-attention-repository";
+export {
+  createPrismaAttentionQueueRepository,
+  prismaAttentionQueueRepository,
+} from "@/modules/business-state/infrastructure/prisma-attention-repository";
 export { createMemoryAttentionQueueRepository } from "@/modules/business-state/infrastructure/memory-attention-repository";
 export { createPrismaBusinessStateConsumerDeps } from "@/modules/business-state/infrastructure/prisma-consumer-deps";

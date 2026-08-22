@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/lib/db/client";
 import { authorize, AuthorizationError } from "@/lib/security/authorize";
 import { resolveAiActionSecret } from "@/modules/ai/infrastructure/action-secret";
 import {
   AttentionItemNotFoundError,
   AttentionTenantMismatchError,
-  createPrismaAttentionQueueRepository,
+  prismaAttentionQueueRepository,
   proposeBriefPaymentReminder,
   proposeBriefReminderSchema,
 } from "@/modules/business-state";
@@ -35,7 +34,7 @@ export async function POST(request: Request) {
       actorUserId: tenant.membership.userId,
       attentionItemId: parsed.data.attentionItemId,
       secret: resolveAiActionSecret(),
-      attention: createPrismaAttentionQueueRepository(prisma),
+      attention: prismaAttentionQueueRepository,
     });
 
     return NextResponse.json(
