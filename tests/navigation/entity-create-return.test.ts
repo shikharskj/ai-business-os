@@ -78,5 +78,15 @@ describe("entity-create-return", () => {
         returnTo: "/app/purchases/bills/new",
       })
     ).toBeNull();
+
+    expect(
+      buildRedirectAfterEntityCreate({
+        entity: "customer",
+        entityId: "cust_new",
+        returnTo: "/app/sales/payments/new?advance=1",
+      })
+    ).toBe(
+      "/app/sales/payments/new?advance=1&customerId=cust_new&entityCreated=customer"
+    );
   });
 });

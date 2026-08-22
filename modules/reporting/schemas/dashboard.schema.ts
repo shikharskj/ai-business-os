@@ -13,7 +13,7 @@ export const dashboardSearchSchema = z
         "last_3_months",
       ])
       .optional()
-      .default("last_3_months"),
+      .default("last_7_days"),
     from: businessDateSchema.optional(),
     to: businessDateSchema.optional(),
   })

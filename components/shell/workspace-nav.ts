@@ -67,10 +67,24 @@ const salesGroup: WorkspaceNavGroup = {
     },
     {
       type: "leaf",
+      label: "Orders",
+      href: "/app/sales/orders",
+      permission: "quotation:read",
+      keywords: "sales order confirmed",
+    },
+    {
+      type: "leaf",
       label: "Invoices",
       href: "/app/sales/invoices",
       permission: "invoice:read",
       keywords: "sales bill receivables",
+    },
+    {
+      type: "leaf",
+      label: "Credit notes",
+      href: "/app/sales/credit-notes",
+      permission: "invoice:read",
+      keywords: "credit note return gst correction",
     },
     {
       type: "leaf",
@@ -109,6 +123,13 @@ const purchasesGroup: WorkspaceNavGroup = {
       href: "/app/purchases/bills",
       permission: "purchase:read",
       keywords: "supplier bills payables",
+    },
+    {
+      type: "leaf",
+      label: "Returns",
+      href: "/app/purchases/returns",
+      permission: "purchase:read",
+      keywords: "purchase return debit note",
     },
     {
       type: "leaf",

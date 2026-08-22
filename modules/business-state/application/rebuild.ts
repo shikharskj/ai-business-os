@@ -5,13 +5,13 @@ import {
   parseLowStockThreshold,
   type InventoryRepository,
 } from "@/modules/inventory";
-import { remainingOutstanding } from "@/modules/payments/domain/allocation";
+import { remainingDocumentBalance } from "@/modules/payments/domain/allocation";
 import type { PaymentRepository } from "@/modules/payments";
 import {
   RECEIVABLE_INVOICE_STATUSES,
   type SalesRepository,
 } from "@/modules/sales";
-import { GST_SALES_STATUSES } from "@/modules/reporting/domain/gst-types";
+import { GST_CREDIT_NOTE_STATUSES, GST_SALES_STATUSES } from "@/modules/reporting/domain/gst-types";
 import type {
   AccountRepository,
   JournalRepository,
@@ -38,6 +38,7 @@ import {
 import {
   addMoney,
   money,
+  subtractMoney,
   type Money,
 } from "@/modules/shared-kernel/money";
 
@@ -83,10 +84,11 @@ export async function computeReceivablesRisk(input: {
     statuses: RECEIVABLE_INVOICE_STATUSES,
   });
   const scoped = invoices.filter((row) => row.tenantId === input.tenantId);
-  const allocated = await input.payments.allocatedTotalsForInvoices(
-    input.tenantId,
-    scoped.map((row) => row.id)
-  );
+  const invoiceIds = scoped.map((row) => row.id);
+  const [allocated, credited] = await Promise.all([
+    input.payments.allocatedTotalsForInvoices(input.tenantId, invoiceIds),
+    input.sales.creditedTotalsForInvoices(input.tenantId, invoiceIds),
+  ]);
 
   let totalOutstanding = zeroMoney(input.currency);
   let overdueOutstanding = zeroMoney(input.currency);
@@ -95,7 +97,12 @@ export async function computeReceivablesRisk(input: {
 
   for (const invoice of scoped) {
     const paid = allocated.get(invoice.id) ?? zeroMoney(input.currency);
-    const outstanding = remainingOutstanding(invoice.grandTotal, paid);
+    const creditedAmount = credited.get(invoice.id) ?? zeroMoney(input.currency);
+    const outstanding = remainingDocumentBalance(
+      invoice.grandTotal,
+      paid,
+      creditedAmount
+    );
     if (outstanding.amountMinor <= 0n) continue;
     openInvoiceCount += 1;
     totalOutstanding = addMoney(totalOutstanding, outstanding);
@@ -155,6 +162,12 @@ export async function computeSalesMomentum(input: {
     fromDate: windowFrom,
     toDate: windowTo,
   });
+  const creditNotes = await input.sales.listCreditNotes({
+    tenantId: input.tenantId,
+    statuses: GST_CREDIT_NOTE_STATUSES,
+    fromDate: windowFrom,
+    toDate: windowTo,
+  });
 
   let salesTotal = zeroMoney(input.currency);
   let taxableTotal = zeroMoney(input.currency);
@@ -165,6 +178,11 @@ export async function computeSalesMomentum(input: {
     postedInvoiceCount += 1;
     salesTotal = addMoney(salesTotal, invoice.grandTotal);
     taxableTotal = addMoney(taxableTotal, invoice.taxableAmount);
+  }
+  for (const creditNote of creditNotes) {
+    if (creditNote.tenantId !== input.tenantId) continue;
+    salesTotal = subtractMoney(salesTotal, creditNote.grandTotal);
+    taxableTotal = subtractMoney(taxableTotal, creditNote.taxableAmount);
   }
 
   return {

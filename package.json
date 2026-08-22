@@ -13,6 +13,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "test": "vitest run",
+    "db:seed:volume": "vitest run --config vitest.seed.config.ts",
     "check:lockfile": "node scripts/check-lockfile-sync.mjs",
     "prepare": "git config core.hooksPath .githooks || true"
   },
@@ -65,6 +66,7 @@
     "jsdom": "^29.1.1",
     "prisma": "^7.9.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5",
     "vitest": "^4.1.11"
   },

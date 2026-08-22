@@ -8,6 +8,7 @@ import {
   acceptQuotationAction,
   cancelQuotationAction,
   convertQuotationAction,
+  convertQuotationToSalesOrderAction,
   exportQuotationPdfAction,
   sendQuotationAction,
 } from "@/app/app/(workspace)/sales/quotations/actions";
@@ -25,6 +26,7 @@ import type { QuotationStatus } from "@/modules/sales/domain/types";
 type PendingAction =
   | "send"
   | "accept"
+  | "convertOrder"
   | "convert"
   | "export"
   | "cancel"
@@ -54,6 +56,7 @@ export function QuotationStatusActions({
     action: (id: string) => Promise<{
       error?: string;
       invoiceId?: string;
+      salesOrderId?: string;
       documentId?: string;
     }>,
     success?: { title: string; description?: string }
@@ -87,6 +90,14 @@ export function QuotationStatusActions({
         router.refresh();
         return;
       }
+      if (result.salesOrderId) {
+        notifySuccess(
+          "Sales order created",
+          "The quotation was converted to a confirmed sales order."
+        );
+        router.push(`/app/sales/orders/${result.salesOrderId}`);
+        return;
+      }
       if (result.invoiceId) {
         notifySuccess(
           "Invoice created",
@@ -103,6 +114,18 @@ export function QuotationStatusActions({
   }
 
   const menuItems = [
+    canUpdate && status === "ACCEPTED"
+      ? {
+          key: "convert",
+          label: "Convert to invoice",
+          action: () =>
+            run(
+              "convert",
+              "Convert this quotation to a draft invoice? Line items and GST totals will be copied.",
+              convertQuotationAction
+            ),
+        }
+      : null,
     canRead && (status === "SENT" || status === "ACCEPTED")
       ? {
           key: "export",
@@ -162,16 +185,16 @@ export function QuotationStatusActions({
         {canUpdate && status === "ACCEPTED" ? (
           <PendingButton
             type="button"
-            pending={isPending && pendingAction === "convert"}
+            pending={isPending && pendingAction === "convertOrder"}
             onClick={() =>
               run(
-                "convert",
-                "Convert this quotation to a draft invoice? Line items and GST totals will be copied.",
-                convertQuotationAction
+                "convertOrder",
+                "Create a confirmed sales order from this quotation? Stock and accounts stay unchanged until you invoice and post.",
+                convertQuotationToSalesOrderAction
               )
             }
           >
-            Convert to invoice
+            Create order
           </PendingButton>
         ) : null}
         {menuItems.length > 0 ? (

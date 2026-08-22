@@ -44,9 +44,25 @@ export function remainingOutstanding(
   return remaining;
 }
 
+/** Outstanding after payments and credits. Clamps at zero (paid invoice + credit is a customer credit). */
+export function remainingDocumentBalance(
+  grandTotal: Money,
+  ...reductions: Money[]
+): Money {
+  let applied = money(0n, grandTotal.currency, grandTotal.scale);
+  for (const reduction of reductions) {
+    applied = addMoney(applied, reduction);
+  }
+  if (applied.amountMinor >= grandTotal.amountMinor) {
+    return money(0n, grandTotal.currency, grandTotal.scale);
+  }
+  return subtractMoney(grandTotal, applied);
+}
+
 /**
  * Shared allocation rules for customer receipts and supplier payments.
- * Full payment amount must be allocated; no over-allocation to documents or payment.
+ * Customer receipts may leave an unallocated remainder (advance / on-account).
+ * Supplier payments still require the full amount to be allocated.
  */
 export function validateDocumentAllocations(input: {
   partyId: string;
@@ -57,12 +73,16 @@ export function validateDocumentAllocations(input: {
   duplicateMessage: string;
   notFoundMessage: string;
   partyMismatchMessage: string;
+  allowUnallocated?: boolean;
 }): Money {
-  if (input.allocations.length === 0) {
-    throw new PaymentValidationError(input.emptyMessage);
-  }
   if (!isPositive(input.paymentAmount)) {
     throw new PaymentValidationError("Payment amount must be greater than zero.");
+  }
+  if (input.allocations.length === 0) {
+    if (input.allowUnallocated) {
+      return money(0n, input.paymentAmount.currency, input.paymentAmount.scale);
+    }
+    throw new PaymentValidationError(input.emptyMessage);
   }
 
   const seen = new Set<string>();
@@ -98,16 +118,38 @@ export function validateDocumentAllocations(input: {
   if (compareMoney(allocatedTotal, input.paymentAmount) > 0) {
     throw new AllocationExceedsPaymentError();
   }
-  if (compareMoney(allocatedTotal, input.paymentAmount) !== 0) {
+  if (
+    !input.allowUnallocated &&
+    compareMoney(allocatedTotal, input.paymentAmount) !== 0
+  ) {
     throw new PaymentValidationError(
-      "Allocate the full payment amount. Unallocated amounts are not recorded in the MVP."
+      "Allocate the full payment amount. Unallocated supplier amounts are not recorded."
     );
   }
-  if (isZero(allocatedTotal)) {
+  if (!input.allowUnallocated && isZero(allocatedTotal)) {
     throw new PaymentValidationError(input.emptyMessage);
   }
 
   return allocatedTotal;
+}
+
+export function allocatedTotal(allocations: Array<{ amount: Money }>, currency = "INR"): Money {
+  return allocations.reduce(
+    (sum, allocation) => addMoney(sum, allocation.amount),
+    money(0n, currency)
+  );
+}
+
+/** Receipt amount not yet applied to invoices. */
+export function unallocatedAmount(input: {
+  amount: Money;
+  allocations: Array<{ amount: Money }>;
+}): Money {
+  const applied = allocatedTotal(input.allocations, input.amount.currency);
+  if (applied.amountMinor >= input.amount.amountMinor) {
+    return money(0n, input.amount.currency, input.amount.scale);
+  }
+  return subtractMoney(input.amount, applied);
 }
 
 export function validateAllocations(input: {
@@ -133,6 +175,7 @@ export function validateAllocations(input: {
     notFoundMessage: "Invoice was not found.",
     partyMismatchMessage:
       "Payments can only be allocated to invoices for the selected customer.",
+    allowUnallocated: true,
   });
 }
 

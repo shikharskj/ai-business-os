@@ -30,6 +30,14 @@ describe("resolveFlashToast", () => {
     expect(result?.paramKeys).toEqual(["entityCreated"]);
   });
 
+  it("maps applied=1 after applying customer credit", () => {
+    const params = new URLSearchParams("applied=1");
+    const result = resolveFlashToast("/app/sales/payments/pay_123", params);
+
+    expect(result?.message.title).toBe("Credit applied");
+    expect(result?.paramKeys).toEqual(["applied"]);
+  });
+
   it("maps invited=1 on members page", () => {
     const params = new URLSearchParams("invited=1");
     const result = resolveFlashToast("/app/settings/members", params);

@@ -438,12 +438,14 @@ Dashboard
 Sales            (collapsible toggle — not a page)
   Quotations
   Invoices
+  Credit notes
   Customers
   Customer payments
 
 Purchases        (collapsible toggle)
   Suppliers
   Bills
+  Returns
   Supplier payments
 
 Inventory        (collapsible toggle)

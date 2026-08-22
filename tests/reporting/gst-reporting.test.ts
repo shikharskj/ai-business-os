@@ -59,6 +59,7 @@ function invoiceFixture(
     customerId: "cust-1",
     customerName: "Acme Traders",
     quotationId: null,
+    salesOrderId: null,
     journalId: "jr-1",
     issuedOn: businessDate("2026-08-10"),
     dueOn: null,
@@ -319,5 +320,59 @@ describe("GST reporting", () => {
       toDate: "2026-02-28",
     });
     expect(gstRowsToCsv([])).toContain("document_kind");
+  });
+
+  it("includes posted credit notes as negative output GST", async () => {
+    const sales = createMemorySalesRepository(
+      [],
+      [
+        invoiceFixture({
+          id: "inv-1",
+          tenantId: "tenant-a",
+          number: "INV/FY2026-27/0001",
+          status: "UNPAID",
+        }),
+      ]
+    );
+    const taxable = money(400_00n);
+    const tax = money(72_00n);
+    sales.creditNotes.push({
+      id: "cn-1",
+      tenantId: "tenant-a",
+      number: "CN/FY2026-27/0001",
+      customerId: "cust-1",
+      customerName: "Acme Traders",
+      invoiceId: "inv-1",
+      invoiceNumber: "INV/FY2026-27/0001",
+      status: "POSTED",
+      journalId: "jr-cn",
+      issuedOn: businessDate("2026-08-15"),
+      notes: null,
+      placeOfSupplyStateCode: "27",
+      subtotal: taxable,
+      discountTotal: zero,
+      taxableAmount: taxable,
+      cgst: money(36_00n),
+      sgst: money(36_00n),
+      igst: zero,
+      totalTax: tax,
+      grandTotal: money(472_00n),
+      supplyType: "INTRA_STATE",
+      postedAt: new Date("2026-08-15T10:00:00.000Z"),
+      lines: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const summary = await getGstSummary({
+      tenantId: "tenant-a",
+      periodKey: "2026-08",
+      sales,
+      purchases: createMemoryPurchasesRepository([]),
+      expenses: createMemoryExpenseRepository([]),
+    });
+    const creditRow = summary.rows.find((row) => row.documentKind === "SALES_CREDIT_NOTE");
+    expect(creditRow).toBeDefined();
+    expect(toMajorString(creditRow!.taxableAmount)).toBe("-400.00");
+    expect(toMajorString(summary.output.taxableAmount)).toBe("600.00");
   });
 });

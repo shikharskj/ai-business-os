@@ -121,6 +121,111 @@ export type PreparedQuotation = {
   lines: PreparedQuotationLine[];
 };
 
+export const SALES_ORDER_STATUSES = [
+  "DRAFT",
+  "CONFIRMED",
+  "CANCELLED",
+  "FULFILLED",
+] as const;
+
+export type SalesOrderStatus = (typeof SALES_ORDER_STATUSES)[number];
+
+export type SalesOrderLine = {
+  id: string;
+  tenantId: string;
+  salesOrderId: string;
+  sortOrder: number;
+  productId: string;
+  productName: string;
+  sku: string;
+  unitOfMeasurement: string;
+  hsnSac: string | null;
+  taxRateBps: number;
+  quantity: Quantity;
+  unitPrice: Money;
+  discount: Money;
+  lineSubtotal: Money;
+  taxableAmount: Money;
+  cgst: Money;
+  sgst: Money;
+  igst: Money;
+  totalTax: Money;
+  lineTotal: Money;
+  supplyType: GstSupplyType;
+  treatment: GstTreatment;
+};
+
+export type SalesOrder = {
+  id: string;
+  tenantId: string;
+  number: string;
+  customerId: string;
+  customerName: string;
+  status: SalesOrderStatus;
+  quotationId: string | null;
+  issuedOn: BusinessDate;
+  expectedOn: BusinessDate | null;
+  notes: string | null;
+  placeOfSupplyStateCode: string;
+  subtotal: Money;
+  discountTotal: Money;
+  taxableAmount: Money;
+  cgst: Money;
+  sgst: Money;
+  igst: Money;
+  totalTax: Money;
+  grandTotal: Money;
+  supplyType: GstSupplyType | "MIXED";
+  lines: SalesOrderLine[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type SalesOrderLineInput = QuotationLineInput;
+
+export type SalesOrderInput = {
+  customerId: string;
+  issuedOn: BusinessDate;
+  expectedOn?: BusinessDate | null;
+  notes?: string | null;
+  placeOfSupplyStateCode?: string | null;
+  lines: SalesOrderLineInput[];
+};
+
+export type SalesOrderListFilter = {
+  tenantId: string;
+  query?: string;
+  status?: SalesOrderStatus | "ALL";
+  customerId?: string;
+  fromDate?: BusinessDate;
+  toDate?: BusinessDate;
+};
+
+export type PreparedSalesOrderLine = Omit<
+  SalesOrderLine,
+  "id" | "tenantId" | "salesOrderId"
+>;
+
+export type PreparedSalesOrder = {
+  customerId: string;
+  customerName: string;
+  quotationId: string | null;
+  issuedOn: BusinessDate;
+  expectedOn: BusinessDate | null;
+  notes: string | null;
+  placeOfSupplyStateCode: string;
+  subtotal: Money;
+  discountTotal: Money;
+  taxableAmount: Money;
+  cgst: Money;
+  sgst: Money;
+  igst: Money;
+  totalTax: Money;
+  grandTotal: Money;
+  supplyType: GstSupplyType | "MIXED";
+  lines: PreparedSalesOrderLine[];
+};
+
 export const INVOICE_STATUSES = [
   "DRAFT",
   "POSTED",
@@ -165,6 +270,7 @@ export type SalesInvoice = {
   customerName: string;
   status: SalesInvoiceStatus;
   quotationId: string | null;
+  salesOrderId: string | null;
   journalId: string | null;
   issuedOn: BusinessDate;
   dueOn: BusinessDate | null;
@@ -218,3 +324,109 @@ export type PreparedInvoice = Omit<PreparedQuotation, "validUntil"> & {
 };
 
 export type SalesTaxContext = QuotationTaxContext;
+
+export const CREDIT_NOTE_STATUSES = ["DRAFT", "POSTED", "CANCELLED"] as const;
+
+export type CreditNoteStatus = (typeof CREDIT_NOTE_STATUSES)[number];
+
+export type CreditNoteLine = {
+  id: string;
+  tenantId: string;
+  creditNoteId: string;
+  sourceInvoiceLineId: string;
+  sortOrder: number;
+  productId: string;
+  productName: string;
+  sku: string;
+  unitOfMeasurement: string;
+  hsnSac: string | null;
+  taxRateBps: number;
+  quantity: Quantity;
+  unitPrice: Money;
+  discount: Money;
+  lineSubtotal: Money;
+  taxableAmount: Money;
+  cgst: Money;
+  sgst: Money;
+  igst: Money;
+  totalTax: Money;
+  lineTotal: Money;
+  supplyType: GstSupplyType;
+  treatment: GstTreatment;
+};
+
+export type CreditNote = {
+  id: string;
+  tenantId: string;
+  number: string;
+  customerId: string;
+  customerName: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  status: CreditNoteStatus;
+  journalId: string | null;
+  issuedOn: BusinessDate;
+  notes: string | null;
+  placeOfSupplyStateCode: string;
+  subtotal: Money;
+  discountTotal: Money;
+  taxableAmount: Money;
+  cgst: Money;
+  sgst: Money;
+  igst: Money;
+  totalTax: Money;
+  grandTotal: Money;
+  supplyType: GstSupplyType | "MIXED";
+  postedAt: Date | null;
+  lines: CreditNoteLine[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type CreditNoteLineInput = {
+  invoiceLineId: string;
+  quantity: Quantity;
+};
+
+export type CreditNoteInput = {
+  invoiceId: string;
+  issuedOn: BusinessDate;
+  notes?: string | null;
+  lines: CreditNoteLineInput[];
+};
+
+export type CreditNoteListFilter = {
+  tenantId: string;
+  query?: string;
+  status?: CreditNoteStatus | "ALL";
+  customerId?: string;
+  invoiceId?: string;
+  statuses?: readonly CreditNoteStatus[];
+  fromDate?: BusinessDate;
+  toDate?: BusinessDate;
+};
+
+export type PreparedCreditNoteLine = Omit<
+  CreditNoteLine,
+  "id" | "tenantId" | "creditNoteId"
+>;
+
+export type PreparedCreditNote = {
+  customerId: string;
+  customerName: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  issuedOn: BusinessDate;
+  notes: string | null;
+  placeOfSupplyStateCode: string;
+  subtotal: Money;
+  discountTotal: Money;
+  taxableAmount: Money;
+  cgst: Money;
+  sgst: Money;
+  igst: Money;
+  totalTax: Money;
+  grandTotal: Money;
+  supplyType: GstSupplyType | "MIXED";
+  lines: PreparedCreditNoteLine[];
+};

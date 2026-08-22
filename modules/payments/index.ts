@@ -1,4 +1,7 @@
 export type {
+  ApplyCustomerAdvanceInput,
+  ApplyCustomerCreditInput,
+  CustomerAdvance,
   CustomerOutstanding,
   CustomerPayment,
   InvoiceOutstanding,
@@ -28,6 +31,9 @@ export {
 } from "@/modules/payments/domain/errors";
 export {
   remainingOutstanding,
+  remainingDocumentBalance,
+  unallocatedAmount,
+  allocatedTotal,
   validateAllocations,
   validatePurchaseAllocations,
   validateDocumentAllocations,
@@ -51,6 +57,10 @@ export {
   nextPurchasePaymentStatus,
 } from "@/modules/payments/domain/status";
 export { recordCustomerPayment } from "@/modules/payments/application/record-payment";
+export {
+  applyCustomerAdvance,
+  applyCustomerCredit,
+} from "@/modules/payments/application/apply-advance";
 export { recordSupplierPayment } from "@/modules/payments/application/record-supplier-payment";
 export {
   getPayment,
@@ -60,6 +70,7 @@ export {
   getInvoiceOutstanding,
   listOpenReceivableInvoices,
   getCustomerOutstanding,
+  getCustomerAdvance,
   outstandingByCustomerIds,
 } from "@/modules/payments/application/queries";
 export {
@@ -81,8 +92,11 @@ export {
 } from "@/modules/payments/infrastructure/supplier-payment-repositories";
 export {
   recordCustomerPaymentSchema,
+  applyCustomerAdvanceSchema,
+  applyCustomerCreditSchema,
   paymentSearchSchema,
   toPaymentFields,
+  toAdvanceAllocationFields,
 } from "@/modules/payments/schemas/payment.schema";
 export {
   recordSupplierPaymentSchema,

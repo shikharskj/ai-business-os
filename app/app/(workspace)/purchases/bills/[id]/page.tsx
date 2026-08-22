@@ -6,6 +6,7 @@ import { GstBreakdown } from "@/components/business/gst-breakdown";
 import { MoneyDisplay } from "@/components/business/money-display";
 import { StatusBadge } from "@/components/business/status-badge";
 import {
+  PURCHASE_RETURN_STATUS_TONES,
   PURCHASE_STATUS_LABELS,
   PURCHASE_STATUS_TONES,
 } from "@/components/business/status-tone";
@@ -33,8 +34,11 @@ import { prismaSupplierPaymentRepository } from "@/modules/payments/infrastructu
 import {
   getPurchase,
   isPayablePurchaseStatus,
+  isPostedPurchaseStatus,
+  listPurchaseReturns,
   PurchaseNotFoundError,
   purchasePaymentStatusLabel,
+  purchaseReturnStatusLabel,
 } from "@/modules/purchases";
 import { prismaPurchasesRepository } from "@/modules/purchases/infrastructure/prisma-purchases-repository";
 import { money } from "@/modules/shared-kernel/money";
@@ -52,6 +56,7 @@ export default async function BillDetailPage({
   const canUpdate = roleHasPermission(tenant.membership.role, "purchase:update");
   const canCancel = roleHasPermission(tenant.membership.role, "purchase:cancel");
   const canCreatePayment = roleHasPermission(tenant.membership.role, "payment:create");
+  const canCreateReturn = roleHasPermission(tenant.membership.role, "purchase:create");
   const canReadPayments = roleHasPermission(tenant.membership.role, "payment:read");
 
   let purchase;
@@ -83,6 +88,11 @@ export default async function BillDetailPage({
         supplierPayments: prismaSupplierPaymentRepository,
       })
     : [];
+  const returns = await listPurchaseReturns({
+    tenantId: tenant.tenantId,
+    purchaseId: purchase.id,
+    purchases: prismaPurchasesRepository,
+  });
   const canRecordPayment =
     canCreatePayment &&
     isPayablePurchaseStatus(purchase.status) &&
@@ -114,6 +124,19 @@ export default async function BillDetailPage({
                 Edit
               </Button>
             ) : null}
+            {canCreateReturn && isPostedPurchaseStatus(purchase.status) ? (
+              <Button
+                nativeButton={false}
+                variant="outline"
+                render={
+                  <Link
+                    href={`/app/purchases/returns/new?purchaseId=${purchase.id}`}
+                  />
+                }
+              >
+                Issue return
+              </Button>
+            ) : null}
             {canRecordPayment ? (
               <Button
                 nativeButton={false}
@@ -137,6 +160,7 @@ export default async function BillDetailPage({
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="flex flex-col gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Lines</CardTitle>
@@ -184,6 +208,50 @@ export default async function BillDetailPage({
             </Table>
           </CardContent>
         </Card>
+
+        {returns.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Returns</CardTitle>
+            </CardHeader>
+            <CardContent className="px-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Number</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {returns.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell>
+                        <Link
+                          href={`/app/purchases/returns/${row.id}`}
+                          className="font-mono text-sm font-medium hover:underline"
+                        >
+                          {row.number}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{row.issuedOn}</TableCell>
+                      <TableCell>
+                        <StatusBadge tone={PURCHASE_RETURN_STATUS_TONES[row.status]}>
+                          {purchaseReturnStatusLabel(row.status)}
+                        </StatusBadge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <MoneyDisplay value={row.grandTotal} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        ) : null}
+        </div>
 
         <div className="flex flex-col gap-6">
           <Card>

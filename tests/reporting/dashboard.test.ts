@@ -40,6 +40,7 @@ function invoiceFixture(
     customerId: "cust-1",
     customerName: "Acme Traders",
     quotationId: null,
+    salesOrderId: null,
     journalId: "jr-1",
     issuedOn: businessDate("2026-08-10"),
     dueOn: businessDate("2026-08-01"),
@@ -263,12 +264,12 @@ describe("dashboard overview", () => {
     expect(range.fromDate <= range.toDate).toBe(true);
   });
 
-  it("defaults to last_3_months when preset is omitted", () => {
+  it("defaults to last_7_days when preset is omitted", () => {
     const range = resolveDashboardDateRange({
       timezone: "Asia/Kolkata",
     });
-    expect(range.preset).toBe("last_3_months");
-    expect(range.label).toBe("Last 3 months");
+    expect(range.preset).toBe("last_7_days");
+    expect(range.label).toBe("Last 7 days");
     expect(range.fromDate < range.toDate).toBe(true);
   });
 

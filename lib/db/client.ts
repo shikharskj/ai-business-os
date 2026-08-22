@@ -22,10 +22,13 @@ function hasCurrentDelegates(client: PrismaClient | undefined): boolean {
         product?: { findMany?: unknown };
         inventoryMovement?: { findMany?: unknown };
         quotation?: { findMany?: unknown };
+        salesOrder?: { findMany?: unknown };
         salesInvoice?: { findMany?: unknown };
+        creditNote?: { findMany?: unknown };
         customerPayment?: { findMany?: unknown };
         expense?: { findMany?: unknown };
         purchase?: { findMany?: unknown };
+        purchaseReturn?: { findMany?: unknown };
         supplierPayment?: { findMany?: unknown };
         notification?: { findMany?: unknown };
         tenantAutonomyPolicy?: { findUnique?: unknown };
@@ -38,10 +41,13 @@ function hasCurrentDelegates(client: PrismaClient | undefined): boolean {
     typeof candidate?.product?.findMany === "function" &&
     typeof candidate?.inventoryMovement?.findMany === "function" &&
     typeof candidate?.quotation?.findMany === "function" &&
+    typeof candidate?.salesOrder?.findMany === "function" &&
     typeof candidate?.salesInvoice?.findMany === "function" &&
+    typeof candidate?.creditNote?.findMany === "function" &&
     typeof candidate?.customerPayment?.findMany === "function" &&
     typeof candidate?.expense?.findMany === "function" &&
     typeof candidate?.purchase?.findMany === "function" &&
+    typeof candidate?.purchaseReturn?.findMany === "function" &&
     typeof candidate?.supplierPayment?.findMany === "function" &&
     typeof candidate?.notification?.findMany === "function" &&
     typeof candidate?.tenantAutonomyPolicy?.findUnique === "function" &&

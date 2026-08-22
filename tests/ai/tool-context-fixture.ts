@@ -53,6 +53,7 @@ function invoiceFixture(
     customerId: CUSTOMER_A,
     customerName: "Acme Traders",
     quotationId: null,
+    salesOrderId: null,
     journalId: "jr-1",
     issuedOn: businessDate("2020-03-15"),
     dueOn: businessDate("2020-04-14"),

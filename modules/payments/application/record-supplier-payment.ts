@@ -7,6 +7,7 @@ import type {
 import { PartyInactiveError, PartyNotFoundError } from "@/modules/party/domain/errors";
 import type { PartyRepository } from "@/modules/party/infrastructure/repositories";
 import {
+  remainingDocumentBalance,
   remainingOutstanding,
   validatePurchaseAllocations,
 } from "@/modules/payments/domain/allocation";
@@ -83,6 +84,10 @@ export async function recordSupplierPayment(input: {
     input.tenantId,
     uniquePurchaseIds
   );
+  const returnedTotals = await input.purchases.returnedTotalsForPurchases(
+    input.tenantId,
+    uniquePurchaseIds
+  );
   const allocatable = purchases.map((purchase) => {
     if (!isPayablePurchaseStatus(purchase.status)) {
       throw new PaymentValidationError(
@@ -91,10 +96,12 @@ export async function recordSupplierPayment(input: {
     }
     const allocated =
       allocatedTotals.get(purchase.id) ?? money(0n, purchase.grandTotal.currency);
+    const returned =
+      returnedTotals.get(purchase.id) ?? money(0n, purchase.grandTotal.currency);
     return {
       purchase,
       allocated,
-      outstanding: remainingOutstanding(purchase.grandTotal, allocated),
+      outstanding: remainingDocumentBalance(purchase.grandTotal, allocated, returned),
     };
   });
 

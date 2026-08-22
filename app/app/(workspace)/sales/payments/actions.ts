@@ -15,8 +15,13 @@ import { PartyError } from "@/modules/party";
 import { createPrismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 import {
   PaymentError,
+  applyCustomerAdvance,
+  applyCustomerAdvanceSchema,
+  applyCustomerCredit,
+  applyCustomerCreditSchema,
   recordCustomerPayment,
   recordCustomerPaymentSchema,
+  toAdvanceAllocationFields,
   toPaymentFields,
 } from "@/modules/payments";
 import { createPrismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
@@ -143,4 +148,127 @@ export async function recordCustomerPaymentAction(
   revalidatePath("/app/sales/invoices");
   revalidatePath("/app/sales/customers");
   redirect(`/app/sales/payments/${paymentId}?created=1`);
+}
+
+function readAdvanceAllocations(formData: FormData) {
+  const allocationCount = Number(formData.get("allocationCount") ?? 0);
+  if (
+    !Number.isSafeInteger(allocationCount) ||
+    allocationCount < 1 ||
+    allocationCount > 1000
+  ) {
+    throw new ZodError([
+      {
+        code: "custom",
+        path: ["allocations"],
+        message: "Allocate the credit to at least one invoice",
+      },
+    ]);
+  }
+
+  const allocations = Array.from({ length: allocationCount }, (_, index) => ({
+    invoiceId: String(formData.get(`allocation-${index}-invoiceId`) ?? ""),
+    amount: String(formData.get(`allocation-${index}-amount`) ?? "").trim(),
+  })).filter((row) => {
+    const trimmed = row.amount.trim();
+    if (trimmed === "" || trimmed === ".") {
+      return false;
+    }
+    try {
+      return parseFloat(trimmed) > 0;
+    } catch {
+      return false;
+    }
+  });
+
+  return allocations;
+}
+
+export async function applyCustomerAdvanceAction(
+  _prevState: PaymentActionState,
+  formData: FormData
+): Promise<PaymentActionState> {
+  let paymentId: string;
+
+  try {
+    const tenant = await authorize("payment:create");
+    const parsed = applyCustomerAdvanceSchema.parse({
+      paymentId: formData.get("paymentId"),
+      allocations: readAdvanceAllocations(formData),
+    });
+    paymentId = parsed.paymentId;
+    await prisma.$transaction(async (tx) =>
+      applyCustomerAdvance({
+        tenantId: tenant.tenantId,
+        actorUserId: tenant.membership.userId,
+        fields: {
+          paymentId: parsed.paymentId,
+          ...toAdvanceAllocationFields(parsed),
+        },
+        payments: createPrismaPaymentRepository(tx),
+        sales: createPrismaSalesRepository(tx),
+        parties: createPrismaPartyRepository(tx),
+        audit: createPrismaAuditRepository(tx),
+        outbox: createPrismaOutboxRepository(tx),
+      })
+    );
+  } catch (error) {
+    const mapped = mapError(error);
+    if (mapped) {
+      return mapped;
+    }
+    throw error;
+  }
+
+  revalidatePath("/app/sales/payments");
+  revalidatePath(`/app/sales/payments/${paymentId}`);
+  revalidatePath("/app/sales/invoices");
+  revalidatePath("/app/sales/customers");
+  redirect(`/app/sales/payments/${paymentId}?applied=1`);
+}
+
+export async function applyCustomerCreditAction(
+  _prevState: PaymentActionState,
+  formData: FormData
+): Promise<PaymentActionState> {
+  let invoiceId: string | null = null;
+
+  try {
+    const tenant = await authorize("payment:create");
+    const parsed = applyCustomerCreditSchema.parse({
+      customerId: formData.get("customerId"),
+      allocations: readAdvanceAllocations(formData),
+    });
+    invoiceId = parsed.allocations[0]?.invoiceId ?? null;
+    await prisma.$transaction(async (tx) =>
+      applyCustomerCredit({
+        tenantId: tenant.tenantId,
+        actorUserId: tenant.membership.userId,
+        fields: {
+          customerId: parsed.customerId,
+          ...toAdvanceAllocationFields(parsed),
+        },
+        payments: createPrismaPaymentRepository(tx),
+        sales: createPrismaSalesRepository(tx),
+        parties: createPrismaPartyRepository(tx),
+        audit: createPrismaAuditRepository(tx),
+        outbox: createPrismaOutboxRepository(tx),
+      })
+    );
+  } catch (error) {
+    const mapped = mapError(error);
+    if (mapped) {
+      return mapped;
+    }
+    throw error;
+  }
+
+  revalidatePath("/app/sales/payments");
+  revalidatePath("/app/sales/invoices");
+  revalidatePath("/app/sales/customers");
+  redirect(
+    invoiceId
+      ? `/app/sales/invoices/${invoiceId}?applied=1`
+      : "/app/sales/payments?applied=1"
+  );
 }

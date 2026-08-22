@@ -71,11 +71,11 @@ Every spec uses this shape:
 | 09 | Automation runtime (event→condition→action→outcome) | R4 | Complete |
 | 10 | Collections automation vertical | R4 | Complete |
 | 11 | Quotation follow-up + reorder prepare + expense anomaly | R4 | Complete |
-| 12 | Credit notes / returns | R5 | Not Started *(after R2–R4 unless pulled)* |
-| 13 | Advances / retainers | R5 | Not Started *(after R2–R4 unless pulled)* |
-| 14 | Sales orders | R5 | Not Started *(after R2–R4 unless pulled)* |
+| 12 | Credit notes / returns | R5 | Complete |
+| 13 | Advances / retainers | R5 | Complete |
+| 14 | Sales orders | R5 | Complete |
 | 15 | Reminder/invoice share delivery (non-WhatsApp) | R5 | Not Started *(after R2–R4 unless pulled)* |
 | 16 | Business Guardian | R6 | Not Started |
 | 17 | AI Operations / document → prepared purchase | R7 | Not Started |
 
-**Next implementable spec:** `16-business-guardian.md` (R5 `12`–`15` only if a metric pull is recorded in progress-tracker)
+**Next implementable spec:** `15-share-delivery.md`

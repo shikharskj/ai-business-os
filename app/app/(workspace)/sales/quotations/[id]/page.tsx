@@ -87,6 +87,10 @@ export default async function QuotationDetailPage({
     tenant.tenantId,
     quotation.id
   );
+  const convertedOrder = await prismaSalesRepository.findSalesOrderByQuotationId(
+    tenant.tenantId,
+    quotation.id
+  );
   const documentView = buildQuotationDocumentView({
     number: quotation.number,
     issuedOn: quotation.issuedOn,
@@ -204,6 +208,19 @@ export default async function QuotationDetailPage({
                   </span>
                   {placeOfSupply}
                 </p>
+                {convertedOrder ? (
+                  <p className="flex items-center justify-between">
+                    <span className="text-muted-foreground">
+                      Converted order{" "}
+                    </span>
+                    <Link
+                      href={`/app/sales/orders/${convertedOrder.id}`}
+                      className="font-medium hover:underline"
+                    >
+                      {convertedOrder.number}
+                    </Link>
+                  </p>
+                ) : null}
                 {convertedInvoice ? (
                   <p className="flex items-center justify-between">
                     <span className="text-muted-foreground">

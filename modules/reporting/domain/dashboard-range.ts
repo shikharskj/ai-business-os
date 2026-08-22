@@ -121,7 +121,7 @@ export function resolveDashboardDateRange(input: {
   to?: string | null;
 }): DashboardDateRange {
   const today = todayInTimezone(input.timezone);
-  const presetRaw = input.preset?.trim().toLowerCase() || "last_3_months";
+  const presetRaw = input.preset?.trim().toLowerCase() || "last_7_days";
 
   if (presetRaw === "custom") {
     if (!input.from || !input.to) {

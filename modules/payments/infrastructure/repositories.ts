@@ -1,4 +1,4 @@
-import { money, type Money } from "@/modules/shared-kernel/money";
+import { addMoney, money, type Money } from "@/modules/shared-kernel/money";
 import type { BusinessDate } from "@/modules/shared-kernel/dates";
 import type {
   CustomerPayment,
@@ -43,6 +43,15 @@ export type PaymentRepository = {
     tenantId: string,
     invoiceIds: string[]
   ): Promise<Map<string, Money>>;
+  lockPaymentForUpdate(
+    tenantId: string,
+    paymentId: string
+  ): Promise<CustomerPayment | null>;
+  addPaymentAllocations(input: {
+    tenantId: string;
+    paymentId: string;
+    allocations: Array<PaymentAllocationInput & { invoiceNumber: string }>;
+  }): Promise<CustomerPayment | null>;
 };
 
 function clonePayment(payment: CustomerPayment): CustomerPayment {
@@ -165,6 +174,38 @@ export function createMemoryPaymentRepository(
         totals.set(invoiceId, money(amountMinor, currency, scale));
       }
       return totals;
+    },
+    async lockPaymentForUpdate(tenantId, paymentId) {
+      return this.findPaymentById(tenantId, paymentId);
+    },
+    async addPaymentAllocations(input) {
+      const record = payments.find(
+        (item) => item.tenantId === input.tenantId && item.id === input.paymentId
+      );
+      if (!record) {
+        return null;
+      }
+      const now = new Date();
+      for (const allocation of input.allocations) {
+        const existing = record.allocations.find(
+          (row) => row.invoiceId === allocation.invoiceId
+        );
+        if (existing) {
+          existing.amount = addMoney(existing.amount, allocation.amount);
+          existing.invoiceNumber = allocation.invoiceNumber || existing.invoiceNumber;
+        } else {
+          record.allocations.push({
+            id: crypto.randomUUID(),
+            tenantId: input.tenantId,
+            paymentId: record.id,
+            invoiceId: allocation.invoiceId,
+            invoiceNumber: allocation.invoiceNumber,
+            amount: allocation.amount,
+          });
+        }
+      }
+      record.updatedAt = now;
+      return clonePayment(record);
     },
   };
 }

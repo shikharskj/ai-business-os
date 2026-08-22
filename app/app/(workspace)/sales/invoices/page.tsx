@@ -92,6 +92,7 @@ export default async function InvoicesPage({
     tenantId: tenant.tenantId,
     invoices: result.items,
     payments: prismaPaymentRepository,
+    sales: prismaSalesRepository,
     asOf: businessDate(asOf),
   });
   const hasFilters = Boolean(

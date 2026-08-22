@@ -7,7 +7,9 @@ import {
   parseLowStockThreshold,
   type InventoryRepository,
 } from "@/modules/inventory";
-import { remainingOutstanding } from "@/modules/payments/domain/allocation";
+import {
+  remainingDocumentBalance,
+} from "@/modules/payments/domain/allocation";
 import type { PaymentRepository, SupplierPaymentRepository } from "@/modules/payments";
 import {
   PAYABLE_PURCHASE_STATUSES,
@@ -22,7 +24,7 @@ import type {
   ReceivablesReport,
   SalesReport,
 } from "@/modules/reporting/domain/business-report-types";
-import { GST_SALES_STATUSES } from "@/modules/reporting/domain/gst-types";
+import { GST_CREDIT_NOTE_STATUSES, GST_SALES_STATUSES } from "@/modules/reporting/domain/gst-types";
 import {
   RECEIVABLE_INVOICE_STATUSES,
   type SalesRepository,
@@ -31,6 +33,7 @@ import { todayInTimezone } from "@/modules/shared-kernel/dates";
 import {
   addMoney,
   money,
+  negateMoney,
   subtractMoney,
   type Money,
 } from "@/modules/shared-kernel/money";
@@ -62,6 +65,12 @@ export async function getSalesReport(
     fromDate: input.range.fromDate,
     toDate: input.range.toDate,
   });
+  const creditNotes = await input.sales.listCreditNotes({
+    tenantId: input.tenantId,
+    statuses: GST_CREDIT_NOTE_STATUSES,
+    fromDate: input.range.fromDate,
+    toDate: input.range.toDate,
+  });
 
   let totalTaxable = zero();
   let totalTax = zero();
@@ -81,6 +90,22 @@ export async function getSalesReport(
       grandTotal: invoice.grandTotal,
     };
   });
+
+  for (const creditNote of creditNotes) {
+    totalTaxable = subtractMoney(totalTaxable, creditNote.taxableAmount);
+    totalTax = subtractMoney(totalTax, creditNote.totalTax);
+    grandTotal = subtractMoney(grandTotal, creditNote.grandTotal);
+    rows.push({
+      id: creditNote.id,
+      number: creditNote.number,
+      customerName: creditNote.customerName,
+      issuedOn: creditNote.issuedOn,
+      status: creditNote.status,
+      taxableAmount: negateMoney(creditNote.taxableAmount),
+      totalTax: negateMoney(creditNote.totalTax),
+      grandTotal: negateMoney(creditNote.grandTotal),
+    });
+  }
 
   return {
     range: {
@@ -162,10 +187,11 @@ export async function getReceivablesReport(
     tenantId: input.tenantId,
     statuses: RECEIVABLE_INVOICE_STATUSES,
   });
-  const allocated = await input.payments.allocatedTotalsForInvoices(
-    input.tenantId,
-    invoices.map((invoice) => invoice.id)
-  );
+  const invoiceIds = invoices.map((invoice) => invoice.id);
+  const [allocated, credited] = await Promise.all([
+    input.payments.allocatedTotalsForInvoices(input.tenantId, invoiceIds),
+    input.sales.creditedTotalsForInvoices(input.tenantId, invoiceIds),
+  ]);
 
   const currency =
     input.currency ?? invoices[0]?.grandTotal.currency ?? "INR";
@@ -174,7 +200,13 @@ export async function getReceivablesReport(
     .map((invoice) => {
       const allocatedAmount =
         allocated.get(invoice.id) ?? money(0n, invoice.grandTotal.currency);
-      const outstanding = remainingOutstanding(invoice.grandTotal, allocatedAmount);
+      const creditedAmount =
+        credited.get(invoice.id) ?? money(0n, invoice.grandTotal.currency);
+      const outstanding = remainingDocumentBalance(
+        invoice.grandTotal,
+        allocatedAmount,
+        creditedAmount
+      );
       return {
         invoiceId: invoice.id,
         invoiceNumber: invoice.number,
@@ -217,13 +249,23 @@ export async function getPayablesReport(
     input.tenantId,
     purchases.map((purchase) => purchase.id)
   );
+  const returned = await input.purchases.returnedTotalsForPurchases(
+    input.tenantId,
+    purchases.map((purchase) => purchase.id)
+  );
 
   let totalOutstanding = zero();
   const rows = purchases
     .map((purchase) => {
       const allocatedAmount =
         allocated.get(purchase.id) ?? money(0n, purchase.grandTotal.currency);
-      const outstanding = remainingOutstanding(purchase.grandTotal, allocatedAmount);
+      const returnedAmount =
+        returned.get(purchase.id) ?? money(0n, purchase.grandTotal.currency);
+      const outstanding = remainingDocumentBalance(
+        purchase.grandTotal,
+        allocatedAmount,
+        returnedAmount
+      );
       return {
         purchaseId: purchase.id,
         purchaseNumber: purchase.number,

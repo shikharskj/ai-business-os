@@ -13,7 +13,10 @@ export type ListTablePresetName =
   | "suppliers"
   | "ledger"
   | "journals"
-  | "accounts";
+  | "accounts"
+  | "creditNotes"
+  | "purchaseReturns"
+  | "salesOrders";
 
 export type ListTablePreset = {
   filters: ListFilterField[];
@@ -185,5 +188,44 @@ export const LIST_TABLE_PRESETS: Record<ListTablePresetName, ListTablePreset> = 
     showPagination: false,
     showActions: false,
     maxWidth: "max-w-5xl",
+  },
+  salesOrders: {
+    filters: [
+      { kind: "search" },
+      { kind: "select", width: "w-48" },
+      { kind: "date" },
+      { kind: "date" },
+      { kind: "button" },
+    ],
+    columns: 6,
+    rows: 10,
+    showPagination: true,
+    showActions: true,
+  },
+  creditNotes: {
+    filters: [
+      { kind: "search" },
+      { kind: "select", width: "w-48" },
+      { kind: "date" },
+      { kind: "date" },
+      { kind: "button" },
+    ],
+    columns: 6,
+    rows: 10,
+    showPagination: true,
+    showActions: true,
+  },
+  purchaseReturns: {
+    filters: [
+      { kind: "search" },
+      { kind: "select", width: "w-48" },
+      { kind: "date" },
+      { kind: "date" },
+      { kind: "button" },
+    ],
+    columns: 6,
+    rows: 10,
+    showPagination: true,
+    showActions: true,
   },
 };

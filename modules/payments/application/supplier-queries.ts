@@ -1,4 +1,4 @@
-import { remainingOutstanding } from "@/modules/payments/domain/allocation";
+import { remainingDocumentBalance } from "@/modules/payments/domain/allocation";
 import { PaymentNotFoundError } from "@/modules/payments/domain/errors";
 import type {
   PurchaseOutstanding,
@@ -79,15 +79,19 @@ export async function listPaymentsForPurchase(input: {
 async function outstandingForPurchases(input: {
   tenantId: string;
   purchases: Awaited<ReturnType<PurchasesRepository["listPurchases"]>>;
+  purchasesRepo: PurchasesRepository;
   supplierPayments: SupplierPaymentRepository;
 }): Promise<PurchaseOutstanding[]> {
-  const allocated = await input.supplierPayments.allocatedTotalsForPurchases(
-    input.tenantId,
-    input.purchases.map((purchase) => purchase.id)
-  );
+  const purchaseIds = input.purchases.map((purchase) => purchase.id);
+  const [allocated, returned] = await Promise.all([
+    input.supplierPayments.allocatedTotalsForPurchases(input.tenantId, purchaseIds),
+    input.purchasesRepo.returnedTotalsForPurchases(input.tenantId, purchaseIds),
+  ]);
   return input.purchases.map((purchase) => {
     const allocatedAmount =
       allocated.get(purchase.id) ?? money(0n, purchase.grandTotal.currency);
+    const returnedAmount =
+      returned.get(purchase.id) ?? money(0n, purchase.grandTotal.currency);
     return {
       purchaseId: purchase.id,
       purchaseNumber: purchase.number,
@@ -98,7 +102,11 @@ async function outstandingForPurchases(input: {
       dueOn: purchase.dueOn,
       grandTotal: purchase.grandTotal,
       allocated: allocatedAmount,
-      outstanding: remainingOutstanding(purchase.grandTotal, allocatedAmount),
+      outstanding: remainingDocumentBalance(
+        purchase.grandTotal,
+        allocatedAmount,
+        returnedAmount
+      ),
     };
   });
 }
@@ -119,6 +127,7 @@ export async function getPurchaseOutstanding(input: {
   const [row] = await outstandingForPurchases({
     tenantId: input.tenantId,
     purchases: [purchase],
+    purchasesRepo: input.purchases,
     supplierPayments: input.supplierPayments,
   });
   return row ?? null;
@@ -138,6 +147,7 @@ export async function listOpenPayablePurchases(input: {
   const rows = await outstandingForPurchases({
     tenantId: input.tenantId,
     purchases: bills,
+    purchasesRepo: input.purchases,
     supplierPayments: input.supplierPayments,
   });
   return rows.filter((row) => row.outstanding.amountMinor > 0n);
@@ -158,6 +168,7 @@ export async function getSupplierOutstanding(input: {
   const rows = await outstandingForPurchases({
     tenantId: input.tenantId,
     purchases: posted,
+    purchasesRepo: input.purchases,
     supplierPayments: input.supplierPayments,
   });
   const seedCurrency = rows.length > 0 ? rows[0]!.outstanding.currency : (input.currency ?? "INR");

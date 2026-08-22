@@ -47,7 +47,10 @@ function typesToSearch(filter: SearchFilter): SearchEntityType[] {
     "supplier",
     "product",
     "invoice",
+    "credit_note",
+    "sales_order",
     "purchase",
+    "purchase_return",
     "payment",
     "supplier_payment",
     "expense",
@@ -242,6 +245,90 @@ export function createPrismaSearchRepository(
         )`);
       }
 
+      if (types.includes("credit_note")) {
+        const conditions: Prisma.Sql[] = [
+          Prisma.sql`cn."tenantId" = ${filter.tenantId}`,
+          Prisma.sql`to_tsvector(
+            'simple',
+            coalesce(cn.number, '') || ' ' || coalesce(cn."customerName", '') || ' ' || coalesce(cn."invoiceNumber", '')
+          ) @@ to_tsquery('simple', ${tsQuery})`,
+        ];
+        if (filter.status) {
+          conditions.push(Prisma.sql`cn.status::text = ${filter.status}`);
+        }
+        if (filter.fromDate) {
+          conditions.push(Prisma.sql`cn."issuedOn" >= ${filter.fromDate}`);
+        }
+        if (filter.toDate) {
+          conditions.push(Prisma.sql`cn."issuedOn" <= ${filter.toDate}`);
+        }
+        parts.push(Prisma.sql`(
+          SELECT
+            cn.id,
+            'credit_note'::text AS entity_type,
+            cn.number AS title,
+            cn."customerName" AS subtitle,
+            ('/app/sales/credit-notes/' || cn.id) AS href,
+            cn.status::text AS status,
+            ${moneyLabelSql(Prisma.sql`cn."grandTotal"`)} AS amount_label,
+            cn."customerName" AS party_name,
+            cn."issuedOn"::text AS business_date,
+            ts_rank(
+              to_tsvector(
+                'simple',
+                coalesce(cn.number, '') || ' ' || coalesce(cn."customerName", '') || ' ' || coalesce(cn."invoiceNumber", '')
+              ),
+              to_tsquery('simple', ${tsQuery})
+            ) AS rank
+          FROM credit_notes cn
+          WHERE ${Prisma.join(conditions, " AND ")}
+          ORDER BY rank DESC, title ASC
+          LIMIT ${limit}
+        )`);
+      }
+
+      if (types.includes("sales_order")) {
+        const conditions: Prisma.Sql[] = [
+          Prisma.sql`so."tenantId" = ${filter.tenantId}`,
+          Prisma.sql`to_tsvector(
+            'simple',
+            coalesce(so.number, '') || ' ' || coalesce(so."customerName", '')
+          ) @@ to_tsquery('simple', ${tsQuery})`,
+        ];
+        if (filter.status) {
+          conditions.push(Prisma.sql`so.status::text = ${filter.status}`);
+        }
+        if (filter.fromDate) {
+          conditions.push(Prisma.sql`so."issuedOn" >= ${filter.fromDate}`);
+        }
+        if (filter.toDate) {
+          conditions.push(Prisma.sql`so."issuedOn" <= ${filter.toDate}`);
+        }
+        parts.push(Prisma.sql`(
+          SELECT
+            so.id,
+            'sales_order'::text AS entity_type,
+            so.number AS title,
+            so."customerName" AS subtitle,
+            ('/app/sales/orders/' || so.id) AS href,
+            so.status::text AS status,
+            ${moneyLabelSql(Prisma.sql`so."grandTotal"`)} AS amount_label,
+            so."customerName" AS party_name,
+            so."issuedOn"::text AS business_date,
+            ts_rank(
+              to_tsvector(
+                'simple',
+                coalesce(so.number, '') || ' ' || coalesce(so."customerName", '')
+              ),
+              to_tsquery('simple', ${tsQuery})
+            ) AS rank
+          FROM sales_orders so
+          WHERE ${Prisma.join(conditions, " AND ")}
+          ORDER BY rank DESC, title ASC
+          LIMIT ${limit}
+        )`);
+      }
+
       if (types.includes("purchase")) {
         const conditions: Prisma.Sql[] = [
           Prisma.sql`p."tenantId" = ${filter.tenantId}`,
@@ -278,6 +365,48 @@ export function createPrismaSearchRepository(
               to_tsquery('simple', ${tsQuery})
             ) AS rank
           FROM purchases p
+          WHERE ${Prisma.join(conditions, " AND ")}
+          ORDER BY rank DESC, title ASC
+          LIMIT ${limit}
+        )`);
+      }
+
+      if (types.includes("purchase_return")) {
+        const conditions: Prisma.Sql[] = [
+          Prisma.sql`pr."tenantId" = ${filter.tenantId}`,
+          Prisma.sql`to_tsvector(
+            'simple',
+            coalesce(pr.number, '') || ' ' || coalesce(pr."supplierName", '') || ' ' || coalesce(pr."purchaseNumber", '')
+          ) @@ to_tsquery('simple', ${tsQuery})`,
+        ];
+        if (filter.status) {
+          conditions.push(Prisma.sql`pr.status::text = ${filter.status}`);
+        }
+        if (filter.fromDate) {
+          conditions.push(Prisma.sql`pr."issuedOn" >= ${filter.fromDate}`);
+        }
+        if (filter.toDate) {
+          conditions.push(Prisma.sql`pr."issuedOn" <= ${filter.toDate}`);
+        }
+        parts.push(Prisma.sql`(
+          SELECT
+            pr.id,
+            'purchase_return'::text AS entity_type,
+            pr.number AS title,
+            pr."supplierName" AS subtitle,
+            ('/app/purchases/returns/' || pr.id) AS href,
+            pr.status::text AS status,
+            ${moneyLabelSql(Prisma.sql`pr."grandTotal"`)} AS amount_label,
+            pr."supplierName" AS party_name,
+            pr."issuedOn"::text AS business_date,
+            ts_rank(
+              to_tsvector(
+                'simple',
+                coalesce(pr.number, '') || ' ' || coalesce(pr."supplierName", '') || ' ' || coalesce(pr."purchaseNumber", '')
+              ),
+              to_tsquery('simple', ${tsQuery})
+            ) AS rank
+          FROM purchase_returns pr
           WHERE ${Prisma.join(conditions, " AND ")}
           ORDER BY rank DESC, title ASC
           LIMIT ${limit}

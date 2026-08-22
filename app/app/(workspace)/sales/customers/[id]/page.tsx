@@ -12,6 +12,8 @@ import {
   PARTY_STATUS_TONES,
   QUOTATION_STATUS_LABELS,
   QUOTATION_STATUS_TONES,
+  SALES_ORDER_STATUS_LABELS,
+  SALES_ORDER_STATUS_TONES,
 } from "@/components/business/status-tone";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -29,12 +31,13 @@ import { roleHasPermission } from "@/lib/security/permissions";
 import { getCustomer, PartyNotFoundError } from "@/modules/party";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 import {
+  getCustomerAdvance,
   getCustomerOutstanding,
   listPaymentsPage,
   PAYMENT_METHOD_LABELS,
 } from "@/modules/payments";
 import { prismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
-import { listInvoices, listQuotations } from "@/modules/sales";
+import { listInvoices, listQuotations, listSalesOrders } from "@/modules/sales";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
 
 const RELATED_LIMIT = 10;
@@ -83,20 +86,32 @@ export default async function CustomerDetailPage({
     .filter(Boolean)
     .join("\n");
 
-  const outstanding = await getCustomerOutstanding({
-    tenantId: tenant.tenantId,
-    customerId: customer.id,
-    sales: prismaSalesRepository,
-    payments: prismaPaymentRepository,
-  });
+  const [outstanding, advance] = await Promise.all([
+    getCustomerOutstanding({
+      tenantId: tenant.tenantId,
+      customerId: customer.id,
+      sales: prismaSalesRepository,
+      payments: prismaPaymentRepository,
+    }),
+    getCustomerAdvance({
+      tenantId: tenant.tenantId,
+      customerId: customer.id,
+      payments: prismaPaymentRepository,
+    }),
+  ]);
 
-  const [invoices, quotations, paymentsPage] = await Promise.all([
+  const [invoices, quotations, salesOrders, paymentsPage] = await Promise.all([
     listInvoices({
       tenantId: tenant.tenantId,
       customerId: customer.id,
       sales: prismaSalesRepository,
     }),
     listQuotations({
+      tenantId: tenant.tenantId,
+      customerId: customer.id,
+      sales: prismaSalesRepository,
+    }),
+    listSalesOrders({
       tenantId: tenant.tenantId,
       customerId: customer.id,
       sales: prismaSalesRepository,
@@ -112,6 +127,7 @@ export default async function CustomerDetailPage({
 
   const recentInvoices = invoices.slice(0, RELATED_LIMIT);
   const recentQuotations = quotations.slice(0, RELATED_LIMIT);
+  const recentSalesOrders = salesOrders.slice(0, RELATED_LIMIT);
   const canRecordPayment =
     canCreatePayment && outstanding.outstanding.amountMinor > 0n;
 
@@ -139,6 +155,19 @@ export default async function CustomerDetailPage({
                 render={<Link href="/app/sales/invoices/new" />}
               >
                 New invoice
+              </Button>
+            ) : null}
+            {canCreatePayment && customer.status === "ACTIVE" ? (
+              <Button
+                nativeButton={false}
+                variant="outline"
+                render={
+                  <Link
+                    href={`/app/sales/payments/new?advance=1&customerId=${customer.id}`}
+                  />
+                }
+              >
+                Record advance
               </Button>
             ) : null}
             {canRecordPayment ? (
@@ -180,6 +209,7 @@ export default async function CustomerDetailPage({
         }
       />
 
+      <div className="grid gap-6 sm:grid-cols-2">
       <Card>
         <CardHeader>
           <CardTitle>Outstanding</CardTitle>
@@ -200,6 +230,25 @@ export default async function CustomerDetailPage({
           </p>
         </CardContent>
       </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Customer credit</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-1">
+          <MoneyDisplay
+            value={advance.unallocated}
+            className="text-2xl font-semibold"
+          />
+          <p className="text-base text-muted-foreground">
+            {advance.unallocated.amountMinor === 0n
+              ? "No unallocated receipts"
+              : advance.receiptCount === 1
+                ? "1 receipt on account"
+                : `${advance.receiptCount} receipts on account`}
+          </p>
+        </CardContent>
+      </Card>
+      </div>
 
       <Card>
         <CardHeader>
@@ -279,6 +328,61 @@ export default async function CustomerDetailPage({
                     </TableRow>
                   );
                 })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle>Recent sales orders</CardTitle>
+          {salesOrders.length > RELATED_LIMIT ? (
+            <Link
+              href={`/app/sales/orders?customerId=${customer.id}`}
+              className="text-sm font-medium hover:underline"
+            >
+              View all
+            </Link>
+          ) : null}
+        </CardHeader>
+        <CardContent className="px-0 pb-0">
+          {recentSalesOrders.length === 0 ? (
+            <p className="px-6 pb-6 text-base text-muted-foreground">
+              No sales orders yet.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Number</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentSalesOrders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell>
+                      <Link
+                        href={`/app/sales/orders/${order.id}`}
+                        className="font-mono text-sm font-medium hover:underline"
+                      >
+                        {order.number}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{formatDisplayDate(order.issuedOn)}</TableCell>
+                    <TableCell className="text-right">
+                      <MoneyDisplay value={order.grandTotal} />
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge tone={SALES_ORDER_STATUS_TONES[order.status]}>
+                        {SALES_ORDER_STATUS_LABELS[order.status]}
+                      </StatusBadge>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           )}

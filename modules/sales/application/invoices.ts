@@ -44,6 +44,9 @@ import {
   QuotationAlreadyConvertedError,
   QuotationNotFoundError,
   QuotationStatusError,
+  SalesOrderAlreadyConvertedError,
+  SalesOrderNotFoundError,
+  SalesOrderStatusError,
 } from "@/modules/sales/domain/errors";
 import {
   assertInvoiceEditable,
@@ -56,6 +59,7 @@ import {
 } from "@/modules/sales/domain/numbering";
 import { lineTaxableAmount, moneyTimesQuantity } from "@/modules/sales/domain/pricing";
 import { assertQuotationTransition } from "@/modules/sales/domain/status";
+import { assertSalesOrderTransition } from "@/modules/sales/domain/sales-order-status";
 import { aggregateQuotationLines, zeroMoney } from "@/modules/sales/domain/totals";
 import type {
   InvoiceInput,
@@ -64,6 +68,7 @@ import type {
   PreparedInvoiceLine,
   Quotation,
   SalesInvoice,
+  SalesOrder,
   SalesInvoiceStatus,
   SalesTaxContext,
 } from "@/modules/sales/domain/types";
@@ -233,6 +238,47 @@ async function prepareInvoice(input: {
     placeOfSupplyStateCode,
     ...totals,
     lines,
+  };
+}
+
+function preparedFromSalesOrder(order: SalesOrder): PreparedInvoice {
+  return {
+    customerId: order.customerId,
+    customerName: order.customerName,
+    issuedOn: order.issuedOn,
+    dueOn: order.expectedOn,
+    notes: order.notes,
+    placeOfSupplyStateCode: order.placeOfSupplyStateCode,
+    subtotal: order.subtotal,
+    discountTotal: order.discountTotal,
+    taxableAmount: order.taxableAmount,
+    cgst: order.cgst,
+    sgst: order.sgst,
+    igst: order.igst,
+    totalTax: order.totalTax,
+    grandTotal: order.grandTotal,
+    supplyType: order.supplyType,
+    lines: order.lines.map((line) => ({
+      sortOrder: line.sortOrder,
+      productId: line.productId,
+      productName: line.productName,
+      sku: line.sku,
+      unitOfMeasurement: line.unitOfMeasurement,
+      hsnSac: line.hsnSac,
+      taxRateBps: line.taxRateBps,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+      discount: line.discount,
+      lineSubtotal: line.lineSubtotal,
+      taxableAmount: line.taxableAmount,
+      cgst: line.cgst,
+      sgst: line.sgst,
+      igst: line.igst,
+      totalTax: line.totalTax,
+      lineTotal: line.lineTotal,
+      supplyType: line.supplyType,
+      treatment: line.treatment,
+    })),
   };
 }
 
@@ -635,6 +681,13 @@ export async function convertQuotationToInvoice(input: {
   if (existingInvoice) {
     throw new QuotationAlreadyConvertedError();
   }
+  const existingOrder = await input.sales.findSalesOrderByQuotationId(
+    input.tenantId,
+    input.quotationId
+  );
+  if (existingOrder) {
+    throw new QuotationAlreadyConvertedError();
+  }
 
   const prepared = preparedFromQuotation(quotation);
   const financialYearKey = invoiceFinancialYearKey(
@@ -698,6 +751,105 @@ export async function convertQuotationToInvoice(input: {
       number: invoice.number,
       status: invoice.status,
       quotationId: quotation.id,
+    },
+  });
+
+  return invoice;
+}
+
+export async function convertSalesOrderToInvoice(input: {
+  tenantId: string;
+  actorUserId: string;
+  salesOrderId: string;
+  taxContext: SalesTaxContext;
+} & InvoiceUseCaseDeps): Promise<SalesInvoice> {
+  const salesOrder = await input.sales.findSalesOrderById(
+    input.tenantId,
+    input.salesOrderId
+  );
+  if (!salesOrder) {
+    throw new SalesOrderNotFoundError();
+  }
+  if (salesOrder.status === "FULFILLED") {
+    throw new SalesOrderAlreadyConvertedError();
+  }
+  if (salesOrder.status !== "CONFIRMED") {
+    throw new SalesOrderStatusError(
+      "Only confirmed sales orders can be converted to an invoice."
+    );
+  }
+
+  const existingInvoice = await input.sales.findInvoiceBySalesOrderId(
+    input.tenantId,
+    input.salesOrderId
+  );
+  if (existingInvoice) {
+    throw new SalesOrderAlreadyConvertedError();
+  }
+
+  const prepared = preparedFromSalesOrder(salesOrder);
+  const financialYearKey = invoiceFinancialYearKey(
+    prepared.issuedOn,
+    input.taxContext.financialYearStartMonth
+  );
+  const sequence = await input.sales.allocateNextInvoiceNumber(
+    input.tenantId,
+    financialYearKey
+  );
+  const invoice = await input.sales.createInvoice({
+    tenantId: input.tenantId,
+    number: formatInvoiceNumber(financialYearKey, sequence),
+    prepared,
+    quotationId: salesOrder.quotationId,
+    salesOrderId: salesOrder.id,
+  });
+
+  assertSalesOrderTransition(salesOrder.status, "FULFILLED");
+  await input.sales.updateSalesOrderStatus({
+    tenantId: input.tenantId,
+    salesOrderId: salesOrder.id,
+    status: "FULFILLED",
+  });
+
+  await input.audit.append({
+    tenantId: input.tenantId,
+    actorUserId: input.actorUserId,
+    action: "sales_order.converted",
+    resource: "sales_order",
+    resourceId: salesOrder.id,
+    metadata: { number: salesOrder.number, invoiceId: invoice.id, invoiceNumber: invoice.number },
+  });
+
+  await persistDomainEvent(input.outbox, {
+    tenantId: input.tenantId,
+    eventType: "SalesOrderFulfilled",
+    aggregateType: "SalesOrder",
+    aggregateId: salesOrder.id,
+    payload: { number: salesOrder.number, invoiceId: invoice.id },
+  });
+
+  await input.audit.append({
+    tenantId: input.tenantId,
+    actorUserId: input.actorUserId,
+    action: "invoice.created",
+    resource: "invoice",
+    resourceId: invoice.id,
+    metadata: {
+      number: invoice.number,
+      salesOrderId: salesOrder.id,
+      grandTotal: moneySnapshot(invoice.grandTotal),
+    },
+  });
+
+  await persistDomainEvent(input.outbox, {
+    tenantId: input.tenantId,
+    eventType: "SalesInvoiceCreated",
+    aggregateType: "SalesInvoice",
+    aggregateId: invoice.id,
+    payload: {
+      number: invoice.number,
+      status: invoice.status,
+      salesOrderId: salesOrder.id,
     },
   });
 
