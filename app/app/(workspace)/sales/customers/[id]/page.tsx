@@ -233,7 +233,7 @@ export default async function CustomerDetailPage({
         </CardContent>
       </Card>
 
-      <Card className="p-0">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Recent invoices</CardTitle>
           {invoices.length > RELATED_LIMIT ? (
@@ -289,7 +289,7 @@ export default async function CustomerDetailPage({
         </CardContent>
       </Card>
 
-      <Card className="p-0">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Recent quotations</CardTitle>
           {quotations.length > RELATED_LIMIT ? (
@@ -344,7 +344,7 @@ export default async function CustomerDetailPage({
         </CardContent>
       </Card>
 
-      <Card className="p-0">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Recent payments</CardTitle>
           {paymentsPage.total > RELATED_LIMIT ? (

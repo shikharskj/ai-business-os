@@ -109,12 +109,9 @@ export function createReorderPrepareWorkflow(): WorkflowDefinition {
     eventTypes: ["StockLow"],
     autonomyLevel: "L2",
     mode: "dry_run",
-    idempotencyKey(event, context) {
-      const asOf = asOfFor(event, context);
-      return reorderPrepareIdempotencyKey(
-        event.aggregateId,
-        typeof asOf === "string" ? asOf : asOf
-      );
+    idempotencyKey(event) {
+      const asOf = expansionAsOf(event) ?? "unknown";
+      return reorderPrepareIdempotencyKey(event.aggregateId, asOf);
     },
     concurrencyKey(event) {
       return reorderPrepareConcurrencyKey(event.aggregateId);
