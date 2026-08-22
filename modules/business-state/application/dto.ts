@@ -1,6 +1,7 @@
 import { toMajorString, type Money } from "@/modules/shared-kernel/money";
 import { CASH_POSITION_FACT_IDS } from "@/modules/accounting/domain/cash-accounts";
 import type {
+  AttentionItem,
   BusinessStateSummary,
   CashPositionSnapshot,
 } from "@/modules/business-state/domain/types";
@@ -53,6 +54,9 @@ export function businessStateSummaryToDto(summary: BusinessStateSummary) {
     cashPosition: summary.cashPosition
       ? cashPositionToDto(summary.cashPosition)
       : null,
+    attention: {
+      openCount: summary.attention.openCount,
+    },
   };
 }
 
@@ -78,5 +82,29 @@ export function cashPositionToDto(snapshot: CashPositionSnapshot) {
       balance: moneyFactDto(account.balance, account.factId),
     })),
     computedAt: snapshot.computedAt.toISOString(),
+  };
+}
+
+export function attentionItemToDto(item: AttentionItem) {
+  return {
+    id: item.id,
+    type: item.type,
+    severity: item.severity,
+    status: item.status,
+    title: item.title,
+    body: item.body,
+    href: item.href,
+    resourceType: item.resourceType,
+    resourceId: item.resourceId,
+    amount: item.amount
+      ? {
+          amount: toMajorString(item.amount),
+          currency: item.amount.currency,
+          scale: item.amount.scale,
+          factId: item.factId,
+        }
+      : null,
+    computedAt: item.computedAt.toISOString(),
+    dismissedAt: item.dismissedAt?.toISOString() ?? null,
   };
 }

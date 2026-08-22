@@ -107,6 +107,8 @@ model Business {
   inventoryRiskState InventoryRiskState?
   salesMomentumState SalesMomentumState?
   cashPositionState CashPositionState?
+  attentionItems AttentionItem[]
+  automationOutcomes AutomationOutcome[]
 
   @@map("businesses")
 }
@@ -276,6 +278,58 @@ model CashPositionState {
   business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("cash_position_state")
+}
+
+/// Derived Needs-attention queue row. Rebuildable from overdue invoices,
+/// low-stock products, and idle quotations. Dismiss does not mutate source records.
+model AttentionItem {
+  id                String    @id @default(uuid())
+  tenantId          String
+  naturalKey        String
+  type              String
+  severity          Int
+  status            String    @default("OPEN")
+  title             String
+  body              String
+  href              String
+  resourceType      String
+  resourceId        String
+  amount            Decimal?  @db.Decimal(18, 2)
+  currency          String?
+  factId            String?
+  computedAt        DateTime
+  dismissedAt       DateTime?
+  dismissedByUserId String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  business Business             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outcomes AutomationOutcome[]
+
+  @@unique([tenantId, naturalKey])
+  @@index([tenantId, status, severity])
+  @@map("attention_items")
+}
+
+/// Outcome hook for dismissals and later automation learning (reminder sent, paid after reminder).
+model AutomationOutcome {
+  id              String   @id @default(uuid())
+  tenantId        String
+  kind            String
+  attentionItemId String?
+  resourceType    String?
+  resourceId      String?
+  payload         Json     @default("{}")
+  idempotencyKey  String
+  recordedAt      DateTime @default(now())
+
+  business      Business       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  attentionItem AttentionItem? @relation(fields: [attentionItemId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, kind, recordedAt])
+  @@index([tenantId, resourceType, resourceId])
+  @@map("automation_outcomes")
 }
 
 model Notification {

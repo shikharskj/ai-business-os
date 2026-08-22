@@ -9,7 +9,9 @@ import {
   createPrismaJournalRepository,
 } from "@/modules/accounting/infrastructure/prisma-accounting-repositories";
 import { createPrismaBusinessStateProjectionRepository } from "@/modules/business-state/infrastructure/prisma-projection-repository";
+import { createPrismaAttentionQueueRepository } from "@/modules/business-state/infrastructure/prisma-attention-repository";
 import type { BusinessStateConsumerDeps } from "@/modules/business-state/consumers/business-state-consumer";
+import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 
 /**
  * Builds BusinessState outbox consumer deps against the shared Prisma client.
@@ -25,6 +27,8 @@ export function createPrismaBusinessStateConsumerDeps(
     accounts: createPrismaAccountRepository(prisma),
     journals: createPrismaJournalRepository(prisma),
     projections: createPrismaBusinessStateProjectionRepository(prisma),
+    attention: createPrismaAttentionQueueRepository(prisma),
+    outbox: createPrismaOutboxRepository(prisma),
     async resolveTenantContext(tenantId) {
       const business = await prisma.business.findUnique({
         where: { id: tenantId },

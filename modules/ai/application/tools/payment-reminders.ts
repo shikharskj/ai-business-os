@@ -5,6 +5,7 @@ import {
   paymentRemindersOutputSchema,
 } from "@/modules/ai/schemas/ai-tool.schema";
 import { createInAppChannel } from "@/modules/notifications";
+import { recordPaymentReminderOutcomes } from "@/modules/business-state/application/record-reminder-outcomes";
 import { getReceivablesReport } from "@/modules/reporting";
 import { formatINR } from "@/modules/shared-kernel/format-money";
 
@@ -112,6 +113,15 @@ export const paymentRemindersTool = defineAiTool({
           outstanding,
           daysOverdue,
           status: delivered ? "sent" : "already_sent",
+        });
+
+        await recordPaymentReminderOutcomes({
+          tenantId: context.tenantId,
+          invoiceId: row.invoiceId,
+          asOf: report.asOf,
+          delivered: delivered !== null,
+          attention: context.repositories.attention,
+          outbox: context.repositories.outbox,
         });
       } catch {
         reminders.push({

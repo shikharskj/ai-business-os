@@ -26,6 +26,7 @@ import {
   signAiActionToken,
   verifyAiActionToken,
 } from "@/modules/ai/domain/action-token";
+import { todayInTimezone } from "@/modules/shared-kernel/dates";
 import { TENANT_B, toolContext } from "./tool-context-fixture";
 
 const ROOT = path.resolve(__dirname, "../..");
@@ -227,6 +228,12 @@ describe("assistant mutation confirmation gate", () => {
       category: "action",
       startedAuditRecordId: expect.any(String),
     });
+
+    const sentOutcomes = await context.repositories.attention.listOutcomes({
+      tenantId: context.tenantId,
+      kind: "REMINDER_SENT",
+    });
+    expect(sentOutcomes).toHaveLength(2);
   });
 
   it("is idempotent for the same invoice on the same business day", async () => {
@@ -246,6 +253,42 @@ describe("assistant mutation confirmation gate", () => {
 
     expect(context.notificationRecords).toHaveLength(1);
     expect(second.facts[0]?.value).toBe("0");
+  });
+
+  it("does not record REMINDER_SENT when the channel reports already_sent", async () => {
+    const context = toolContext();
+    const asOf = todayInTimezone(context.timezone);
+    await context.repositories.notifications.createIdempotent({
+      tenantId: context.tenantId,
+      channel: "IN_APP",
+      type: "INVOICE_OVERDUE",
+      title: "Payment reminder",
+      body: "prior delivery",
+      href: "/app/sales/invoices/inv-a1",
+      resourceType: "SalesInvoice",
+      resourceId: "inv-a1",
+      idempotencyKey: `ai-payment-reminder:inv-a1:${asOf}`,
+    });
+
+    const outcome = await runConfirmedAiAction({
+      context,
+      toolName: "send_payment_reminders",
+      argumentsJson: JSON.stringify({ invoiceIds: ["inv-a1"] }),
+    });
+
+    expect(outcome.facts[0]?.value).toBe("0");
+    expect(context.notificationRecords).toHaveLength(1);
+
+    const proposed = await context.repositories.attention.listOutcomes({
+      tenantId: context.tenantId,
+      kind: "REMINDER_PROPOSED",
+    });
+    const sentOutcomes = await context.repositories.attention.listOutcomes({
+      tenantId: context.tenantId,
+      kind: "REMINDER_SENT",
+    });
+    expect(proposed).toHaveLength(1);
+    expect(sentOutcomes).toHaveLength(0);
   });
 
   it("re-checks permission on confirmation instead of trusting the proposal", async () => {

@@ -3,6 +3,7 @@ import { registerDefaultOutboxConsumers } from "@/modules/events/application/reg
 import type { OutboxDispatchRepository } from "@/modules/events/domain/types";
 import type { BusinessStateConsumerDeps } from "@/modules/business-state/consumers/business-state-consumer";
 import { BUSINESS_STATE_CONSUMER_NAME } from "@/modules/business-state/consumers/business-state-consumer";
+import { rebuildBusinessStateProjections } from "@/modules/business-state/application/rebuild";
 import type { NotificationChannel } from "@/modules/notifications/domain/channel";
 import type { NotificationContextRepository } from "@/modules/notifications/domain/outbox-consumer-repository";
 import { checkOverdueInvoices } from "@/modules/notifications/application/process-outbox";
@@ -66,6 +67,24 @@ export async function runOutboxProcessing(
         tenantId,
         channel: input.channel,
         context: input.context,
+      });
+      const tenantContext =
+        await input.businessState.resolveTenantContext(tenantId);
+      if (!tenantContext) continue;
+      await rebuildBusinessStateProjections({
+        tenantId,
+        timezone: tenantContext.timezone,
+        lowStockThresholdMajor: tenantContext.lowStockThresholdMajor,
+        currency: tenantContext.currency,
+        sales: input.businessState.sales,
+        payments: input.businessState.payments,
+        catalog: input.businessState.catalog,
+        inventory: input.businessState.inventory,
+        accounts: input.businessState.accounts,
+        journals: input.businessState.journals,
+        projections: input.businessState.projections,
+        attention: input.businessState.attention,
+        families: ["attentionQueue"],
       });
     }
   }

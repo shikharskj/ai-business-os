@@ -3,27 +3,26 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/client";
 import { authorize, AuthorizationError } from "@/lib/security/authorize";
 import {
-  businessStateSummaryToDto,
-  getBusinessStateSummary,
+  attentionItemToDto,
+  listOpenAttention,
 } from "@/modules/business-state";
 import { createPrismaAttentionQueueRepository } from "@/modules/business-state/infrastructure/prisma-attention-repository";
-import { createPrismaBusinessStateProjectionRepository } from "@/modules/business-state/infrastructure/prisma-projection-repository";
 import { TenantRequiredError } from "@/modules/tenant/domain/errors";
 
 /**
- * Read BusinessState projections for the current tenant.
- * Authz: report:read. Does not invent money — returns derived snapshots only.
+ * List open AttentionQueue items for the current tenant, ranked by severity.
+ * Authz: report:read (same as dashboard / BusinessState reads).
  */
 export async function GET() {
   try {
     const tenant = await authorize("report:read");
-    const projections = createPrismaBusinessStateProjectionRepository(prisma);
-    const summary = await getBusinessStateSummary({
+    const items = await listOpenAttention({
       tenantId: tenant.tenantId,
-      projections,
       attention: createPrismaAttentionQueueRepository(prisma),
     });
-    return NextResponse.json(businessStateSummaryToDto(summary));
+    return NextResponse.json({
+      items: items.map(attentionItemToDto),
+    });
   } catch (error) {
     if (error instanceof TenantRequiredError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

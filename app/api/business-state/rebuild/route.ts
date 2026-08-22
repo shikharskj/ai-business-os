@@ -7,6 +7,7 @@ import {
   getBusinessStateSummary,
   rebuildBusinessStateProjections,
 } from "@/modules/business-state";
+import { createPrismaAttentionQueueRepository } from "@/modules/business-state/infrastructure/prisma-attention-repository";
 import { createPrismaBusinessStateConsumerDeps } from "@/modules/business-state/infrastructure/prisma-consumer-deps";
 import { createPrismaBusinessStateProjectionRepository } from "@/modules/business-state/infrastructure/prisma-projection-repository";
 import { TenantRequiredError } from "@/modules/tenant/domain/errors";
@@ -36,12 +37,14 @@ export async function POST() {
       accounts: deps.accounts,
       journals: deps.journals,
       projections: deps.projections,
+      attention: deps.attention,
       markRebuilt: true,
     });
 
     const summary = await getBusinessStateSummary({
       tenantId: tenant.tenantId,
       projections: createPrismaBusinessStateProjectionRepository(prisma),
+      attention: createPrismaAttentionQueueRepository(prisma),
     });
 
     return NextResponse.json({

@@ -7,6 +7,7 @@ import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma
 import { prismaExpenseRepository } from "@/modules/expenses/infrastructure/prisma-expenses-repository";
 import { prismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";
 import { createPrismaNotificationRepository } from "@/modules/notifications";
+import { createPrismaAttentionQueueRepository } from "@/modules/business-state/infrastructure/prisma-attention-repository";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 import { prismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
 import { prismaSupplierPaymentRepository } from "@/modules/payments/infrastructure/prisma-supplier-payments-repository";
@@ -17,6 +18,7 @@ import {
   createPrismaJournalRepository,
 } from "@/modules/accounting/infrastructure/prisma-accounting-repositories";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
+import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 
 /**
  * Builds the only context an AI tool may execute with.
@@ -50,6 +52,8 @@ export async function createAiToolContext(options?: {
       accounts: createPrismaAccountRepository(prisma),
       journals: createPrismaJournalRepository(prisma),
       notifications: createPrismaNotificationRepository(prisma),
+      attention: createPrismaAttentionQueueRepository(prisma),
+      outbox: createPrismaOutboxRepository(prisma),
     },
     audit: createPrismaAuditRepository(prisma),
     correlationId: options?.correlationId,

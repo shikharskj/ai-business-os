@@ -45,7 +45,7 @@ export const DOMAIN_EVENT_TYPES = [
   "JournalPosted",
   "JournalReversed",
   "AccountingPeriodClosed",
-  // Post-MVP stubs (emitters land in later specs)
+  // Post-MVP (emitters land with later specs; AttentionDismissed / AutomationOutcomeRecorded emit in spec 04)
   "InvoiceOverdue",
   "QuotationIdle",
   "AttentionDismissed",
@@ -151,6 +151,9 @@ export const quotationAcceptedPayloadSchema = z
 export const attentionDismissedPayloadSchema = z
   .object({
     attentionItemId: z.string().optional(),
+    type: z.string().optional(),
+    resourceType: z.string().optional(),
+    resourceId: z.string().optional(),
   })
   .passthrough();
 
@@ -158,6 +161,10 @@ export const automationOutcomeRecordedPayloadSchema = z
   .object({
     runId: z.string().optional(),
     outcome: z.string().optional(),
+    attentionItemId: z.string().optional(),
+    resourceType: z.string().optional(),
+    resourceId: z.string().optional(),
+    idempotencyKey: z.string().optional(),
   })
   .passthrough();
 

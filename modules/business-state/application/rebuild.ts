@@ -16,6 +16,8 @@ import type {
   JournalRepository,
 } from "@/modules/accounting/infrastructure/repositories";
 import { computeCashPosition } from "@/modules/business-state/application/compute-cash-position";
+import { computeAttentionQueue } from "@/modules/business-state/application/compute-attention";
+import type { AttentionQueueRepository } from "@/modules/business-state/domain/attention-repository";
 import type { BusinessStateProjectionRepository } from "@/modules/business-state/domain/projection-repository";
 import {
   BUSINESS_STATE_SCHEMA_VERSION,
@@ -25,6 +27,7 @@ import {
   type ProjectionFamily,
   type ReceivablesRiskSnapshot,
   type SalesMomentumSnapshot,
+  type AttentionItemDraft,
 } from "@/modules/business-state/domain/types";
 import {
   businessDate,
@@ -49,6 +52,7 @@ export type RebuildBusinessStateDeps = {
   accounts: AccountRepository;
   journals: JournalRepository;
   projections: BusinessStateProjectionRepository;
+  attention: AttentionQueueRepository;
   families?: ProjectionFamily[];
   /** When true, stamps meta.rebuiltAt (full/backfill rebuild). */
   markRebuilt?: boolean;
@@ -185,6 +189,7 @@ export async function rebuildBusinessStateProjections(
   inventoryRisk: InventoryRiskSnapshot | null;
   salesMomentum: SalesMomentumSnapshot | null;
   cashPosition: CashPositionSnapshot | null;
+  attentionItems: AttentionItemDraft[] | null;
 }> {
   const families = new Set(
     input.families?.includes("all") || !input.families || input.families.length === 0
@@ -193,6 +198,7 @@ export async function rebuildBusinessStateProjections(
           "inventoryRisk",
           "salesMomentum",
           "cashPosition",
+          "attentionQueue",
         ] as ProjectionFamily[])
       : input.families
   );
@@ -202,6 +208,7 @@ export async function rebuildBusinessStateProjections(
   let inventoryRisk: InventoryRiskSnapshot | null = null;
   let salesMomentum: SalesMomentumSnapshot | null = null;
   let cashPosition: CashPositionSnapshot | null = null;
+  let attentionItems: AttentionItemDraft[] | null = null;
 
   if (families.has("receivablesRisk")) {
     receivablesRisk = await computeReceivablesRisk({
@@ -240,6 +247,19 @@ export async function rebuildBusinessStateProjections(
     });
   }
 
+  if (families.has("attentionQueue")) {
+    attentionItems = await computeAttentionQueue({
+      tenantId: input.tenantId,
+      timezone: input.timezone,
+      currency,
+      lowStockThresholdMajor: input.lowStockThresholdMajor,
+      sales: input.sales,
+      payments: input.payments,
+      catalog: input.catalog,
+      inventory: input.inventory,
+    });
+  }
+
   await input.projections.commitSnapshots({
     tenantId: input.tenantId,
     schemaVersion: BUSINESS_STATE_SCHEMA_VERSION,
@@ -250,5 +270,29 @@ export async function rebuildBusinessStateProjections(
     ...(cashPosition ? { cashPosition } : {}),
   });
 
-  return { receivablesRisk, inventoryRisk, salesMomentum, cashPosition };
+  if (attentionItems) {
+    await input.attention.syncItems({
+      tenantId: input.tenantId,
+      items: attentionItems,
+      computedAt: new Date(),
+    });
+    const wroteSnapshots = Boolean(
+      receivablesRisk || inventoryRisk || salesMomentum || cashPosition
+    );
+    if (!wroteSnapshots) {
+      await input.projections.touchMeta({
+        tenantId: input.tenantId,
+        schemaVersion: BUSINESS_STATE_SCHEMA_VERSION,
+        rebuiltAt: input.markRebuilt ? new Date() : undefined,
+      });
+    }
+  }
+
+  return {
+    receivablesRisk,
+    inventoryRisk,
+    salesMomentum,
+    cashPosition,
+    attentionItems,
+  };
 }

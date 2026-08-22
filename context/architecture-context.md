@@ -777,6 +777,18 @@ AI must not invent cash from invoice tables, unpaid totals, or receipts-in-perio
 
 Rebuild/backfill: `rebuildBusinessStateProjections` (family `cashPosition`) recomputes from journals. Outbox events `PaymentReceived`, `PaymentMade`, `ExpenseRecorded`, `JournalPosted`, `JournalReversed` refresh the projection.
 
+## AttentionQueue
+
+Tenant-scoped derived queue of what needs attention. Rows are rebuildable from overdue invoices, low-stock products, and idle SENT/ACCEPTED quotations. Dismiss records an outcome and emits `AttentionDismissed`; it must not mutate invoices or stock.
+
+```text
+GET  /api/business-state/attention          report:read   open items, ranked by severity
+POST /api/business-state/attention/dismiss  report:read   idempotent dismiss + outcome
+GET  /api/business-state                    report:read   includes attention.openCount
+```
+
+Populate path: mutation + outbox → `business-state` consumer (family `attentionQueue`) and the scheduled overdue scan already used for notifications. Outcome stubs: `ATTENTION_DISMISSED`, `REMINDER_PROPOSED`, `REMINDER_SENT`, `PAID_AFTER_REMINDER` (`AutomationOutcomeRecorded`).
+
 ---
 
 # Automation Runtime

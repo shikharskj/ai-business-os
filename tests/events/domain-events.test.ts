@@ -21,6 +21,7 @@ import {
   createMemoryNotificationRepository,
 } from "@/modules/notifications";
 import { createMemoryBusinessStateProjectionRepository } from "@/modules/business-state";
+import { createMemoryAttentionQueueRepository } from "@/modules/business-state/infrastructure/memory-attention-repository";
 import type { BusinessStateConsumerDeps } from "@/modules/business-state";
 import { createMemoryCatalogRepository } from "@/modules/catalog";
 import { createMemoryInventoryRepository } from "@/modules/inventory";
@@ -40,6 +41,7 @@ function stubBusinessStateDeps(): BusinessStateConsumerDeps {
     accounts: createMemoryAccountRepository(),
     journals: createMemoryJournalRepository(),
     projections: createMemoryBusinessStateProjectionRepository(),
+    attention: createMemoryAttentionQueueRepository(),
     async resolveTenantContext() {
       return {
         timezone: "Asia/Kolkata",
