@@ -2,6 +2,7 @@ import { toMajorString, type Money } from "@/modules/shared-kernel/money";
 import { CASH_POSITION_FACT_IDS } from "@/modules/accounting/domain/cash-accounts";
 import type {
   AttentionItem,
+  AutomationOutcome,
   BusinessStateSummary,
   CashPositionSnapshot,
 } from "@/modules/business-state/domain/types";
@@ -110,3 +111,17 @@ export function attentionItemToDto(item: AttentionItem) {
 }
 
 export type AttentionItemDto = ReturnType<typeof attentionItemToDto>;
+
+export function automationOutcomeToDto(outcome: AutomationOutcome) {
+  return {
+    id: outcome.id,
+    kind: outcome.kind,
+    attentionItemId: outcome.attentionItemId,
+    resourceType: outcome.resourceType,
+    resourceId: outcome.resourceId,
+    payload: outcome.payload,
+    recordedAt: outcome.recordedAt.toISOString(),
+  };
+}
+
+export type AutomationOutcomeDto = ReturnType<typeof automationOutcomeToDto>;

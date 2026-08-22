@@ -15,15 +15,19 @@ import {
 } from "@/modules/inventory/domain/quantity";
 import type { GstSupplyType, GstTreatment } from "@/modules/tax/domain/types";
 import type {
+  InvoiceListFilter,
+  PreparedInvoice,
+  PreparedQuotation,
   Quotation,
   QuotationLine,
+  QuotationListFilter,
   QuotationStatus,
   SalesInvoice,
   SalesInvoiceLine,
   SalesInvoiceStatus,
 } from "@/modules/sales/domain/types";
 import type { SalesRepository } from "@/modules/sales/infrastructure/repositories";
-import type { InvoiceListFilter, PreparedInvoice, PreparedQuotation } from "@/modules/sales/domain/types";
+import { RECEIVABLE_INVOICE_STATUSES } from "@/modules/sales/domain/invoice-status";
 
 type PrismaSalesClient = Pick<
   PrismaClient,
@@ -356,14 +360,11 @@ function mapInvoice(record: {
   };
 }
 
-function quotationWhereConditions(filter: {
-  tenantId: string;
-  query?: string;
-  status?: QuotationStatus | "ALL";
-  fromDate?: string;
-  toDate?: string;
-}): Prisma.Sql[] {
+function quotationWhereConditions(filter: QuotationListFilter): Prisma.Sql[] {
   const conditions: Prisma.Sql[] = [Prisma.sql`q."tenantId" = ${filter.tenantId}`];
+  if (filter.customerId) {
+    conditions.push(Prisma.sql`q."customerId" = ${filter.customerId}`);
+  }
   if (filter.status && filter.status !== "ALL") {
     conditions.push(Prisma.sql`q.status = ${filter.status}`);
   }
@@ -389,6 +390,11 @@ function invoiceWhereConditions(filter: InvoiceListFilter): Prisma.Sql[] {
   if (filter.customerId) {
     conditions.push(Prisma.sql`i."customerId" = ${filter.customerId}`);
   }
+  if (filter.customerIds && filter.customerIds.length > 0) {
+    conditions.push(
+      Prisma.sql`i."customerId" IN (${Prisma.join(filter.customerIds)})`
+    );
+  }
   const statuses =
     filter.statuses && filter.statuses.length > 0
       ? [...filter.statuses]
@@ -403,6 +409,13 @@ function invoiceWhereConditions(filter: InvoiceListFilter): Prisma.Sql[] {
   }
   if (filter.toDate) {
     conditions.push(Prisma.sql`i."issuedOn" <= ${filter.toDate}`);
+  }
+  if (filter.due === "OVERDUE" && filter.overdueAsOf) {
+    conditions.push(
+      Prisma.sql`i.status IN (${Prisma.join([...RECEIVABLE_INVOICE_STATUSES])})`
+    );
+    conditions.push(Prisma.sql`i."dueOn" IS NOT NULL`);
+    conditions.push(Prisma.sql`i."dueOn" < ${filter.overdueAsOf}`);
   }
   const query = filter.query?.trim();
   if (query) {
@@ -702,9 +715,21 @@ export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRep
 
       const where: Prisma.SalesInvoiceWhereInput = {
         tenantId: filter.tenantId,
-        customerId: filter.customerId,
-        status: statuses ? { in: statuses } : undefined,
+        ...(filter.customerIds && filter.customerIds.length > 0
+          ? { customerId: { in: [...filter.customerIds] } }
+          : filter.customerId
+            ? { customerId: filter.customerId }
+            : {}),
+        status:
+          filter.due === "OVERDUE"
+            ? { in: [...RECEIVABLE_INVOICE_STATUSES] }
+            : statuses
+              ? { in: statuses }
+              : undefined,
         issuedOn,
+        ...(filter.due === "OVERDUE" && filter.overdueAsOf
+          ? { dueOn: { not: null, lt: filter.overdueAsOf } }
+          : {}),
         ...(query
           ? {
               OR: [

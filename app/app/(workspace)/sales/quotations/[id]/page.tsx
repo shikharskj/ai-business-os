@@ -50,7 +50,7 @@ export default async function QuotationDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string }>;
+  searchParams: Promise<{ saved?: string; locked?: string }>;
 }) {
   const tenant = await authorize("quotation:read");
   const { id } = await params;
@@ -151,6 +151,12 @@ export default async function QuotationDetailPage({
         }
       />
 
+      {query.locked ? (
+        <p className="text-base text-muted-foreground">
+          Only draft quotations can be edited.
+        </p>
+      ) : null}
+
       {query.saved ? (
         <p className="text-base text-muted-foreground">
           Quotation saved. GST totals were recalculated by the tax engine.
@@ -228,6 +234,7 @@ export default async function QuotationDetailPage({
                     <TableHead className="text-right">Qty</TableHead>
                     <TableHead className="text-right">Rate</TableHead>
                     <TableHead className="text-right">Discount</TableHead>
+                    <TableHead className="text-right">Tax rate</TableHead>
                     <TableHead className="text-right">Tax</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
@@ -250,6 +257,9 @@ export default async function QuotationDetailPage({
                       </TableCell>
                       <TableCell className="text-right">
                         <MoneyDisplay value={line.discount} />
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {(line.taxRateBps / 100).toFixed(2)}%
                       </TableCell>
                       <TableCell className="text-right">
                         <MoneyDisplay value={line.totalTax} />

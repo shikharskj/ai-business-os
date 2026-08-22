@@ -46,6 +46,10 @@ interface DatePickerProps {
   id?: string
   name?: string
   defaultValue?: string
+  /** Controlled ISO date (`YYYY-MM-DD`). */
+  value?: string
+  /** Called with ISO date or empty string when cleared. */
+  onValueChange?: (iso: string) => void
   date?: Date
   onSelect?: (date: Date | undefined) => void
   placeholder?: string
@@ -57,6 +61,8 @@ export function DatePicker({
   id,
   name,
   defaultValue,
+  value,
+  onValueChange,
   date,
   onSelect,
   placeholder = "Pick a date",
@@ -64,23 +70,29 @@ export function DatePicker({
   disabled = false,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
-  const [internalDate, setInternalDate] = React.useState<Date | undefined>(() =>
-    defaultValue ? calendarDateFromIso(defaultValue) : undefined
-  )
-  const selectedDate = date ?? internalDate
+  const [internalDate, setInternalDate] = React.useState<Date | undefined>(() => {
+    if (value !== undefined) {
+      return value ? calendarDateFromIso(value) : undefined
+    }
+    return defaultValue ? calendarDateFromIso(defaultValue) : undefined
+  })
+  const controlledDate =
+    value !== undefined ? (value ? calendarDateFromIso(value) : undefined) : undefined
+  const selectedDate = date ?? controlledDate ?? internalDate
   const isoValue = selectedDate ? isoFromCalendarDate(selectedDate) : ""
   const [visibleMonth, setVisibleMonth] = React.useState<Date>(
     () => selectedDate ?? new Date()
   )
 
   const commitDate = (nextDate: Date | undefined, close: boolean) => {
-    if (date === undefined) {
+    if (date === undefined && value === undefined) {
       setInternalDate(nextDate)
     }
     if (nextDate) {
       setVisibleMonth(nextDate)
     }
     onSelect?.(nextDate)
+    onValueChange?.(nextDate ? isoFromCalendarDate(nextDate) : "")
     if (close) {
       setOpen(false)
     }

@@ -161,3 +161,35 @@ export async function getCustomerOutstanding(input: {
     hasPostedInvoices: posted.length > 0,
   };
 }
+
+export async function outstandingByCustomerIds(input: {
+  tenantId: string;
+  customerIds: string[];
+  sales: SalesRepository;
+  payments: PaymentRepository;
+}): Promise<Map<string, import("@/modules/shared-kernel/money").Money>> {
+  if (input.customerIds.length === 0) {
+    return new Map();
+  }
+
+  const invoices = await input.sales.listInvoices({
+    tenantId: input.tenantId,
+    customerIds: input.customerIds,
+    statuses: RECEIVABLE_INVOICE_STATUSES,
+  });
+  const rows = await outstandingForInvoices({
+    tenantId: input.tenantId,
+    invoices,
+    payments: input.payments,
+  });
+
+  const totals = new Map<string, ReturnType<typeof money>>();
+  for (const row of rows) {
+    if (row.outstanding.amountMinor <= 0n) {
+      continue;
+    }
+    const current = totals.get(row.customerId) ?? money(0n);
+    totals.set(row.customerId, addMoney(current, row.outstanding));
+  }
+  return totals;
+}

@@ -11,6 +11,7 @@ export type {
 } from "@/modules/party/domain/types";
 export {
   PartyError,
+  PartyAlreadyActiveError,
   PartyInactiveError,
   PartyNotFoundError,
   PartyValidationError,
@@ -27,6 +28,7 @@ export {
   listCustomers,
   listCustomersPage,
   deactivateCustomer,
+  reactivateCustomer,
 } from "@/modules/party/application/customers";
 export {
   createSupplier,

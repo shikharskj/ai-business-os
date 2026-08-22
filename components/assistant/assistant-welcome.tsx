@@ -19,8 +19,8 @@ export function AssistantWelcome() {
         How can I help?
       </h2>
       <p className="mt-1.5 max-w-[20rem] text-sm text-muted-foreground animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200 fill-mode-both">
-        Ask about sales, receivables, stock, or expenses. Figures come from your
-        business records.
+        Ask why sales moved, who needs follow-up, or what to do next. Figures
+        come from your business records.
       </p>
     </div>
   );

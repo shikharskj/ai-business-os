@@ -39,6 +39,12 @@ export {
   type AiToolPeriodInput,
 } from "@/modules/ai/application/tool-period";
 export { runConfirmedAiAction } from "@/modules/ai/application/confirm-action";
+export {
+  assembleAssistantContext,
+  formatBusinessStateContextSummary,
+} from "@/modules/ai/application/assemble-assistant-context";
+export { composePeriodMovement } from "@/modules/ai/application/compose-period-movement";
+export { signPendingPaymentReminder } from "@/modules/ai/application/sign-pending-reminder";
 
 // Re-export the client-safe surface so server callers can use one import.
 export * from "@/modules/ai/index";

@@ -20,6 +20,7 @@ import {
 import {
   createBusinessWithOrganization,
   inviteOrganizationMember,
+  updateAutonomyPolicy,
   updateBusinessProfile,
 } from "@/modules/tenant";
 import { assignMemberRole } from "@/modules/tenant/application/assign-role";
@@ -31,6 +32,8 @@ import {
   prismaBusinessRepository,
   prismaMembershipRepository,
 } from "@/modules/tenant/infrastructure/prisma-repositories";
+import { prismaAutonomyPolicyRepository } from "@/modules/tenant/infrastructure/prisma-autonomy-policy-repository";
+import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 import { ensureChartOfAccounts } from "@/modules/accounting/application/seed-chart";
 import { prismaAccountRepository } from "@/modules/accounting/infrastructure/prisma-accounting-repositories";
 
@@ -187,6 +190,7 @@ export async function updateBusinessProfileAction(
         payments: deps.payments,
         catalog: deps.catalog,
         inventory: deps.inventory,
+        expenses: deps.expenses,
         accounts: deps.accounts,
         journals: deps.journals,
         projections: deps.projections,
@@ -200,6 +204,47 @@ export async function updateBusinessProfileAction(
   revalidatePath("/app/settings");
   revalidatePath("/app");
   redirect("/app/settings?saved=1");
+}
+
+export async function updateAutonomyPolicyAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const tenant = await authorize("settings:update");
+
+  const update = {
+    enablePaymentReminderL4: formData.get("enablePaymentReminderL4") === "on",
+    paymentReminderAmountThreshold: String(
+      formData.get("paymentReminderAmountThreshold") ?? ""
+    ).trim(),
+    paymentReminderRequireConfirmationAbove: String(
+      formData.get("paymentReminderRequireConfirmationAbove") ?? ""
+    ).trim(),
+    disabledAutomations: [] as string[],
+  };
+
+  try {
+    await updateAutonomyPolicy({
+      tenantId: tenant.tenantId,
+      actorUserId: tenant.membership.userId,
+      update,
+      policies: prismaAutonomyPolicyRepository,
+      audit: createPrismaAuditRepository(prisma),
+    });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return { fieldErrors: formatZodErrors(error) };
+    }
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to update autonomy policy",
+    };
+  }
+
+  revalidatePath("/app/settings");
+  redirect("/app/settings?saved=autonomy");
 }
 
 export async function inviteMemberAction(

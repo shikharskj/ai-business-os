@@ -1,5 +1,6 @@
 "use client";
 
+import { MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -11,6 +12,12 @@ import {
   sendQuotationAction,
 } from "@/app/app/(workspace)/sales/quotations/actions";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { QuotationStatus } from "@/modules/sales/domain/types";
 
 export function QuotationStatusActions({
@@ -49,7 +56,11 @@ export function QuotationStatusActions({
         return;
       }
       if (result.documentId) {
-        const opened = window.open(`/api/documents/${result.documentId}`, "_blank", "noopener,noreferrer");
+        const opened = window.open(
+          `/api/documents/${result.documentId}`,
+          "_blank",
+          "noopener,noreferrer"
+        );
         if (!opened) {
           setError("Popup blocked. Please allow popups to open the PDF.");
         }
@@ -64,15 +75,28 @@ export function QuotationStatusActions({
     });
   }
 
+  const menuItems = [
+    canRead && (status === "SENT" || status === "ACCEPTED")
+      ? { key: "export", label: "Export PDF", action: () => run(null, exportQuotationPdfAction) }
+      : null,
+    canCancel && (status === "DRAFT" || status === "SENT" || status === "ACCEPTED")
+      ? {
+          key: "cancel",
+          label: "Cancel quotation",
+          action: () =>
+            run(
+              "Cancel this quotation? It will remain in your list as cancelled. Stock and accounts are not affected.",
+              cancelQuotationAction
+            ),
+        }
+      : null,
+  ].filter(Boolean) as { key: string; label: string; action: () => void }[];
+
   return (
     <div className="flex flex-col items-end gap-2">
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {canUpdate && status === "DRAFT" ? (
-          <Button
-            type="button"
-            disabled={isPending}
-            onClick={() => run(null, sendQuotationAction)}
-          >
+          <Button type="button" disabled={isPending} onClick={() => run(null, sendQuotationAction)}>
             Mark sent
           </Button>
         ) : null}
@@ -88,7 +112,6 @@ export function QuotationStatusActions({
         {canUpdate && status === "ACCEPTED" ? (
           <Button
             type="button"
-            variant="outline"
             disabled={isPending}
             onClick={() =>
               run(
@@ -100,30 +123,28 @@ export function QuotationStatusActions({
             Convert to invoice
           </Button>
         ) : null}
-        {canRead && (status === "SENT" || status === "ACCEPTED") ? (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isPending}
-            onClick={() => run(null, exportQuotationPdfAction)}
-          >
-            Export PDF
-          </Button>
-        ) : null}
-        {canCancel && (status === "DRAFT" || status === "SENT" || status === "ACCEPTED") ? (
-          <Button
-            type="button"
-            variant="destructive"
-            disabled={isPending}
-            onClick={() =>
-              run(
-                "Cancel this quotation? It will remain in your list as cancelled. Stock and accounts are not affected.",
-                cancelQuotationAction
-              )
-            }
-          >
-            Cancel quotation
-          </Button>
+        {menuItems.length > 0 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isPending}
+                  aria-label="More actions"
+                >
+                  <MoreHorizontal className="size-5" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              {menuItems.map((item) => (
+                <DropdownMenuItem key={item.key} onClick={item.action}>
+                  {item.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : null}
       </div>
       {error ? (

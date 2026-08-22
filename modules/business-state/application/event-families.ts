@@ -41,6 +41,7 @@ const ATTENTION_EVENTS: ReadonlySet<string> = new Set<DomainEventType>([
   "QuotationCancelled",
   "InvoiceOverdue",
   "QuotationIdle",
+  "ExpenseRecorded",
 ]);
 
 /**

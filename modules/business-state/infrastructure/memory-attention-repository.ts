@@ -182,11 +182,21 @@ export function createMemoryAttentionQueueRepository(): AttentionQueueRepository
         .filter((row) => row.tenantId === filter.tenantId)
         .filter((row) => (filter.kind ? row.kind === filter.kind : true))
         .filter((row) =>
+          filter.kinds && filter.kinds.length > 0
+            ? filter.kinds.includes(row.kind)
+            : true
+        )
+        .filter((row) =>
           filter.resourceType ? row.resourceType === filter.resourceType : true
         )
         .filter((row) =>
           filter.resourceIds
             ? Boolean(row.resourceId && filter.resourceIds.includes(row.resourceId))
+            : true
+        )
+        .filter((row) =>
+          filter.recordedAfter
+            ? row.recordedAt.getTime() >= filter.recordedAfter.getTime()
             : true
         )
         .map(cloneOutcome);

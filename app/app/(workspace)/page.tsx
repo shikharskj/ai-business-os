@@ -96,6 +96,7 @@ export default async function DashboardPage({
         payments: businessStateDeps.payments,
         catalog: businessStateDeps.catalog,
         inventory: businessStateDeps.inventory,
+        expenses: businessStateDeps.expenses,
         accounts: businessStateDeps.accounts,
         journals: businessStateDeps.journals,
         projections: businessStateDeps.projections,
@@ -126,6 +127,10 @@ export default async function DashboardPage({
     canPreparePaymentReminder: roleHasPermission(
       tenant.membership.role,
       "invoice:update"
+    ),
+    canPreparePurchase: roleHasPermission(
+      tenant.membership.role,
+      "purchase:create"
     ),
     overview: result.overview,
   });

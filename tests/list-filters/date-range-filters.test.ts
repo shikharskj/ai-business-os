@@ -26,6 +26,7 @@ import {
   createInvoice,
   createMemorySalesRepository,
   createQuotation,
+  decorateInvoiceListRows,
   listInvoicesPage,
   listQuotationsPage,
   postInvoice,
@@ -276,6 +277,136 @@ describe("payment date range and method filters", () => {
     });
     expect(result.total).toBe(1);
     expect(result.items[0]?.method).toBe("UPI");
+  });
+});
+
+describe("invoice overdue filter and outstanding decoration", () => {
+  it("returns only receivable invoices past due when due=OVERDUE", async () => {
+    const d = baseDeps();
+    const accounts = createMemoryAccountRepository();
+    const journals = createMemoryJournalRepository();
+    const inventory = createMemoryInventoryRepository();
+    await ensureChartOfAccounts({ tenantId, accountRepository: accounts });
+    const customer = await seedCustomer(d.parties);
+    const product = await seedProduct(d.catalog);
+
+    const createPosted = async (dueOn: string) => {
+      const invoice = await createInvoice({
+        tenantId,
+        actorUserId,
+        fields: {
+          customerId: customer.id,
+          issuedOn: businessDate("2026-04-01"),
+          dueOn: businessDate(dueOn),
+          placeOfSupplyStateCode: "27",
+          lines: [
+            {
+              productId: product.id,
+              quantity: quantityFromMajor("1"),
+              discount: money(0n),
+            },
+          ],
+        },
+        taxContext: taxContext(),
+        ...d,
+      });
+      return postInvoice({
+        tenantId,
+        actorUserId,
+        invoiceId: invoice.id,
+        taxContext: taxContext(),
+        closedThroughPeriodKey: null,
+        accounts,
+        journals,
+        inventory,
+        ...d,
+      });
+    };
+
+    await createPosted("2026-04-10");
+    await createPosted("2026-05-15");
+
+    const filtered = await listInvoicesPage({
+      tenantId,
+      due: "OVERDUE",
+      overdueAsOf: businessDate("2026-04-20"),
+      page: 1,
+      pageSize,
+      sales: d.sales,
+    });
+
+    expect(filtered.total).toBe(1);
+    expect(filtered.items[0]?.dueOn).toBe(businessDate("2026-04-10"));
+  });
+
+  it("decorates invoice rows with outstanding and overdue flags", async () => {
+    const d = baseDeps();
+    const payments = createMemoryPaymentRepository();
+    const accounts = createMemoryAccountRepository();
+    const journals = createMemoryJournalRepository();
+    const inventory = createMemoryInventoryRepository();
+    await ensureChartOfAccounts({ tenantId, accountRepository: accounts });
+    const customer = await seedCustomer(d.parties);
+    const product = await seedProduct(d.catalog);
+
+    const invoice = await createInvoice({
+      tenantId,
+      actorUserId,
+      fields: {
+        customerId: customer.id,
+        issuedOn: businessDate("2026-04-01"),
+        dueOn: businessDate("2026-04-10"),
+        placeOfSupplyStateCode: "27",
+        lines: [
+          {
+            productId: product.id,
+            quantity: quantityFromMajor("2"),
+            discount: money(0n),
+          },
+        ],
+      },
+      taxContext: taxContext(),
+      ...d,
+    });
+    const posted = await postInvoice({
+      tenantId,
+      actorUserId,
+      invoiceId: invoice.id,
+      taxContext: taxContext(),
+      closedThroughPeriodKey: null,
+      accounts,
+      journals,
+      inventory,
+      ...d,
+    });
+
+    await recordCustomerPayment({
+      tenantId,
+      actorUserId,
+      financialYearStartMonth: 4,
+      closedThroughPeriodKey: null,
+      fields: {
+        customerId: customer.id,
+        receivedOn: businessDate("2026-04-05"),
+        method: "CASH",
+        amount: money(100_00n),
+        allocations: [{ invoiceId: posted.id, amount: money(100_00n) }],
+      },
+      accounts,
+      journals,
+      payments,
+      ...d,
+    });
+
+    const [row] = await decorateInvoiceListRows({
+      tenantId,
+      invoices: [posted],
+      payments,
+      asOf: businessDate("2026-04-20"),
+    });
+
+    expect(row?.outstanding.amountMinor).toBeGreaterThan(0n);
+    expect(row?.isOverdue).toBe(true);
   });
 });
 

@@ -13,6 +13,7 @@ import type { Purchase } from "@/modules/purchases/domain/types";
 import {
   getDashboardOverview,
   getPeriodActivity,
+  previousDashboardDateRange,
   resolveDashboardDateRange,
 } from "@/modules/reporting";
 import { createMemorySalesRepository } from "@/modules/sales";
@@ -381,5 +382,47 @@ describe("period activity snapshot", () => {
     expect(toMajorString(snapshot.sales)).toBe("400.00");
     expect(toMajorString(snapshot.collections)).toBe("100.00");
     expect(toMajorString(snapshot.expenses)).toBe("50.00");
+  });
+});
+
+describe("previous dashboard range (07)", () => {
+  it("compares this month to the matching month-to-date last month", () => {
+    expect(
+      previousDashboardDateRange({
+        preset: "this_month",
+        fromDate: businessDate("2026-08-01"),
+        toDate: businessDate("2026-08-22"),
+        label: "This month",
+      })
+    ).toMatchObject({
+      fromDate: "2026-07-01",
+      toDate: "2026-07-22",
+      label: "Previous period",
+    });
+  });
+
+  it("clamps the prior month when the current day does not exist", () => {
+    expect(
+      previousDashboardDateRange({
+        preset: "this_month",
+        fromDate: businessDate("2026-03-01"),
+        toDate: businessDate("2026-03-31"),
+        label: "This month",
+      }).toDate
+    ).toBe("2026-02-28");
+  });
+
+  it("uses an equal-length window for rolling day presets", () => {
+    expect(
+      previousDashboardDateRange({
+        preset: "last_7_days",
+        fromDate: businessDate("2026-08-16"),
+        toDate: businessDate("2026-08-22"),
+        label: "Last 7 days",
+      })
+    ).toMatchObject({
+      fromDate: "2026-08-09",
+      toDate: "2026-08-15",
+    });
   });
 });

@@ -7,6 +7,7 @@ import { createPrismaOutboxDispatchRepository } from "@/modules/events/infrastru
 import { createInAppChannel } from "@/modules/notifications/infrastructure/in-app-channel";
 import { createPrismaNotificationContextRepository } from "@/modules/notifications/infrastructure/prisma-notification-context";
 import { createPrismaNotificationRepository } from "@/modules/notifications/infrastructure/prisma-notification-repository";
+import { createPrismaAutomationRuntimeDeps } from "@/modules/workflows/infrastructure/prisma-runtime-deps";
 
 /**
  * Fire-and-forget outbox fan-out after the HTTP/response path.
@@ -24,6 +25,7 @@ export function scheduleNotificationOutboxProcessing(tenantId?: string): void {
         context,
         channel: createInAppChannel(notifications),
         businessState: createPrismaBusinessStateConsumerDeps(prisma),
+        automation: createPrismaAutomationRuntimeDeps(prisma),
         includeOverdueCheck: Boolean(tenantId),
       });
     } catch {

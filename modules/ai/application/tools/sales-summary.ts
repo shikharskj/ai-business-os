@@ -15,6 +15,7 @@ export const salesSummaryTool = defineAiTool({
     "Total posted sales for a period: taxable value, tax, grand total, invoice count, and the largest invoices.",
   category: "read",
   permission: "report:read",
+  autonomyLevel: "L0",
   inputSchema: salesSummaryInputSchema,
   outputSchema: salesSummaryOutputSchema,
   async execute(input, context) {

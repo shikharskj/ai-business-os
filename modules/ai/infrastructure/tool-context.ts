@@ -3,10 +3,12 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { requireCurrentTenant } from "@/lib/tenant";
 import type { AiToolContext } from "@/modules/ai/domain/tool-types";
+import type { MembershipRole } from "@/modules/tenant/domain/types";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 import { prismaExpenseRepository } from "@/modules/expenses/infrastructure/prisma-expenses-repository";
 import { prismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";
 import { createPrismaNotificationRepository } from "@/modules/notifications";
+import { createPrismaBusinessStateProjectionRepository } from "@/modules/business-state/infrastructure/prisma-projection-repository";
 import { createPrismaAttentionQueueRepository } from "@/modules/business-state/infrastructure/prisma-attention-repository";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 import { prismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
@@ -19,6 +21,8 @@ import {
 } from "@/modules/accounting/infrastructure/prisma-accounting-repositories";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
+import { getAutonomyPolicy } from "@/modules/tenant/application/autonomy-policy";
+import { prismaAutonomyPolicyRepository } from "@/modules/tenant/infrastructure/prisma-autonomy-policy-repository";
 
 /**
  * Builds the only context an AI tool may execute with.
@@ -32,14 +36,43 @@ export async function createAiToolContext(options?: {
   correlationId?: string;
 }): Promise<AiToolContext> {
   const tenant = await requireCurrentTenant();
-
-  return {
+  return createAiToolContextForActor({
     tenantId: tenant.tenantId,
     actorUserId: tenant.membership.userId,
     role: tenant.membership.role,
     timezone: tenant.business.timezone,
     currency: tenant.business.currency,
     lowStockThresholdMajor: tenant.business.lowStockThreshold,
+    correlationId: options?.correlationId,
+  });
+}
+
+/**
+ * Trusted tool context for a resolved actor (session or automation owner).
+ * Repositories and policy are still loaded on the server — never from input
+ * that a model could supply.
+ */
+export async function createAiToolContextForActor(input: {
+  tenantId: string;
+  actorUserId: string;
+  role: MembershipRole;
+  timezone: string;
+  currency: string;
+  lowStockThresholdMajor: string;
+  correlationId?: string;
+}): Promise<AiToolContext> {
+  const autonomyPolicy = await getAutonomyPolicy({
+    tenantId: input.tenantId,
+    policies: prismaAutonomyPolicyRepository,
+  });
+
+  return {
+    tenantId: input.tenantId,
+    actorUserId: input.actorUserId,
+    role: input.role,
+    timezone: input.timezone,
+    currency: input.currency,
+    lowStockThresholdMajor: input.lowStockThresholdMajor,
     repositories: {
       sales: prismaSalesRepository,
       purchases: prismaPurchasesRepository,
@@ -53,9 +86,11 @@ export async function createAiToolContext(options?: {
       journals: createPrismaJournalRepository(prisma),
       notifications: createPrismaNotificationRepository(prisma),
       attention: createPrismaAttentionQueueRepository(prisma),
+      projections: createPrismaBusinessStateProjectionRepository(prisma),
       outbox: createPrismaOutboxRepository(prisma),
     },
     audit: createPrismaAuditRepository(prisma),
-    correlationId: options?.correlationId,
+    autonomyPolicy,
+    correlationId: input.correlationId,
   };
 }

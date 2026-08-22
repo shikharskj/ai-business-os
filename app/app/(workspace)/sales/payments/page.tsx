@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PaymentsDataTable } from "@/components/business/payments-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
 import { DatePicker } from "@/components/date-picker";
+import { ListFilterClear } from "@/components/shell/list-filter-clear";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ export default async function SalesPaymentsPage({
   searchParams: Promise<{
     q?: string;
     method?: string;
+    customerId?: string;
     from?: string;
     to?: string;
     page?: string;
@@ -43,16 +45,18 @@ export default async function SalesPaymentsPage({
   const parseResult = paymentSearchSchema.safeParse({
     q: params.q,
     method: params.method,
+    customerId: params.customerId,
     from: params.from || undefined,
     to: params.to || undefined,
   });
   const filters = parseResult.success
     ? parseResult.data
-    : { q: "", method: "ALL" as const, from: undefined, to: undefined };
+    : { q: "", method: "ALL" as const, customerId: undefined, from: undefined, to: undefined };
   const canCreate = roleHasPermission(tenant.membership.role, "payment:create");
   const result = await listPaymentsPage({
     tenantId: tenant.tenantId,
     query: filters.q,
+    customerId: filters.customerId,
     method: filters.method === "ALL" ? undefined : filters.method,
     fromDate: filters.from ? businessDate(filters.from) : undefined,
     toDate: filters.to ? businessDate(filters.to) : undefined,
@@ -61,7 +65,11 @@ export default async function SalesPaymentsPage({
     payments: prismaPaymentRepository,
   });
   const hasFilters = Boolean(
-    filters.q || filters.method !== "ALL" || filters.from || filters.to
+    filters.q ||
+      filters.method !== "ALL" ||
+      filters.customerId ||
+      filters.from ||
+      filters.to
   );
   const queryString = toQueryString(params);
 
@@ -86,6 +94,9 @@ export default async function SalesPaymentsPage({
       <form className="flex flex-wrap items-end gap-3" method="get">
         {pageSize !== 10 ? (
           <input type="hidden" name="pageSize" value={pageSize} />
+        ) : null}
+        {filters.customerId ? (
+          <input type="hidden" name="customerId" value={filters.customerId} />
         ) : null}
         <div className="flex min-w-56 flex-1 flex-col gap-2">
           <label htmlFor="q" className="text-base font-medium">
@@ -147,6 +158,7 @@ export default async function SalesPaymentsPage({
         <Button type="submit" variant="outline">
           Filter
         </Button>
+        {hasFilters ? <ListFilterClear href="/app/sales/payments" /> : null}
       </form>
 
       {result.total === 0 ? (

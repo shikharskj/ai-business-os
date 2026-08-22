@@ -31,6 +31,7 @@ export {
 } from "@/modules/ai/domain/supervisor-types";
 export { assertViewCitesFacts } from "@/modules/ai/domain/quality-gate";
 export {
+  AiAutonomyPolicyError,
   AiToolAuthorizationError,
   AiToolError,
   AiToolIdentityOverrideError,
@@ -98,6 +99,7 @@ export {
   assistantConfirmSchema,
   assistantFactSchema,
   assistantPendingActionSchema,
+  assistantPendingActionWireSchema,
   assistantSuggestionSchema,
   assistantTurnSchema,
   assistantUiMessageSchema,
@@ -125,6 +127,8 @@ export {
   paymentRemindersInputSchema,
   paymentRemindersOutputSchema,
   periodInputSchema,
+  periodMovementInputSchema,
+  periodMovementOutputSchema,
   receivablesInputSchema,
   receivablesOutputSchema,
   salesSummaryInputSchema,
@@ -137,6 +141,7 @@ export {
   type OverdueInvoicesOutput,
   type PaymentRemindersInput,
   type PaymentRemindersOutput,
+  type PeriodMovementOutput,
   type ReceivablesOutput,
   type SalesSummaryOutput,
 } from "@/modules/ai/schemas/ai-tool.schema";

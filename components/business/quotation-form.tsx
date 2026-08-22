@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useActionState } from "react";
 import { Plus, Trash2 } from "lucide-react";
@@ -15,7 +16,10 @@ import {
   documentPreviewAsideStyle,
   QuotationDocumentPreview,
 } from "@/components/business/quotation-document";
+import { lineSubtotalBeforeGstMajor } from "@/components/business/line-subtotal-label";
+import { DatePicker } from "@/components/date-picker";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -153,10 +157,6 @@ export function QuotationForm({
   );
   const [engineView, setEngineView] = useState<QuotationDocumentView | null>(null);
 
-  const customerItems = useMemo(
-    () => Object.fromEntries(customers.map((customer) => [customer.id, customer.name])),
-    [customers]
-  );
   const stateItems = useMemo(() => GST_STATE_CODES, []);
   const selectedCustomer = customers.find((row) => row.id === customerId) ?? null;
 
@@ -262,31 +262,34 @@ export function QuotationForm({
 
         <section className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <label htmlFor="customerId" className="text-base font-medium">
-              Customer
-            </label>
-            <Select
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor="customerId" className="text-base font-medium">
+                Customer
+              </label>
+              <Link
+                href="/app/sales/customers/new"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+              >
+                New customer
+              </Link>
+            </div>
+            <Combobox
+              id="customerId"
               value={customerId}
               onValueChange={(value) => {
-                const next = String(value ?? "");
-                setCustomerId(next);
+                setCustomerId(value);
                 setPlaceOfSupply(
-                  customerPlaceOfSupply(customers.find((row) => row.id === next))
+                  customerPlaceOfSupply(customers.find((row) => row.id === value))
                 );
               }}
-              items={customerItems}
-            >
-              <SelectTrigger id="customerId" className="w-full">
-                <SelectValue placeholder="Select a customer" />
-              </SelectTrigger>
-              <SelectContent>
-                {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={customers.map((customer) => ({
+                value: customer.id,
+                label: customer.name,
+                keywords: [customer.gstin ?? "", customer.phone ?? ""].join(" "),
+              }))}
+              placeholder="Select a customer"
+              searchPlaceholder="Search customers…"
+            />
             <FieldError name="customerId" fieldErrors={state.fieldErrors} />
           </div>
 
@@ -320,14 +323,13 @@ export function QuotationForm({
             <label htmlFor="issuedOn" className="text-base font-medium">
               Quotation date
             </label>
-            <Input
+            <DatePicker
               id="issuedOn"
-              name="issuedOn"
-              type="date"
-              required
               value={issuedOn}
-              onChange={(event) => setIssuedOn(event.target.value)}
+              onValueChange={setIssuedOn}
+              placeholder="Quotation date"
             />
+            <input type="hidden" name="issuedOn" value={issuedOn} />
             <FieldError name="issuedOn" fieldErrors={state.fieldErrors} />
           </div>
 
@@ -335,13 +337,13 @@ export function QuotationForm({
             <label htmlFor="validUntil" className="text-base font-medium">
               Valid until
             </label>
-            <Input
+            <DatePicker
               id="validUntil"
-              name="validUntil"
-              type="date"
               value={validUntil}
-              onChange={(event) => setValidUntil(event.target.value)}
+              onValueChange={setValidUntil}
+              placeholder="Valid until (optional)"
             />
+            <input type="hidden" name="validUntil" value={validUntil} />
             <FieldError name="validUntil" fieldErrors={state.fieldErrors} />
           </div>
         </section>
@@ -376,7 +378,7 @@ export function QuotationForm({
             {lines.map((line, index) => (
               <div
                 key={index}
-                className="grid gap-3 rounded-md border border-border p-4 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto]"
+                className="grid gap-3 rounded-md border border-border p-4 md:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))_auto]"
               >
                 <input
                   type="hidden"
@@ -384,37 +386,35 @@ export function QuotationForm({
                   value={line.productId}
                 />
                 <div className="flex flex-col gap-2">
-                  <label className="text-base font-medium" htmlFor={`line-${index}-product`}>
-                    Product / service
-                  </label>
-                  <Select
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-base font-medium" htmlFor={`line-${index}-product`}>
+                      Product / service
+                    </label>
+                    <Link
+                      href="/app/inventory/products/new"
+                      className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                    >
+                      New product
+                    </Link>
+                  </div>
+                  <Combobox
+                    id={`line-${index}-product`}
                     value={line.productId}
-                    onValueChange={(value) => {
-                      const productId = String(value ?? "");
+                    onValueChange={(productId) => {
                       const product = products.find((row) => row.id === productId);
                       updateLine(index, {
                         productId,
                         unitPrice: product?.sellingPriceMajor ?? line.unitPrice,
                       });
                     }}
-                    items={Object.fromEntries(
-                      products.map((product) => [
-                        product.id,
-                        `${product.name} (${product.sku})`,
-                      ])
-                    )}
-                  >
-                    <SelectTrigger id={`line-${index}-product`} className="w-full">
-                      <SelectValue placeholder="Select a product" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={products.map((product) => ({
+                      value: product.id,
+                      label: `${product.name} (${product.sku})`,
+                      keywords: product.sku,
+                    }))}
+                    placeholder="Select a product"
+                    searchPlaceholder="Search products…"
+                  />
                   <FieldError name={`lines.${index}.productId`} fieldErrors={state.fieldErrors} />
                 </div>
                 <div className="flex flex-col gap-2">
@@ -463,6 +463,12 @@ export function QuotationForm({
                     }
                   />
                   <FieldError name={`lines.${index}.discount`} fieldErrors={state.fieldErrors} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <span className="text-base font-medium">Line total (pre-GST)</span>
+                  <p className="flex h-10 items-center text-base tabular-nums">
+                    ₹{lineSubtotalBeforeGstMajor(line)}
+                  </p>
                 </div>
                 <div className="flex items-end">
                   <Button

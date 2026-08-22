@@ -289,6 +289,62 @@ export const cashPositionOutputSchema = z
   })
   .strict();
 
+const movementLineSchema = z
+  .object({
+    current: moneyViewSchema,
+    previous: moneyViewSchema,
+    delta: moneyViewSchema,
+    direction: z.enum(["up", "down", "flat"]),
+  })
+  .strict();
+
+export const periodMovementInputSchema = periodInputSchema;
+
+/**
+ * Current vs previous period, with application-computed deltas. The model
+ * explains this output; it must not invent a prior period or subtract itself.
+ */
+export const periodMovementOutputSchema = z
+  .object({
+    currentRange: dateRangeViewSchema,
+    previousRange: dateRangeViewSchema,
+    revenue: movementLineSchema,
+    expenses: movementLineSchema,
+    profit: movementLineSchema,
+    driver: z
+      .object({
+        kind: z.enum(["sales", "expenses", "both", "stable"]),
+        summary: z.string().min(1),
+      })
+      .strict(),
+    largestInvoices: z.array(
+      z
+        .object({
+          invoiceId: z.string().min(1),
+          invoiceNumber: z.string().min(1),
+          customerName: z.string(),
+          issuedOn: businessDateStringSchema,
+          grandTotal: moneyViewSchema,
+        })
+        .strict()
+    ),
+    topExpenseCategories: z.array(
+      z
+        .object({
+          category: z.string().min(1),
+          categoryLabel: z.string().min(1),
+          expenseCount: z.number().int().positive(),
+          total: moneyViewSchema,
+        })
+        .strict()
+    ),
+    overdueInvoiceCount: z.number().int().nonnegative(),
+    overdueOutstanding: moneyViewSchema,
+    overdueInvoiceIds: z.array(z.string().min(1)).max(10),
+    lowStockCount: z.number().int().nonnegative(),
+  })
+  .strict();
+
 export type SalesSummaryOutput = z.infer<typeof salesSummaryOutputSchema>;
 export type ExpensesSummaryOutput = z.infer<typeof expensesSummaryOutputSchema>;
 export type ReceivablesOutput = z.infer<typeof receivablesOutputSchema>;
@@ -296,6 +352,7 @@ export type OverdueInvoicesOutput = z.infer<typeof overdueInvoicesOutputSchema>;
 export type LowStockOutput = z.infer<typeof lowStockOutputSchema>;
 export type BusinessMetricsOutput = z.infer<typeof businessMetricsOutputSchema>;
 export type CashPositionOutput = z.infer<typeof cashPositionOutputSchema>;
+export type PeriodMovementOutput = z.infer<typeof periodMovementOutputSchema>;
 export type PaymentRemindersInput = z.infer<typeof paymentRemindersInputSchema>;
 export type PaymentRemindersOutput = z.infer<
   typeof paymentRemindersOutputSchema

@@ -231,6 +231,25 @@ export function createPrismaPartyRepository(
       return updated ? asCustomer(updated) : null;
     },
 
+    async reactivateCustomer(tenantId, customerId) {
+      const result = await client.party.updateMany({
+        where: {
+          id: customerId,
+          tenantId,
+          kind: "CUSTOMER",
+          status: "INACTIVE",
+        },
+        data: { status: "ACTIVE" },
+      });
+      if (result.count === 0) {
+        return null;
+      }
+      const updated = await client.party.findFirst({
+        where: { id: customerId, tenantId, kind: "CUSTOMER" },
+      });
+      return updated ? asCustomer(updated) : null;
+    },
+
     async createSupplier(input) {
       const record = await client.party.create({
         data: {

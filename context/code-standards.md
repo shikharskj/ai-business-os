@@ -753,11 +753,14 @@ Avoid inconsistent response structures without a documented reason.
 * Record outcomes for learning hooks.
 * First vertical: collections (unless progress-tracker says otherwise).
 
+Implemented (spec `09`–`11`): `modules/workflows/` runner + `workflow_runs` job rows. Outbox consumer enqueues; overdue scan emits `InvoiceOverdue`, `QuotationIdle`, and `StockLow` and enqueues matching workflows. `processDueWorkflowRuns` executes off the request path with idempotent keys, backoff, and tenant concurrency keys. L4 execute must call `evaluateL4Autonomy` before `action`. Collections uses `onL4Denied: "prepare"` so L3 still drafts when L4 is off; send goes through `executeAiTool({ autonomyAttempt: "L4" })`. Expansion workflows (`quotations.followup`, `inventory.reorder`, `expenses.anomaly`) are prepare/inform `dry_run` — they must not post journals, purchases, expenses, or stock. `proof.noop` is the dry-run proof. Metrics stubs: success / fail / skip.
+
 # Autonomy metadata
 
 * Tools and automatable actions declare autonomy level L0–L4.
-* L3 uses the existing confirm-token path.
-* L4 requires explicit tenant policy + thresholds.
+* Read tools declare `L0`. `send_payment_reminders` declares `L3` and `actionClass: "payment_reminder"`.
+* L3 uses the existing confirm-token path. Chat must not set `autonomyAttempt`.
+* L4 requires explicit tenant policy + thresholds (`evaluateL4Autonomy` in `executeAiTool`).
 * L5 is forbidden.
 
 ---

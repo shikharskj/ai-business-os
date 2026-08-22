@@ -18,6 +18,10 @@ export {
   BUSINESS_STATE_SCHEMA_VERSION,
   SALES_MOMENTUM_WINDOW_DAYS,
   IDLE_QUOTATION_DAYS,
+  EXPENSE_ANOMALY_LOOKBACK_DAYS,
+  EXPENSE_ANOMALY_MIN_SAMPLES,
+  EXPENSE_ANOMALY_MULTIPLIER,
+  EXPENSE_ANOMALY_SURFACE_DAYS,
   ATTENTION_ITEM_TYPES,
   ATTENTION_ITEM_STATUSES,
   AUTOMATION_OUTCOME_KINDS,
@@ -42,6 +46,7 @@ export {
 } from "@/modules/business-state/application/rebuild";
 export { computeCashPosition } from "@/modules/business-state/application/compute-cash-position";
 export { computeAttentionQueue } from "@/modules/business-state/application/compute-attention";
+export { findUnusualExpenses } from "@/modules/business-state/domain/expense-anomaly";
 export { getCashPosition } from "@/modules/business-state/application/get-cash-position";
 export { getBusinessStateSummary } from "@/modules/business-state/application/get-business-state";
 export { listOpenAttention } from "@/modules/business-state/application/list-open-attention";
@@ -54,15 +59,26 @@ export { dismissAttentionItem } from "@/modules/business-state/application/dismi
 export { recordAutomationOutcome } from "@/modules/business-state/application/record-outcome";
 export { recordPaymentReminderOutcomes } from "@/modules/business-state/application/record-reminder-outcomes";
 export {
+  recordQuotationFollowUpProposed,
+  recordReorderPrepared,
+  recordExpenseAnomalyFlagged,
+} from "@/modules/business-state/application/record-expansion-outcomes";
+export {
   recordPaidAfterReminderOutcomes,
   invoiceIdsFromPaymentPayload,
 } from "@/modules/business-state/application/record-paid-after-reminder";
+export {
+  listCollectionsOutcomes,
+  COLLECTIONS_OUTCOME_KINDS,
+} from "@/modules/business-state/application/list-collections-outcomes";
 export { projectionFamiliesForEvent } from "@/modules/business-state/application/event-families";
 export {
   businessStateSummaryToDto,
   cashPositionToDto,
   attentionItemToDto,
+  automationOutcomeToDto,
   type AttentionItemDto,
+  type AutomationOutcomeDto,
 } from "@/modules/business-state/application/dto";
 export {
   buildDailyBriefView,
@@ -89,7 +105,11 @@ export {
   proposeBriefReminderSchema,
   type ProposeBriefReminderBody,
 } from "@/modules/business-state/schemas/propose-brief-reminder.schema";
-export { dismissAttentionSchema } from "@/modules/business-state/schemas/attention.schema";
+export {
+  dismissAttentionSchema,
+  listCollectionsOutcomesQuerySchema,
+  type ListCollectionsOutcomesQuery,
+} from "@/modules/business-state/schemas/attention.schema";
 export {
   createBusinessStateOutboxConsumer,
   BUSINESS_STATE_CONSUMER_NAME,

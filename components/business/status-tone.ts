@@ -4,6 +4,7 @@ import type {
   SalesInvoiceStatus,
 } from "@/modules/sales/domain/types";
 import type { PurchaseStatus } from "@/modules/purchases/domain/types";
+import { paymentStatusLabel } from "@/modules/sales/domain/invoice-status";
 
 export const QUOTATION_STATUS_LABELS: Record<QuotationStatus, string> = {
   DRAFT: "Draft",
@@ -38,6 +39,20 @@ export const INVOICE_STATUS_TONES: Record<SalesInvoiceStatus, BadgeTone> = {
   PAID: "success",
   CANCELLED: "danger",
 };
+
+/** Payment-facing badge for list/detail (Draft / Unpaid / Partially paid / Paid / Cancelled). */
+export function invoicePaymentBadgePresentation(status: SalesInvoiceStatus): {
+  tone: BadgeTone;
+  label: string;
+} {
+  const label = paymentStatusLabel(status);
+  if (status === "DRAFT") return { tone: "neutral", label };
+  if (status === "CANCELLED") return { tone: "danger", label };
+  if (status === "PAID") return { tone: "success", label };
+  if (status === "PARTIALLY_PAID") return { tone: "warning", label };
+  if (status === "POSTED" || status === "UNPAID") return { tone: "warning", label };
+  return { tone: "neutral", label };
+}
 
 export const PURCHASE_STATUS_LABELS: Record<PurchaseStatus, string> = {
   DRAFT: "Draft",

@@ -83,6 +83,7 @@ export type QuotationListFilter = {
   tenantId: string;
   query?: string;
   status?: QuotationStatus | "ALL";
+  customerId?: string;
   fromDate?: BusinessDate;
   toDate?: BusinessDate;
 };
@@ -195,12 +196,17 @@ export type InvoiceInput = {
   lines: InvoiceLineInput[];
 };
 
+export type InvoiceDueFilter = "ALL" | "OVERDUE";
+
 export type InvoiceListFilter = {
   tenantId: string;
   query?: string;
   status?: SalesInvoiceStatus | "ALL";
   customerId?: string;
+  customerIds?: readonly string[];
   statuses?: readonly SalesInvoiceStatus[];
+  due?: InvoiceDueFilter;
+  overdueAsOf?: BusinessDate;
   fromDate?: BusinessDate;
   toDate?: BusinessDate;
 };

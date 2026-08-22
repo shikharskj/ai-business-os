@@ -177,7 +177,7 @@ export function AssistantActivity({
       <ol className="relative mt-2 ml-1.5 flex flex-col gap-0 border-l border-border pl-4">
         {steps.map((step) => (
           <li key={step.id} className="relative py-1.5 first:pt-0 last:pb-0">
-            <span className="absolute top-2 -left-[1.3125rem] flex size-4 items-center justify-center rounded-full bg-sidebar">
+            <span className="absolute top-2 -left-[1.3125rem] flex size-5 items-center justify-center rounded-full bg-sidebar">
               <StepIcon step={step} />
             </span>
             <span

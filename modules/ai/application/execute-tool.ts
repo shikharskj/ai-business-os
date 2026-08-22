@@ -1,6 +1,7 @@
 import { roleHasPermission } from "@/lib/security/permissions";
 import { findAiTool, requireAiTool } from "@/modules/ai/application/tools/registry";
 import {
+  AiAutonomyPolicyError,
   AiToolAuthorizationError,
   AiToolError,
   AiToolInputError,
@@ -12,6 +13,7 @@ import type {
   AiToolDefinition,
   AiToolInvocationResult,
 } from "@/modules/ai/domain/tool-types";
+import { evaluateL4Autonomy } from "@/modules/tenant/domain/autonomy-policy";
 
 export const AI_TOOL_AUDIT_RESOURCE = "ai_tool";
 export const AI_TOOL_AUDIT_ACTION = "ai.tool.invoked";
@@ -21,6 +23,15 @@ export type ExecuteAiToolInput = {
   toolName: string;
   /** Set by the caller once the user confirmed a high-risk action (spec 28). */
   confirmed?: boolean;
+  /**
+   * Trusted server caller requesting L4 auto-execute. Never from the model.
+   * Chat and the HMAC confirm path must not set this — they stay on L3.
+   */
+  autonomyAttempt?: "L4";
+  /** Verified amount (major units) for L4 threshold checks. Re-derived from domain. */
+  policyAmountMajor?: string;
+  /** Optional automation id checked against `disabledAutomations`. */
+  automationId?: string;
 } & (
   | { input: unknown; argumentsJson?: undefined }
   /** Raw provider tool-call arguments. Untrusted until parsed and validated. */
@@ -55,6 +66,7 @@ async function recordInvocation(input: {
   toolName: string;
   outcome: AiToolAuditOutcome;
   errorCode?: string;
+  autonomyDeniedReason?: string;
   durationMs: number;
   startedAuditRecordId?: string;
 }): Promise<string> {
@@ -71,8 +83,12 @@ async function recordInvocation(input: {
       permission: input.tool?.permission ?? "unknown",
       role: input.context.role,
       policyVersion: AI_POLICY_VERSION,
+      autonomyLevel: input.tool?.autonomyLevel ?? "unknown",
       durationMs: input.durationMs,
       ...(input.errorCode ? { errorCode: input.errorCode } : {}),
+      ...(input.autonomyDeniedReason
+        ? { autonomyDeniedReason: input.autonomyDeniedReason }
+        : {}),
       ...(input.startedAuditRecordId
         ? { startedAuditRecordId: input.startedAuditRecordId }
         : {}),
@@ -119,10 +135,26 @@ export async function executeAiTool(
     }
 
     if (tool.requiresConfirmation && !input.confirmed) {
-      throw new AiToolError(
-        "TOOL_CONFIRMATION_REQUIRED",
-        `AI tool "${tool.name}" requires explicit user confirmation before it can run.`
-      );
+      if (input.autonomyAttempt === "L4") {
+        if (!tool.actionClass) {
+          throw new AiAutonomyPolicyError("class_not_allowed");
+        }
+        const decision = evaluateL4Autonomy({
+          actionClass: tool.actionClass,
+          amountMajor: input.policyAmountMajor,
+          policy: context.autonomyPolicy,
+          automationId: input.automationId,
+          currency: context.currency,
+        });
+        if (!decision.allowed) {
+          throw new AiAutonomyPolicyError(decision.reason);
+        }
+      } else {
+        throw new AiToolError(
+          "TOOL_CONFIRMATION_REQUIRED",
+          `AI tool "${tool.name}" requires explicit user confirmation before it can run.`
+        );
+      }
     }
 
     // Action tools must leave an audit trail. Establish intent before mutation
@@ -204,6 +236,9 @@ export async function executeAiTool(
         errorCode: error instanceof AiToolError ? error.code : "UNEXPECTED",
         durationMs: Date.now() - startedAt,
         startedAuditRecordId,
+        ...(error instanceof AiAutonomyPolicyError
+          ? { autonomyDeniedReason: error.reason }
+          : {}),
       });
     } catch (auditError) {
       console.error("AI tool audit failed after tool error:", {

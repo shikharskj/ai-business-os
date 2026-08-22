@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 
+import { MoneyDisplay } from "@/components/business/money-display";
 import { StatusBadge } from "@/components/business/status-badge";
 import {
   PARTY_STATUS_LABELS,
@@ -12,17 +13,22 @@ import { useListTableHref } from "@/components/business/list-table-client";
 import { DataTable } from "@/components/data-table";
 import type { DataTableFeatures } from "@/components/data-table/data-table-features";
 import type { Customer } from "@/modules/party/domain/types";
+import type { Money } from "@/modules/shared-kernel/money";
 import type { PageSize } from "@/modules/shared-kernel/list-page";
 
+export type CustomerListRow = Customer & {
+  outstanding: Money;
+};
+
 type CustomersDataTableProps = {
-  items: Customer[];
+  items: CustomerListRow[];
   total: number;
   page: number;
   pageSize: PageSize;
   queryString: string;
 };
 
-const columns: ColumnDef<DataTableFeatures, Customer>[] = [
+const columns: ColumnDef<DataTableFeatures, CustomerListRow>[] = [
   {
     accessorKey: "name",
     header: "Customer",
@@ -51,6 +57,15 @@ const columns: ColumnDef<DataTableFeatures, Customer>[] = [
     accessorKey: "phone",
     header: "Phone",
     cell: ({ row }) => row.original.phone ?? "—",
+  },
+  {
+    id: "outstanding",
+    header: () => <span className="block text-right">Outstanding</span>,
+    cell: ({ row }) => (
+      <div className="text-right">
+        <MoneyDisplay value={row.original.outstanding} />
+      </div>
+    ),
   },
   {
     accessorKey: "status",

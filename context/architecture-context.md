@@ -779,7 +779,7 @@ Rebuild/backfill: `rebuildBusinessStateProjections` (family `cashPosition`) reco
 
 ## AttentionQueue
 
-Tenant-scoped derived queue of what needs attention. Rows are rebuildable from overdue invoices, low-stock products, and idle SENT/ACCEPTED quotations. Dismiss records an outcome and emits `AttentionDismissed`; it must not mutate invoices or stock.
+Tenant-scoped derived queue of what needs attention. Rows are rebuildable from overdue invoices, low-stock products, idle SENT/ACCEPTED quotations, and unusual expenses (same-category amount vs recent average). Dismiss records an outcome and emits `AttentionDismissed`; it must not mutate invoices or stock.
 
 ```text
 GET  /api/business-state/attention          report:read   open items, ranked by severity
@@ -787,11 +787,11 @@ POST /api/business-state/attention/dismiss  report:read   idempotent dismiss + o
 GET  /api/business-state                    report:read   includes attention.openCount
 ```
 
-Populate path: mutation + outbox → `business-state` consumer (family `attentionQueue`) and the scheduled overdue scan already used for notifications. Outcome stubs: `ATTENTION_DISMISSED`, `REMINDER_PROPOSED`, `REMINDER_SENT`, `PAID_AFTER_REMINDER` (`AutomationOutcomeRecorded`).
+Populate path: mutation + outbox → `business-state` consumer (family `attentionQueue`) and the scheduled overdue scan already used for notifications. Outcome stubs: `ATTENTION_DISMISSED`, `REMINDER_PROPOSED`, `REMINDER_SENT`, `PAID_AFTER_REMINDER`, `QUOTATION_FOLLOW_UP_PROPOSED`, `REORDER_PREPARED`, `EXPENSE_ANOMALY_FLAGGED` (`AutomationOutcomeRecorded`).
 
 First `/app` visit backfills the queue when BusinessState `meta.rebuiltAt` is null or older than 6 hours (`ensureAttentionQueueFresh` → family `attentionQueue`, stamps `rebuiltAt`). Changing the business low-stock threshold rebuilds `attentionQueue` + `inventoryRisk` from the settings action (composition root — not inside `modules/tenant`). After that, day-to-day freshness stays on outbox + overdue scan.
 
-Daily Brief (home `/app`, specs `05`–`06`): ranked Needs attention list from this queue plus yesterday sales / cash-in / expenses from `getPeriodActivity` (same basis as dashboard KPIs). Header shows open-type counts from visible rows; period notes (expense ratio / negative profit / payables-heavy) are L0 inform from supervisor overview facts — not a second Alerts rail. Each row carries deterministic L1 recommend labels; overdue rows can L2 Prepare reminder only when the member has `invoice:update`, via `POST /api/assistant/actions/propose` then confirm with `POST /api/assistant/actions/confirm` (same HMAC token gate as chat). A failed confirm keeps Try again / Cancel on the pending card and View / Dismiss on the row. Dismiss calls `POST /api/business-state/attention/dismiss`. The surface is deterministic when the AI supervisor is down (quieter header, same rows + notes). It is not a second chatbot. Supervisor mapper still emits an `insights` region id for schema compatibility but leaves it empty — Needs attention owns notes and queue (do not restore Alerts).
+Daily Brief (home `/app`, specs `05`–`06`, expansions in `11`): ranked Needs attention list from this queue plus yesterday sales / cash-in / expenses from `getPeriodActivity` (same basis as dashboard KPIs). Header shows open-type counts from visible rows; period notes (expense ratio / negative profit / payables-heavy) are L0 inform from supervisor overview facts — not a second Alerts rail. Each row carries deterministic L0–L2 labels; overdue rows can L2 Prepare reminder only when the member has `invoice:update`, via `POST /api/assistant/actions/propose` then confirm with `POST /api/assistant/actions/confirm` (same HMAC token gate as chat). Low-stock rows can L2 Prepare purchase (navigate to new bill) when the member has `purchase:create` — it does not post. A failed confirm keeps Try again / Cancel on the pending card and View / Dismiss on the row. Dismiss calls `POST /api/business-state/attention/dismiss`. The surface is deterministic when the AI supervisor is down (quieter header, same rows + notes). It is not a second chatbot. Supervisor mapper still emits an `insights` region id for schema compatibility but leaves it empty — Needs attention owns notes and queue (do not restore Alerts).
 
 ---
 
@@ -806,10 +806,42 @@ EVENT → CONDITION → REASONING → ACTION → RESULT → OUTCOME
 * Jobs execute off the request path (queue/worker).
 * Every mutating action goes through existing domain use cases + authz + audit.
 * Idempotency keys required for sends and posts.
-* First vertical: **collections** (overdue → prioritize → draft reminder → L3 confirm or L4 policy send).
-* Record outcomes (sent, paid, dismissed, failed) so learning has a place to land.
+* First vertical: **collections** (overdue → prioritize → draft reminder → L3 confirm or L4 policy send). Implemented as `collections.remind` (spec `10`): in-app only; share channel is spec `15`.
+* Expansions (spec `11`): `quotations.followup` (idle SENT/ACCEPTED → attention + L1/L2 in-app draft, no email), `inventory.reorder` (StockLow → L1 recommend / L2 draft purchase inputs, **never** auto-post), `expenses.anomaly` (amount vs recent category average → attention + inform/recommend, no recategorize/post).
+* Record outcomes (sent, paid, dismissed, failed, follow-up proposed, reorder prepared, expense flagged) so learning has a place to land.
 
 Workflow primitives may live in `modules/workflows/` / automation boundaries; they must not post journals or stock directly.
+
+## Implemented Path (spec `09`)
+
+```text
+outbox event
+    ↓
+automation consumer          enqueue WorkflowRun (idempotent tenantId+key)
+    ↓
+processDueWorkflowRuns       claim PENDING/RETRY (tenant concurrency key)
+    ↓
+EVENT → CONDITION → REASONING → ACTION → RESULT → OUTCOME
+    ↓
+evaluateL4Autonomy           required before mode=execute (L4 only)
+    ↓
+domain use case              never journals/stock from the runner
+    ↓
+AutomationOutcome            SUCCEEDED / FAILED / SKIPPED
+```
+
+```text
+modules/workflows/           definitions, runner, job rows, metrics stubs
+workflow_runs                PostgreSQL job table (retries / backoff / dead-letter)
+collections.remind           first vertical (spec 10): overdue → draft → L3/L4 send
+quotations.followup          idle quote attention + in-app follow-up draft (no email)
+inventory.reorder            low stock → prepare purchase inputs (never posts)
+expenses.anomaly             unusual expense → attention inform/recommend
+proof.noop                   dry-run on AttentionDismissed (no money mutation)
+registerWorkflow             plugin point for later verticals
+```
+
+Default worker pass (`runOutboxProcessing` / `/api/internal/outbox/process`) fans out consumers, runs the overdue scan (notifications + AttentionQueue rebuild + `InvoiceOverdue` / `QuotationIdle` / `StockLow` catalog events), then processes due runs. Collections uses existing `send_payment_reminders` (in-app): L4 send when tenant policy allows; otherwise it drafts (`REMINDER_PROPOSED`) and leaves Confirm on Needs attention. Daily idempotency keys plus a 7-day `REMINDER_SENT` cooldown prevent reminder spam. Expansion workflows are prepare/inform only (`mode: "dry_run"`): they never post purchases or expenses, and L4 money-post classes stay absent from autonomy policy. Chat/HMAC L3 is unchanged. Settings → Recent automations lists recent runs. `GET /api/business-state/outcomes` lists reminder learning outcomes (`report:read`).
 
 ---
 
@@ -1055,10 +1087,12 @@ Raw SQL
 Database
 ```
 
-## Implemented Path (specs `27`, `28`)
+## Implemented Path (specs `27`, `28`, `07`)
 
 ```text
 app/api/assistant/chat                     AI SDK streamText transport (Gemini via @ai-sdk/google)
+modules/ai/application/assemble-assistant-context.ts
+                                           identity + BusinessState/Attention summary
 lib/ai/model.ts                            language model + stub-mode resolution
 lib/ai/assistant-sdk-tools.ts              SDK tool() wrappers → runAiToolCall / pending actions
 modules/ai/application/tools/registry.ts   the tool registry
@@ -1069,17 +1103,17 @@ app/api/assistant/actions/confirm          run a confirmed action
 components/shell/assistant-launcher.tsx    top-bar sheet (only UI entry point)
 ```
 
-`executeAiTool` is the only way to run a tool. In order it rejects model-supplied identity fields, requires an authenticated user and a tenant resolved on the server, checks the tool's declared permission against the membership role, refuses a confirmation-required tool that has not been confirmed, validates input with Zod, runs the tool, validates output with Zod, and audits the outcome as `ai.tool.invoked` on the `ai_tool` resource.
+`executeAiTool` is the only way to run a tool. In order it rejects model-supplied identity fields, requires an authenticated user and a tenant resolved on the server, checks the tool's declared permission against the membership role, refuses a confirmation-required tool that has not been confirmed (unless a trusted caller sets `autonomyAttempt: "L4"` and tenant policy allows the action class under threshold), validates input with Zod, runs the tool, validates output with Zod, and audits the outcome as `ai.tool.invoked` on the `ai_tool` resource.
 
 Tools receive repositories through `AiToolContext`; they never import the Prisma client. The model never sees a tenant id, user id, role, or permission as an input field.
 
 The AI SDK is confined to `app/api/assistant/chat`, `lib/ai/model.ts`, `lib/ai/assistant-sdk-tools.ts`, and the client `useChat` hook. `modules/ai/domain` and tool implementations must not import `ai` or `@ai-sdk/*`. Hand-rolled `complete()` provider adapters are not used.
 
-The chat route imports no Prisma client and no business repository: every figure it returns came from a registered tool. Provider and configuration failures are converted by `describeAssistantFailure` into an assistant error state and never propagate into shell or page rendering (invariant 33).
+The chat route imports no Prisma client and no business repository: BusinessState summaries are assembled through application APIs on the tool context, and every verified figure it returns came from a registered tool. Provider and configuration failures are converted by `describeAssistantFailure` into an assistant error state and never propagate into shell or page rendering (invariant 33).
 
 ## Facts and Recommendations
 
-Business facts shown by the assistant are produced only by `factsFromToolResult`, from schema-validated tool output, and each one carries the tool that produced it. Streaming chat emits those facts as typed data parts alongside model text. Model prose has no path into the facts band.
+Business facts shown by the assistant are produced only by `factsFromToolResult`, from schema-validated tool output, and each one carries the tool that produced it. Streaming chat emits those facts as typed data parts alongside model text. Model prose has no path into the facts band. The assistant UI labels **Verified** (facts), **Analysis** (model prose), and **Recommend** (RECOMMENDATION lines / prepare chips) so they stay distinct.
 
 ## Confirmation Gate
 
@@ -1130,6 +1164,7 @@ get_overdue_invoices        invoice:read
 get_low_stock_products      product:read
 get_business_metrics        report:read
 get_cash_position           report:read   ledger cash/bank only
+explain_period_movement     report:read   current vs previous period deltas
 ```
 
 ## Action Tools
@@ -1148,7 +1183,7 @@ generate_payment_reminder()
 Registered action tools (spec `28`):
 
 ```text
-send_payment_reminders      invoice:update      confirmation required
+send_payment_reminders      invoice:update      L3 confirm; L4 only if policy enables + under threshold
 ```
 
 Every action tool must:
@@ -1204,6 +1239,20 @@ Create / post invoice → L3 (never silent L4 for posting in early Post-MVP)
 Approve large payment → Human approval required
 ```
 
+## Implemented Path (spec `08`)
+
+```text
+tenant_autonomy_policies          1:1 Business; missing row = L4 off
+getAutonomyPolicy / updateAutonomyPolicy
+                                  OWNER/ADMIN via settings:update; changes audited
+evaluateL4Autonomy                fail-closed: class + threshold + not disabled
+executeAiTool                     L4 only when autonomyAttempt is "L4"
+runConfirmedAiAction              still HMAC L3; does not set autonomyAttempt
+send_payment_reminders            declared L3 + actionClass payment_reminder
+```
+
+Settings → Autonomy edits reminder L4 enablement and amount ceilings. Chat still proposes Confirm. Invoice, purchase, and expense posting are not allowed L4 classes.
+
 ---
 
 # AI Context Assembly
@@ -1218,6 +1267,22 @@ Prefer this order when building model context:
 ```
 
 Avoid dumping raw multi-table query results into the prompt. Facts shown to users remain tool/domain-built, never model prose.
+
+## Implemented Path (spec `07`)
+
+```text
+AI_SYSTEM_POLICY (trusted)
+    ↓
+Execution identity note (no tenant/user/role identifiers)
+    ↓
+Fenced BusinessState / Attention summary (derived, untrusted; counts/titles only)
+    ↓
+Typed tool results (schema-validated, fenced)
+    ↓
+Sanitized user/assistant conversation
+```
+
+`assembleAssistantContext` loads projections and open attention through BusinessState APIs on the trusted tool context (`report:read`). It omits projection money so the model cannot treat derived cash/AR as ledger truth. Diagnostic “why” answers use `explain_period_movement` (application-computed deltas). Suggested prepare actions reuse the signed `send_payment_reminders` confirm path.
 
 ---
 

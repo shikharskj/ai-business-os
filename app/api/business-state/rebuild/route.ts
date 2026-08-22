@@ -34,6 +34,7 @@ export async function POST() {
       payments: deps.payments,
       catalog: deps.catalog,
       inventory: deps.inventory,
+      expenses: deps.expenses,
       accounts: deps.accounts,
       journals: deps.journals,
       projections: deps.projections,

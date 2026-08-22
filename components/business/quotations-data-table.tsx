@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 
+import { formatDisplayDate } from "@/components/business/inventory-labels";
 import { MoneyDisplay } from "@/components/business/money-display";
 import { StatusBadge } from "@/components/business/status-badge";
 import {
@@ -36,8 +37,29 @@ const columns: ColumnDef<DataTableFeatures, Quotation>[] = [
       </Link>
     ),
   },
-  { accessorKey: "customerName", header: "Customer" },
-  { accessorKey: "issuedOn", header: "Date" },
+  {
+    accessorKey: "customerName",
+    header: "Customer",
+    cell: ({ row }) => (
+      <Link
+        href={`/app/sales/customers/${row.original.customerId}`}
+        className="font-medium hover:underline"
+      >
+        {row.original.customerName}
+      </Link>
+    ),
+  },
+  {
+    accessorKey: "issuedOn",
+    header: "Date",
+    cell: ({ row }) => formatDisplayDate(row.original.issuedOn),
+  },
+  {
+    id: "validUntil",
+    header: "Valid until",
+    cell: ({ row }) =>
+      row.original.validUntil ? formatDisplayDate(row.original.validUntil) : "—",
+  },
   {
     id: "amount",
     header: () => <span className="block text-right">Amount</span>,
@@ -77,6 +99,7 @@ export function QuotationsDataTable({
       total={total}
       buildHref={buildHref}
       listKey="quotations"
+      enableReorder={false}
     />
   );
 }

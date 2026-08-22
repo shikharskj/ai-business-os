@@ -19,11 +19,19 @@ export type AiAssistantFact = {
   href: string | null;
 };
 
-/** Contextual navigation chip. Never a mutation. */
-export type AiAssistantSuggestion = {
-  label: string;
-  href: string;
-};
+/** Contextual navigation or prepare chip. Never a free-form mutation. */
+export type AiAssistantSuggestion =
+  | {
+      kind: "navigate";
+      label: string;
+      href: string;
+    }
+  | {
+      kind: "prepare";
+      label: string;
+      cue: "prepare";
+      pendingAction: AiAssistantPendingAction & { token: string };
+    };
 
 /** One tool run that produced facts, with the audit record it wrote. */
 export type AiAssistantSource = {

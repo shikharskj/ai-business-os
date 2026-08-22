@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { QuotationsDataTable } from "@/components/business/quotations-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
+import { ListFilterClear } from "@/components/shell/list-filter-clear";
 import { DatePicker } from "@/components/date-picker";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export default async function QuotationsPage({
   searchParams: Promise<{
     q?: string;
     status?: string;
+    customerId?: string;
     from?: string;
     to?: string;
     page?: string;
@@ -39,17 +41,19 @@ export default async function QuotationsPage({
   const parseResult = quotationSearchSchema.safeParse({
     q: params.q,
     status: params.status,
+    customerId: params.customerId,
     from: params.from || undefined,
     to: params.to || undefined,
   });
   const filters = parseResult.success
     ? parseResult.data
-    : { q: "", status: "ALL" as const, from: undefined, to: undefined };
+    : { q: "", status: "ALL" as const, customerId: undefined, from: undefined, to: undefined };
   const canCreate = roleHasPermission(tenant.membership.role, "quotation:create");
   const result = await listQuotationsPage({
     tenantId: tenant.tenantId,
     query: filters.q,
     status: filters.status,
+    customerId: filters.customerId,
     fromDate: filters.from ? businessDate(filters.from) : undefined,
     toDate: filters.to ? businessDate(filters.to) : undefined,
     page,
@@ -57,7 +61,7 @@ export default async function QuotationsPage({
     sales: prismaSalesRepository,
   });
   const hasFilters = Boolean(
-    filters.q || filters.status !== "ALL" || filters.from || filters.to
+    filters.q || filters.status !== "ALL" || filters.customerId || filters.from || filters.to
   );
   const queryString = toQueryString(params);
 
@@ -82,6 +86,9 @@ export default async function QuotationsPage({
       <form className="flex flex-wrap items-end gap-3" method="get">
         {pageSize !== 10 ? (
           <input type="hidden" name="pageSize" value={pageSize} />
+        ) : null}
+        {filters.customerId ? (
+          <input type="hidden" name="customerId" value={filters.customerId} />
         ) : null}
         <div className="flex min-w-56 flex-1 flex-col gap-2">
           <label htmlFor="q" className="text-base font-medium">
@@ -150,6 +157,7 @@ export default async function QuotationsPage({
         <Button type="submit" variant="outline">
           Filter
         </Button>
+        {hasFilters ? <ListFilterClear href="/app/sales/quotations" /> : null}
       </form>
 
       {result.total === 0 ? (

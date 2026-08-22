@@ -13,8 +13,7 @@ import { MoneyDisplay } from "@/components/business/money-display";
 import { InvoiceStatusActions } from "@/components/business/invoice-status-actions";
 import { StatusBadge } from "@/components/business/status-badge";
 import {
-  INVOICE_STATUS_LABELS,
-  INVOICE_STATUS_TONES,
+  invoicePaymentBadgePresentation,
 } from "@/components/business/status-tone";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -46,9 +45,11 @@ import {
   buildInvoiceDocumentView,
   getInvoice,
   InvoiceNotFoundError,
+  isInvoiceOverdue,
   isReceivableInvoiceStatus,
   paymentStatusLabel,
 } from "@/modules/sales";
+import { businessDate, todayInTimezone } from "@/modules/shared-kernel/dates";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
 import { businessLogoUrl } from "@/modules/tenant";
 
@@ -59,7 +60,7 @@ export default async function InvoiceDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string }>;
+  searchParams: Promise<{ saved?: string; locked?: string }>;
 }) {
   const tenant = await authorize("invoice:read");
   const { id } = await params;
@@ -137,6 +138,16 @@ export default async function InvoiceDetailPage({
   const showReceivableSummary =
     outstanding != null && isReceivableInvoiceStatus(invoice.status);
   const recordPaymentHref = `/app/sales/payments/new?customerId=${invoice.customerId}&invoiceId=${invoice.id}`;
+  const asOf = businessDate(todayInTimezone(tenant.business.timezone));
+  const isOverdue =
+    outstanding != null &&
+    isInvoiceOverdue({
+      dueOn: invoice.dueOn,
+      status: invoice.status,
+      outstandingMinor: outstanding.outstanding.amountMinor,
+      asOf,
+    });
+  const paymentBadge = invoicePaymentBadgePresentation(invoice.status);
 
   return (
     <div className="mx-auto flex w-full flex-1 flex-col gap-6">
@@ -156,9 +167,7 @@ export default async function InvoiceDetailPage({
         }
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <StatusBadge tone={INVOICE_STATUS_TONES[invoice.status]}>
-              {INVOICE_STATUS_LABELS[invoice.status]}
-            </StatusBadge>
+            <StatusBadge tone={paymentBadge.tone}>{paymentBadge.label}</StatusBadge>
             <Button
               nativeButton={false}
               variant="outline"
@@ -191,10 +200,17 @@ export default async function InvoiceDetailPage({
               canUpdate={canUpdate}
               canCancel={canCancel}
               canRead={canRead}
+              exportInMenu={canRecordPayment}
             />
           </div>
         }
       />
+
+      {query.locked ? (
+        <p className="text-base text-muted-foreground">
+          Posted invoices cannot be edited. Use a credit note to correct amounts after posting.
+        </p>
+      ) : null}
 
       {query.saved ? (
         <p className="text-base text-muted-foreground">
@@ -254,7 +270,12 @@ export default async function InvoiceDetailPage({
                 </p>
                 <p className="flex items-center justify-between">
                   <span className="text-muted-foreground">Due date </span>
-                  {invoice.dueOn ? formatDisplayDate(invoice.dueOn) : "—"}
+                  <span className="flex items-center gap-2">
+                    {invoice.dueOn ? formatDisplayDate(invoice.dueOn) : "—"}
+                    {isOverdue ? (
+                      <StatusBadge tone="warning">Overdue</StatusBadge>
+                    ) : null}
+                  </span>
                 </p>
                 <p className="flex items-center justify-between">
                   <span className="text-muted-foreground">
@@ -308,6 +329,7 @@ export default async function InvoiceDetailPage({
                     <TableHead className="text-right">Qty</TableHead>
                     <TableHead className="text-right">Rate</TableHead>
                     <TableHead className="text-right">Discount</TableHead>
+                    <TableHead className="text-right">Tax rate</TableHead>
                     <TableHead className="text-right">Tax</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
@@ -330,6 +352,9 @@ export default async function InvoiceDetailPage({
                       </TableCell>
                       <TableCell className="text-right">
                         <MoneyDisplay value={line.discount} />
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {(line.taxRateBps / 100).toFixed(2)}%
                       </TableCell>
                       <TableCell className="text-right">
                         <MoneyDisplay value={line.totalTax} />

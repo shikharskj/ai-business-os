@@ -1,4 +1,5 @@
 import type { CatalogRepository } from "@/modules/catalog";
+import type { ExpenseRepository } from "@/modules/expenses";
 import {
   listLowStockProducts,
   parseLowStockThreshold,
@@ -49,6 +50,7 @@ export type RebuildBusinessStateDeps = {
   payments: PaymentRepository;
   catalog: CatalogRepository;
   inventory: InventoryRepository;
+  expenses: ExpenseRepository;
   accounts: AccountRepository;
   journals: JournalRepository;
   projections: BusinessStateProjectionRepository;
@@ -257,6 +259,7 @@ export async function rebuildBusinessStateProjections(
       payments: input.payments,
       catalog: input.catalog,
       inventory: input.inventory,
+      expenses: input.expenses,
     });
   }
 

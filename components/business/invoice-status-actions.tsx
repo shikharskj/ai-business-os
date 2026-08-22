@@ -1,5 +1,6 @@
 "use client";
 
+import { MoreHorizontal } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import {
@@ -8,6 +9,12 @@ import {
   postInvoiceAction,
 } from "@/app/app/(workspace)/sales/invoices/actions";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { isPostedInvoiceStatus } from "@/modules/sales/domain/invoice-status";
 import type { SalesInvoiceStatus } from "@/modules/sales/domain/types";
 
@@ -17,12 +24,15 @@ export function InvoiceStatusActions({
   canUpdate,
   canCancel,
   canRead,
+  exportInMenu = false,
 }: {
   invoiceId: string;
   status: SalesInvoiceStatus;
   canUpdate: boolean;
   canCancel: boolean;
   canRead: boolean;
+  /** When true, Export PDF lives in the overflow menu (e.g. Record payment is primary). */
+  exportInMenu?: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -42,7 +52,11 @@ export function InvoiceStatusActions({
         return;
       }
       if (result.documentId) {
-        const opened = window.open(`/api/documents/${result.documentId}`, "_blank", "noopener,noreferrer");
+        const opened = window.open(
+          `/api/documents/${result.documentId}`,
+          "_blank",
+          "noopener,noreferrer"
+        );
         if (!opened) {
           setError("Popup blocked. Please allow popups to open the PDF.");
         }
@@ -53,10 +67,30 @@ export function InvoiceStatusActions({
     });
   }
 
+  const showPost = canUpdate && status === "DRAFT";
+  const showExport = canRead && isPostedInvoiceStatus(status);
+  const showCancel = canCancel && status === "DRAFT";
+  const menuItems = [
+    showExport && exportInMenu
+      ? { key: "export", label: "Export PDF", action: () => run(null, exportInvoicePdfAction) }
+      : null,
+    showCancel
+      ? {
+          key: "cancel",
+          label: "Cancel draft",
+          action: () =>
+            run(
+              "Cancel this draft invoice? It will remain in your list as cancelled. Stock and accounts are not affected.",
+              cancelInvoiceAction
+            ),
+        }
+      : null,
+  ].filter(Boolean) as { key: string; label: string; action: () => void }[];
+
   return (
     <div className="flex flex-col items-end gap-2">
-      <div className="flex flex-wrap justify-end gap-2">
-        {canUpdate && status === "DRAFT" ? (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {showPost ? (
           <Button
             type="button"
             disabled={isPending}
@@ -70,7 +104,7 @@ export function InvoiceStatusActions({
             Post invoice
           </Button>
         ) : null}
-        {canRead && isPostedInvoiceStatus(status) ? (
+        {showExport && !exportInMenu ? (
           <Button
             type="button"
             variant="outline"
@@ -80,20 +114,23 @@ export function InvoiceStatusActions({
             Export PDF
           </Button>
         ) : null}
-        {canCancel && status === "DRAFT" ? (
-          <Button
-            type="button"
-            variant="destructive"
-            disabled={isPending}
-            onClick={() =>
-              run(
-                "Cancel this draft invoice? It will remain in your list as cancelled. Stock and accounts are not affected.",
-                cancelInvoiceAction
-              )
-            }
-          >
-            Cancel draft
-          </Button>
+        {menuItems.length > 0 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button type="button" variant="outline" disabled={isPending} aria-label="More actions">
+                  <MoreHorizontal className="size-5" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              {menuItems.map((item) => (
+                <DropdownMenuItem key={item.key} onClick={item.action}>
+                  {item.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : null}
       </div>
       {error ? (

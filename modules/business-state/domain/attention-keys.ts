@@ -12,6 +12,28 @@ export function idleQuotationNaturalKey(quotationId: string): string {
   return `idle-quotation:${quotationId}`;
 }
 
+export function unusualExpenseNaturalKey(expenseId: string): string {
+  return `unusual-expense:${expenseId}`;
+}
+
+export function quotationFollowUpProposedIdempotencyKey(
+  quotationId: string,
+  asOf: string
+): string {
+  return `quotation-follow-up-proposed:${quotationId}:${asOf}`;
+}
+
+export function reorderPreparedIdempotencyKey(
+  productId: string,
+  asOf: string
+): string {
+  return `reorder-prepared:${productId}:${asOf}`;
+}
+
+export function expenseAnomalyFlaggedIdempotencyKey(expenseId: string): string {
+  return `expense-anomaly-flagged:${expenseId}`;
+}
+
 export function attentionFactId(
   type: AttentionItemType,
   resourceId: string

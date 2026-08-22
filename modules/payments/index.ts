@@ -60,6 +60,7 @@ export {
   getInvoiceOutstanding,
   listOpenReceivableInvoices,
   getCustomerOutstanding,
+  outstandingByCustomerIds,
 } from "@/modules/payments/application/queries";
 export {
   getSupplierPayment,

@@ -2,22 +2,42 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { DeactivateCustomerButton } from "@/components/business/deactivate-customer-button";
+import { formatDisplayDate } from "@/components/business/inventory-labels";
 import { MoneyDisplay } from "@/components/business/money-display";
+import { ReactivateCustomerButton } from "@/components/business/reactivate-customer-button";
 import { StatusBadge } from "@/components/business/status-badge";
 import {
+  invoicePaymentBadgePresentation,
   PARTY_STATUS_LABELS,
   PARTY_STATUS_TONES,
+  QUOTATION_STATUS_LABELS,
+  QUOTATION_STATUS_TONES,
 } from "@/components/business/status-tone";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
 import { getCustomer, PartyNotFoundError } from "@/modules/party";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
-import { getCustomerOutstanding } from "@/modules/payments";
+import {
+  getCustomerOutstanding,
+  listPaymentsPage,
+  PAYMENT_METHOD_LABELS,
+} from "@/modules/payments";
 import { prismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
+import { listInvoices, listQuotations } from "@/modules/sales";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
+
+const RELATED_LIMIT = 10;
 
 function gstLabel(status: string): string {
   if (status === "REGISTERED") return "Registered";
@@ -36,6 +56,8 @@ export default async function CustomerDetailPage({
   const { id } = await params;
   const query = await searchParams;
   const canUpdate = roleHasPermission(tenant.membership.role, "customer:update");
+  const canCreateInvoice = roleHasPermission(tenant.membership.role, "invoice:create");
+  const canCreatePayment = roleHasPermission(tenant.membership.role, "payment:create");
 
   let customer;
   try {
@@ -68,13 +90,41 @@ export default async function CustomerDetailPage({
     payments: prismaPaymentRepository,
   });
 
+  const [invoices, quotations, paymentsPage] = await Promise.all([
+    listInvoices({
+      tenantId: tenant.tenantId,
+      customerId: customer.id,
+      sales: prismaSalesRepository,
+    }),
+    listQuotations({
+      tenantId: tenant.tenantId,
+      customerId: customer.id,
+      sales: prismaSalesRepository,
+    }),
+    listPaymentsPage({
+      tenantId: tenant.tenantId,
+      customerId: customer.id,
+      page: 1,
+      pageSize: RELATED_LIMIT,
+      payments: prismaPaymentRepository,
+    }),
+  ]);
+
+  const recentInvoices = invoices.slice(0, RELATED_LIMIT);
+  const recentQuotations = quotations.slice(0, RELATED_LIMIT);
+  const canRecordPayment =
+    canCreatePayment && outstanding.outstanding.amountMinor > 0n;
+
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
       <PageHeader
         title={customer.name}
-        description="Customer profile"
+        description="Customer profile and sales history"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <StatusBadge tone={PARTY_STATUS_TONES[customer.status]}>
+              {PARTY_STATUS_LABELS[customer.status]}
+            </StatusBadge>
             <Button
               nativeButton={false}
               variant="outline"
@@ -82,12 +132,35 @@ export default async function CustomerDetailPage({
             >
               Back
             </Button>
+            {canCreateInvoice && customer.status === "ACTIVE" ? (
+              <Button
+                nativeButton={false}
+                variant="outline"
+                render={<Link href="/app/sales/invoices/new" />}
+              >
+                New invoice
+              </Button>
+            ) : null}
+            {canRecordPayment ? (
+              <Button
+                nativeButton={false}
+                render={
+                  <Link
+                    href={`/app/sales/payments/new?customerId=${customer.id}`}
+                  />
+                }
+              >
+                Record payment
+              </Button>
+            ) : null}
             {canUpdate && customer.status === "ACTIVE" ? (
               <>
                 <Button
                   nativeButton={false}
                   variant="outline"
-                  render={<Link href={`/app/sales/customers/${customer.id}/edit`} />}
+                  render={
+                    <Link href={`/app/sales/customers/${customer.id}/edit`} />
+                  }
                 >
                   Edit
                 </Button>
@@ -97,6 +170,12 @@ export default async function CustomerDetailPage({
                 />
               </>
             ) : null}
+            {canUpdate && customer.status === "INACTIVE" ? (
+              <ReactivateCustomerButton
+                customerId={customer.id}
+                customerName={customer.name}
+              />
+            ) : null}
           </div>
         }
       />
@@ -104,12 +183,6 @@ export default async function CustomerDetailPage({
       {query.saved ? (
         <p className="text-base text-muted-foreground">Customer saved.</p>
       ) : null}
-
-      <div className="flex items-center gap-2">
-        <StatusBadge tone={PARTY_STATUS_TONES[customer.status]}>
-          {PARTY_STATUS_LABELS[customer.status]}
-        </StatusBadge>
-      </div>
 
       <Card>
         <CardHeader>
@@ -157,6 +230,168 @@ export default async function CustomerDetailPage({
             <p className="text-muted-foreground">Billing address</p>
             <p className="whitespace-pre-line">{address || "—"}</p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="p-0">
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle>Recent invoices</CardTitle>
+          {invoices.length > RELATED_LIMIT ? (
+            <Link
+              href={`/app/sales/invoices?customerId=${customer.id}`}
+              className="text-sm font-medium hover:underline"
+            >
+              View all
+            </Link>
+          ) : null}
+        </CardHeader>
+        <CardContent className="px-0 pb-0">
+          {recentInvoices.length === 0 ? (
+            <p className="px-6 pb-6 text-base text-muted-foreground">
+              No invoices yet.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Number</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentInvoices.map((invoice) => {
+                  const badge = invoicePaymentBadgePresentation(invoice.status);
+                  return (
+                    <TableRow key={invoice.id}>
+                      <TableCell>
+                        <Link
+                          href={`/app/sales/invoices/${invoice.id}`}
+                          className="font-mono text-sm font-medium hover:underline"
+                        >
+                          {invoice.number}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{formatDisplayDate(invoice.issuedOn)}</TableCell>
+                      <TableCell className="text-right">
+                        <MoneyDisplay value={invoice.grandTotal} />
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="p-0">
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle>Recent quotations</CardTitle>
+          {quotations.length > RELATED_LIMIT ? (
+            <Link
+              href={`/app/sales/quotations?customerId=${customer.id}`}
+              className="text-sm font-medium hover:underline"
+            >
+              View all
+            </Link>
+          ) : null}
+        </CardHeader>
+        <CardContent className="px-0 pb-0">
+          {recentQuotations.length === 0 ? (
+            <p className="px-6 pb-6 text-base text-muted-foreground">
+              No quotations yet.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Number</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentQuotations.map((quotation) => (
+                  <TableRow key={quotation.id}>
+                    <TableCell>
+                      <Link
+                        href={`/app/sales/quotations/${quotation.id}`}
+                        className="font-mono text-sm font-medium hover:underline"
+                      >
+                        {quotation.number}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{formatDisplayDate(quotation.issuedOn)}</TableCell>
+                    <TableCell className="text-right">
+                      <MoneyDisplay value={quotation.grandTotal} />
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge tone={QUOTATION_STATUS_TONES[quotation.status]}>
+                        {QUOTATION_STATUS_LABELS[quotation.status]}
+                      </StatusBadge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="p-0">
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle>Recent payments</CardTitle>
+          {paymentsPage.total > RELATED_LIMIT ? (
+            <Link
+              href={`/app/sales/payments?customerId=${customer.id}`}
+              className="text-sm font-medium hover:underline"
+            >
+              View all
+            </Link>
+          ) : null}
+        </CardHeader>
+        <CardContent className="px-0 pb-0">
+          {paymentsPage.items.length === 0 ? (
+            <p className="px-6 pb-6 text-base text-muted-foreground">
+              No payments yet.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Receipt</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Method</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paymentsPage.items.map((payment) => (
+                  <TableRow key={payment.id}>
+                    <TableCell>
+                      <Link
+                        href={`/app/sales/payments/${payment.id}`}
+                        className="font-mono text-sm font-medium hover:underline"
+                      >
+                        {payment.number}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{formatDisplayDate(payment.receivedOn)}</TableCell>
+                    <TableCell>{PAYMENT_METHOD_LABELS[payment.method]}</TableCell>
+                    <TableCell className="text-right">
+                      <MoneyDisplay value={payment.amount} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

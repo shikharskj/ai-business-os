@@ -1,16 +1,29 @@
 import type { Money } from "@/modules/shared-kernel/money";
 import type { BusinessDate } from "@/modules/shared-kernel/dates";
 
-export const BUSINESS_STATE_SCHEMA_VERSION = 3;
+export const BUSINESS_STATE_SCHEMA_VERSION = 4;
 
 export const SALES_MOMENTUM_WINDOW_DAYS = 30;
 
 export const IDLE_QUOTATION_DAYS = 7;
 
+/** Lookback used to compute a category average for unusual expenses. */
+export const EXPENSE_ANOMALY_LOOKBACK_DAYS = 90;
+
+/** Prior same-category expenses required before an amount can be unusual. */
+export const EXPENSE_ANOMALY_MIN_SAMPLES = 3;
+
+/** Flag when grand total is at least this many times the category average. */
+export const EXPENSE_ANOMALY_MULTIPLIER = 2;
+
+/** How long an unusual expense stays on the queue after it was incurred. */
+export const EXPENSE_ANOMALY_SURFACE_DAYS = 14;
+
 export const ATTENTION_ITEM_TYPES = [
   "OVERDUE_RECEIVABLE",
   "LOW_STOCK",
   "IDLE_QUOTATION",
+  "UNUSUAL_EXPENSE",
 ] as const;
 
 export type AttentionItemType = (typeof ATTENTION_ITEM_TYPES)[number];
@@ -24,6 +37,12 @@ export const AUTOMATION_OUTCOME_KINDS = [
   "REMINDER_PROPOSED",
   "REMINDER_SENT",
   "PAID_AFTER_REMINDER",
+  "QUOTATION_FOLLOW_UP_PROPOSED",
+  "REORDER_PREPARED",
+  "EXPENSE_ANOMALY_FLAGGED",
+  "AUTOMATION_SUCCEEDED",
+  "AUTOMATION_FAILED",
+  "AUTOMATION_SKIPPED",
 ] as const;
 
 export type AutomationOutcomeKind = (typeof AUTOMATION_OUTCOME_KINDS)[number];
@@ -32,6 +51,7 @@ export const ATTENTION_SEVERITY = {
   OVERDUE_RECEIVABLE_BASE: 80,
   OVERDUE_RECEIVABLE_DAY_CAP: 19,
   LOW_STOCK: 50,
+  UNUSUAL_EXPENSE: 40,
   IDLE_QUOTATION: 30,
 } as const;
 

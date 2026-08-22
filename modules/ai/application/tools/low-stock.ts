@@ -11,6 +11,7 @@ export const lowStockTool = defineAiTool({
     "Inventory-tracked products at or below the business low-stock threshold, with their current quantity.",
   category: "read",
   permission: "product:read",
+  autonomyLevel: "L0",
   inputSchema: lowStockInputSchema,
   outputSchema: lowStockOutputSchema,
   async execute(input, context) {

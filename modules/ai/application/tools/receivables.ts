@@ -22,6 +22,7 @@ export const receivablesTool = defineAiTool({
     "Money customers currently owe the business, grouped by customer with the largest balance first. Optionally scoped to one customer.",
   category: "read",
   permission: "report:read",
+  autonomyLevel: "L0",
   inputSchema: receivablesInputSchema,
   outputSchema: receivablesOutputSchema,
   async execute(input, context) {

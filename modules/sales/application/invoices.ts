@@ -398,6 +398,9 @@ export async function listInvoicesPage(input: {
   tenantId: string;
   query?: string;
   status?: SalesInvoiceStatus | "ALL";
+  customerId?: string;
+  due?: InvoiceListFilter["due"];
+  overdueAsOf?: InvoiceListFilter["overdueAsOf"];
   fromDate?: InvoiceListFilter["fromDate"];
   toDate?: InvoiceListFilter["toDate"];
   page: number;
@@ -408,6 +411,9 @@ export async function listInvoicesPage(input: {
     tenantId: input.tenantId,
     query: input.query,
     status: input.status,
+    customerId: input.customerId,
+    due: input.due,
+    overdueAsOf: input.overdueAsOf,
     fromDate: input.fromDate,
     toDate: input.toDate,
     page: input.page,
@@ -419,12 +425,22 @@ export async function listInvoices(input: {
   tenantId: string;
   query?: string;
   status?: SalesInvoiceStatus | "ALL";
+  customerId?: string;
+  customerIds?: readonly string[];
+  statuses?: readonly SalesInvoiceStatus[];
+  due?: InvoiceListFilter["due"];
+  overdueAsOf?: InvoiceListFilter["overdueAsOf"];
   sales: SalesRepository;
 }): Promise<SalesInvoice[]> {
   const filter: InvoiceListFilter = {
     tenantId: input.tenantId,
     query: input.query,
     status: input.status,
+    customerId: input.customerId,
+    customerIds: input.customerIds,
+    statuses: input.statuses,
+    due: input.due,
+    overdueAsOf: input.overdueAsOf,
   };
   return input.sales.listInvoices(filter);
 }

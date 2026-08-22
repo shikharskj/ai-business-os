@@ -63,3 +63,18 @@ export function paymentStatusLabel(status: SalesInvoiceStatus): string {
   if (status === "POSTED" || status === "UNPAID") return "Unpaid";
   return status;
 }
+
+export function isInvoiceOverdue(input: {
+  dueOn: string | null;
+  status: SalesInvoiceStatus;
+  outstandingMinor: bigint;
+  asOf: string;
+}): boolean {
+  if (!input.dueOn || !isReceivableInvoiceStatus(input.status)) {
+    return false;
+  }
+  if (input.outstandingMinor <= 0n) {
+    return false;
+  }
+  return input.dueOn < input.asOf;
+}

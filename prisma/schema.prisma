@@ -110,8 +110,25 @@ model Business {
   cashPositionState CashPositionState?
   attentionItems AttentionItem[]
   automationOutcomes AutomationOutcome[]
+  autonomyPolicy TenantAutonomyPolicy?
+  workflowRuns WorkflowRun[]
 
   @@map("businesses")
+}
+
+/// Per-tenant L0–L4 autonomy configuration. Missing row = L4 off (empty allow-list).
+model TenantAutonomyPolicy {
+  tenantId                 String   @id
+  allowedActionClasses     String[] @default([])
+  amountThresholds         Json     @default("{}")
+  requireConfirmationAbove Json     @default("{}")
+  disabledAutomations      String[] @default([])
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_autonomy_policies")
 }
 
 model ListRowOrder {
@@ -331,6 +348,41 @@ model AutomationOutcome {
   @@index([tenantId, kind, recordedAt])
   @@index([tenantId, resourceType, resourceId])
   @@map("automation_outcomes")
+}
+
+/// Automation runtime job row. The runner never posts journals or stock.
+model WorkflowRun {
+  id               String    @id @default(uuid())
+  tenantId         String
+  workflowId       String
+  triggerEventId   String
+  triggerEventType String
+  aggregateType    String
+  aggregateId      String
+  triggerPayload   Json      @default("{}")
+  idempotencyKey   String
+  concurrencyKey   String
+  status           String
+  currentStep      String    @default("EVENT")
+  attemptCount     Int       @default(0)
+  maxAttempts      Int       @default(5)
+  nextAttemptAt    DateTime  @default(now())
+  lastError        String?
+  result           Json      @default("{}")
+  outcomeKind      String?
+  correlationId    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  startedAt        DateTime?
+  completedAt      DateTime?
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([status, nextAttemptAt])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, concurrencyKey, status])
+  @@map("workflow_runs")
 }
 
 model Notification {

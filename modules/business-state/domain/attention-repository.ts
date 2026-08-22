@@ -32,8 +32,10 @@ export type RecordAutomationOutcomeInput = {
 export type ListAutomationOutcomesFilter = {
   tenantId: string;
   kind?: AutomationOutcomeKind;
+  kinds?: AutomationOutcomeKind[];
   resourceType?: string;
   resourceIds?: string[];
+  recordedAfter?: Date;
 };
 
 export type AttentionQueueRepository = {

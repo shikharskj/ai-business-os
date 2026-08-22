@@ -38,6 +38,10 @@ export type PartyRepository = {
     tenantId: string,
     customerId: string
   ): Promise<Customer | null>;
+  reactivateCustomer(
+    tenantId: string,
+    customerId: string
+  ): Promise<Customer | null>;
   createSupplier(input: {
     tenantId: string;
     fields: SupplierInput;
@@ -197,6 +201,19 @@ export function createMemoryPartyRepository(
       const updated = asCustomer({
         ...records[index]!,
         status: "INACTIVE",
+        updatedAt: new Date(),
+      });
+      records[index] = updated;
+      return updated;
+    },
+    async reactivateCustomer(tenantId, customerId) {
+      const index = findIndex(tenantId, customerId, "CUSTOMER");
+      if (index === -1) {
+        return null;
+      }
+      const updated = asCustomer({
+        ...records[index]!,
+        status: "ACTIVE",
         updatedAt: new Date(),
       });
       records[index] = updated;

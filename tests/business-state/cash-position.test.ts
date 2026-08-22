@@ -24,6 +24,7 @@ import {
 import { createMemoryAttentionQueueRepository } from "@/modules/business-state/infrastructure/memory-attention-repository";
 import { cashPositionToDto } from "@/modules/business-state/application/dto";
 import { createMemoryCatalogRepository } from "@/modules/catalog";
+import { createMemoryExpenseRepository } from "@/modules/expenses";
 import {
   clearOutboxConsumers,
   createMemoryOutboxDispatchRepository,
@@ -235,6 +236,7 @@ describe("cash position model (post-mvp 03)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       accounts,
       journals,
       projections: createMemoryBusinessStateProjectionRepository(),
@@ -318,6 +320,7 @@ describe("cash position model (post-mvp 03)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       accounts,
       journals,
       projections,
@@ -396,6 +399,7 @@ describe("cash position model (post-mvp 03)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       accounts,
       journals,
       projections,
@@ -435,6 +439,7 @@ describe("cash position model (post-mvp 03)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       accounts,
       journals,
       projections,
@@ -492,6 +497,7 @@ describe("cash position model (post-mvp 03)", () => {
         payments: createMemoryPaymentRepository(),
         catalog: createMemoryCatalogRepository(),
         inventory: createMemoryInventoryRepository(),
+        expenses: createMemoryExpenseRepository(),
         accounts,
         journals,
         projections,

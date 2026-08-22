@@ -10,6 +10,7 @@ import {
   createCustomer,
   updateCustomer,
   deactivateCustomer,
+  reactivateCustomer,
   customerInputSchema,
   PartyError,
 } from "@/modules/party";
@@ -172,6 +173,33 @@ export async function deactivateCustomerAction(
       return { error: error.message };
     }
     console.error("Unexpected error deactivating customer:", error);
+    throw error;
+  }
+}
+
+export async function reactivateCustomerAction(
+  customerId: string
+): Promise<CustomerActionState> {
+  try {
+    const tenant = await authorize("customer:update");
+    await reactivateCustomer({
+      tenantId: tenant.tenantId,
+      actorUserId: tenant.membership.userId,
+      customerId,
+      prisma,
+    });
+
+    revalidatePath("/app/sales/customers");
+    revalidatePath(`/app/sales/customers/${customerId}`);
+    return {};
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return { error: "You don't have permission to reactivate this customer." };
+    }
+    if (error instanceof PartyError) {
+      return { error: error.message };
+    }
+    console.error("Unexpected error reactivating customer:", error);
     throw error;
   }
 }

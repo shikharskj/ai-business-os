@@ -6,6 +6,7 @@ import { env } from "@/lib/env";
 import { createPrismaBusinessStateConsumerDeps } from "@/modules/business-state/infrastructure/prisma-consumer-deps";
 import { runOutboxProcessing } from "@/modules/events/application/run-outbox-processing";
 import { createPrismaOutboxDispatchRepository } from "@/modules/events/infrastructure/prisma-outbox-dispatch";
+import { createPrismaAutomationRuntimeDeps } from "@/modules/workflows/infrastructure/prisma-runtime-deps";
 import {
   createInAppChannel,
   createPrismaNotificationContextRepository,
@@ -64,6 +65,7 @@ export async function POST(request: Request) {
     context,
     channel: createInAppChannel(notifications),
     businessState: createPrismaBusinessStateConsumerDeps(prisma),
+    automation: createPrismaAutomationRuntimeDeps(prisma),
     overdueTenantIds,
     includeOverdueCheck: true,
     limit: 200,

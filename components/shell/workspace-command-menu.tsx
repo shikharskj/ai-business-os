@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { Command, Plus, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,10 +23,20 @@ const ROUTES = [
   { label: "Dashboard", href: "/app", keywords: "home overview" },
   { label: "Search", href: "/app/search", keywords: "find records" },
   { label: "Invoices", href: "/app/sales/invoices", keywords: "sales bill" },
+  { label: "Quotations", href: "/app/sales/quotations", keywords: "quote pricing" },
   { label: "Customers", href: "/app/sales/customers", keywords: "party" },
+  { label: "Payments", href: "/app/sales/payments", keywords: "receipt collection" },
   { label: "Expenses", href: "/app/expenses", keywords: "spend" },
-  { label: "Purchases", href: "/app/purchases/bills", keywords: "supplier bills" },
-  { label: "Inventory", href: "/app/inventory/stock", keywords: "stock products" },
+  {
+    label: "Purchases",
+    href: "/app/purchases/bills",
+    keywords: "supplier bills",
+  },
+  {
+    label: "Inventory",
+    href: "/app/inventory/stock",
+    keywords: "stock products",
+  },
   { label: "Reports", href: "/app/reports", keywords: "gst summary" },
   { label: "Accounting", href: "/app/accounting", keywords: "ledger journals" },
   { label: "Settings", href: "/app/settings", keywords: "business profile" },
@@ -63,7 +73,7 @@ export function WorkspaceCommandMenu() {
       try {
         const response = await fetch(
           `/api/search?q=${encodeURIComponent(trimmedQuery)}&limit=8`,
-          { signal: controller.signal }
+          { signal: controller.signal },
         );
         if (!response.ok) {
           setRecordResults([]);
@@ -99,7 +109,7 @@ export function WorkspaceCommandMenu() {
       (route) =>
         route.label.toLowerCase().includes(q) ||
         route.keywords.includes(q) ||
-        route.href.includes(q)
+        route.href.includes(q),
     );
   }, [trimmedQuery]);
 
@@ -126,9 +136,10 @@ export function WorkspaceCommandMenu() {
         onClick={() => setOpen(true)}
       >
         <Search className="size-4" />
-        <span className="text-muted-foreground">Search</span>
-        <kbd className="rounded border border-border px-1.5 text-xs text-muted-foreground">
-          ⌘K
+        <span className="text-muted-foreground min-w-44 text-left">Search</span>
+        <kbd className="flex items-center gap-1 text-sm text-muted-foreground">
+          <Command className="size-4" />
+          <Plus className="size-4" /> <span className="text-sm"> K</span>
         </kbd>
       </Button>
       <Button
@@ -139,7 +150,7 @@ export function WorkspaceCommandMenu() {
         onClick={() => setOpen(true)}
         aria-label="Open search"
       >
-        <Search className="size-4" />
+        <Search className="size-5" />
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>

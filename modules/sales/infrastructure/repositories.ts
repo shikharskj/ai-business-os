@@ -10,6 +10,7 @@ import type {
 import type { QuotationStatus } from "@/modules/sales/domain/types";
 import type { ListPageParams, ListPageResult } from "@/modules/shared-kernel/list-page";
 import { paginateArray } from "@/modules/shared-kernel/list-page";
+import { isReceivableInvoiceStatus } from "@/modules/sales/domain/invoice-status";
 
 export type CreateQuotationRecordInput = {
   tenantId: string;
@@ -241,6 +242,9 @@ export function createMemorySalesRepository(
       return records
         .filter((record) => record.tenantId === filter.tenantId)
         .filter((record) => {
+          if (filter.customerId && record.customerId !== filter.customerId) {
+            return false;
+          }
           if (!filter.status || filter.status === "ALL") {
             return true;
           }
@@ -392,6 +396,19 @@ export function createMemorySalesRepository(
         .filter((record) => {
           if (filter.customerId && record.customerId !== filter.customerId) {
             return false;
+          }
+          if (filter.customerIds && filter.customerIds.length > 0) {
+            if (!filter.customerIds.includes(record.customerId)) {
+              return false;
+            }
+          }
+          if (filter.due === "OVERDUE" && filter.overdueAsOf) {
+            if (!record.dueOn || record.dueOn >= filter.overdueAsOf) {
+              return false;
+            }
+            if (!isReceivableInvoiceStatus(record.status)) {
+              return false;
+            }
           }
           if (statuses && statuses.length > 0) {
             return statuses.includes(record.status);

@@ -330,6 +330,7 @@ export async function listQuotationsPage(input: {
   tenantId: string;
   query?: string;
   status?: QuotationStatus | "ALL";
+  customerId?: string;
   fromDate?: QuotationListFilter["fromDate"];
   toDate?: QuotationListFilter["toDate"];
   page: number;
@@ -340,6 +341,7 @@ export async function listQuotationsPage(input: {
     tenantId: input.tenantId,
     query: input.query,
     status: input.status,
+    customerId: input.customerId,
     fromDate: input.fromDate,
     toDate: input.toDate,
     page: input.page,
@@ -351,12 +353,14 @@ export async function listQuotations(input: {
   tenantId: string;
   query?: string;
   status?: QuotationStatus | "ALL";
+  customerId?: string;
   sales: SalesRepository;
 }): Promise<Quotation[]> {
   const filter: QuotationListFilter = {
     tenantId: input.tenantId,
     query: input.query,
     status: input.status,
+    customerId: input.customerId,
   };
   return input.sales.listQuotations(filter);
 }

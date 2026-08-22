@@ -21,6 +21,7 @@ export const expensesSummaryTool = defineAiTool({
     "Total business expenses for a period, broken down by expense category, largest category first.",
   category: "read",
   permission: "report:read",
+  autonomyLevel: "L0",
   inputSchema: expensesSummaryInputSchema,
   outputSchema: expensesSummaryOutputSchema,
   async execute(input, context) {

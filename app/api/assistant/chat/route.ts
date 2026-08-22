@@ -14,8 +14,8 @@ import {
 } from "@/lib/ai/assistant-sdk-tools";
 import { getAssistantLanguageModel, isAssistantStubMode } from "@/lib/ai/model";
 import { parseAssistantChatMessages } from "@/lib/ai/sanitize-assistant-messages";
+import { assembleAssistantContext } from "@/modules/ai/application/assemble-assistant-context";
 import { describeAssistantFailure } from "@/modules/ai/application/assistant-failures";
-import { AI_SYSTEM_POLICY } from "@/modules/ai/domain/system-policy";
 import { createAiToolContext } from "@/modules/ai/infrastructure/tool-context";
 import { TenantRequiredError } from "@/modules/tenant/domain/errors";
 
@@ -65,12 +65,13 @@ export async function POST(request: Request) {
 
     const tools = buildAssistantSdkTools({ context, sideEffects });
     const modelMessages = await convertToModelMessages(messages);
+    const assembled = await assembleAssistantContext(context);
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
         const result = streamText({
           model: languageModel,
-          system: AI_SYSTEM_POLICY,
+          system: assembled.system,
           messages: modelMessages,
           tools,
           temperature: AI_ASSISTANT_TEMPERATURE,

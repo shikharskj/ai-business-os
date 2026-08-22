@@ -7,7 +7,9 @@ import {
   recordCustomerPaymentAction,
   type PaymentActionState,
 } from "@/app/app/(workspace)/sales/payments/actions";
+import { DatePicker } from "@/components/date-picker";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -93,6 +95,7 @@ function RecordPaymentFormFields({
   );
   const selectedInvoice = invoices.find((row) => row.invoiceId === selectedInvoiceId);
   const [method, setMethod] = useState<PaymentMethod>("CASH");
+  const [receivedOn, setReceivedOn] = useState(today);
   const [amount, setAmount] = useState(() =>
     selectedInvoice ? toMajorString(selectedInvoice.outstanding) : ""
   );
@@ -110,11 +113,6 @@ function RecordPaymentFormFields({
       ),
     []
   );
-  const customerItems = useMemo(
-    () => Object.fromEntries(customers.map((customer) => [customer.id, customer.name])),
-    [customers]
-  );
-
   const allocatedMinor = invoices.reduce((sum, invoice) => {
     return sum + parseAmount(allocations[invoice.invoiceId] ?? "");
   }, 0n);
@@ -131,25 +129,19 @@ function RecordPaymentFormFields({
           <label htmlFor="customerId" className="text-base font-medium">
             Customer
           </label>
-          <Select
+          <Combobox
+            id="customerId"
             value={selectedCustomerId}
             onValueChange={(value) => {
-              const next = String(value ?? "");
-              router.push(`/app/sales/payments/new?customerId=${next}`);
+              router.push(`/app/sales/payments/new?customerId=${value}`);
             }}
-            items={customerItems}
-          >
-            <SelectTrigger id="customerId" className="w-full">
-              <SelectValue placeholder="Select a customer" />
-            </SelectTrigger>
-            <SelectContent>
-              {customers.map((customer) => (
-                <SelectItem key={customer.id} value={customer.id}>
-                  {customer.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={customers.map((customer) => ({
+              value: customer.id,
+              label: customer.name,
+            }))}
+            placeholder="Select a customer"
+            searchPlaceholder="Search customers…"
+          />
           <FieldError name="customerId" fieldErrors={state.fieldErrors} />
         </div>
 
@@ -157,13 +149,13 @@ function RecordPaymentFormFields({
           <label htmlFor="receivedOn" className="text-base font-medium">
             Received on
           </label>
-          <Input
+          <DatePicker
             id="receivedOn"
-            name="receivedOn"
-            type="date"
-            required
-            defaultValue={today}
+            value={receivedOn}
+            onValueChange={setReceivedOn}
+            placeholder="Received on"
           />
+          <input type="hidden" name="receivedOn" value={receivedOn} />
           <FieldError name="receivedOn" fieldErrors={state.fieldErrors} />
         </div>
 

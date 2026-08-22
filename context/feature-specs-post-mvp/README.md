@@ -63,14 +63,14 @@ Every spec uses this shape:
 | 01 | Typed domain event catalog + outbox consumer registry | R1 | Complete |
 | 02 | BusinessState projections + rebuild | R1 | Complete |
 | 03 | Cash position model (ledger cash/bank) | R1 | Complete |
-| 04 | AttentionQueue + minimal outcome hooks | R1 | Not Started |
-| 05 | Needs attention / Daily Brief UI (deterministic) | R2 | Not Started |
-| 06 | Operator recommendations (L0–L2) on brief | R2 | Not Started |
-| 07 | Copilot context from BusinessState + why/what-next | R3 | Not Started |
-| 08 | Autonomy policy model (tenant L0–L4 config) | R4 | Not Started |
-| 09 | Automation runtime (event→condition→action→outcome) | R4 | Not Started |
-| 10 | Collections automation vertical | R4 | Not Started |
-| 11 | Quotation follow-up + reorder prepare + expense anomaly | R4 | Not Started |
+| 04 | AttentionQueue + minimal outcome hooks | R1 | Complete |
+| 05 | Needs attention / Daily Brief UI (deterministic) | R2 | Complete |
+| 06 | Operator recommendations (L0–L2) on brief | R2 | Complete |
+| 07 | Copilot context from BusinessState + why/what-next | R3 | Complete |
+| 08 | Autonomy policy model (tenant L0–L4 config) | R4 | Complete |
+| 09 | Automation runtime (event→condition→action→outcome) | R4 | Complete |
+| 10 | Collections automation vertical | R4 | Complete |
+| 11 | Quotation follow-up + reorder prepare + expense anomaly | R4 | Complete |
 | 12 | Credit notes / returns | R5 | Not Started *(after R2–R4 unless pulled)* |
 | 13 | Advances / retainers | R5 | Not Started *(after R2–R4 unless pulled)* |
 | 14 | Sales orders | R5 | Not Started *(after R2–R4 unless pulled)* |
@@ -78,4 +78,4 @@ Every spec uses this shape:
 | 16 | Business Guardian | R6 | Not Started |
 | 17 | AI Operations / document → prepared purchase | R7 | Not Started |
 
-**Next implementable spec:** `04-attention-queue.md`
+**Next implementable spec:** `16-business-guardian.md` (R5 `12`–`15` only if a metric pull is recorded in progress-tracker)

@@ -25,3 +25,10 @@ export class PartyInactiveError extends PartyError {
     this.name = "PartyInactiveError";
   }
 }
+
+export class PartyAlreadyActiveError extends PartyError {
+  constructor(message = "This customer is already active.") {
+    super(message);
+    this.name = "PartyAlreadyActiveError";
+  }
+}

@@ -18,6 +18,7 @@ import {
 } from "@/modules/business-state";
 import { createMemoryAttentionQueueRepository } from "@/modules/business-state/infrastructure/memory-attention-repository";
 import { createMemoryCatalogRepository } from "@/modules/catalog";
+import { createMemoryExpenseRepository } from "@/modules/expenses";
 import { createMemoryInventoryRepository } from "@/modules/inventory";
 import { createMemoryPaymentRepository } from "@/modules/payments";
 import { createMemorySalesRepository } from "@/modules/sales";
@@ -145,6 +146,7 @@ describe("business state projections (post-mvp 02)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       ...(await seededAccounting()),
       projections,
       attention: createMemoryAttentionQueueRepository(),
@@ -202,6 +204,7 @@ describe("business state projections (post-mvp 02)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       ...(await seededAccounting()),
       projections,
       attention: createMemoryAttentionQueueRepository(),
@@ -241,6 +244,7 @@ describe("business state projections (post-mvp 02)", () => {
         payments: createMemoryPaymentRepository(),
         catalog: createMemoryCatalogRepository(),
         inventory: createMemoryInventoryRepository(),
+        expenses: createMemoryExpenseRepository(),
         ...(await seededAccounting()),
         projections,
         attention: createMemoryAttentionQueueRepository(),
@@ -308,6 +312,7 @@ describe("business state projections (post-mvp 02)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       ...(await seededAccounting()),
       projections,
       attention: createMemoryAttentionQueueRepository(),
@@ -487,6 +492,7 @@ describe("business state projections (post-mvp 02)", () => {
         payments: createMemoryPaymentRepository(),
         catalog: createMemoryCatalogRepository(),
         inventory: createMemoryInventoryRepository(),
+        expenses: createMemoryExpenseRepository(),
         ...(await seededAccounting()),
         projections,
         attention: createMemoryAttentionQueueRepository(),
