@@ -7,9 +7,11 @@ import {
   deactivateCustomer,
   getCustomer,
   listCustomers,
+  PartyAlreadyActiveError,
   PartyInactiveError,
   PartyNotFoundError,
   PartyValidationError,
+  reactivateCustomer,
   updateCustomer,
 } from "@/modules/party";
 import { createMemoryPartyRepository } from "@/modules/party/infrastructure/repositories";
@@ -183,6 +185,68 @@ describe("deactivateCustomer", () => {
   });
 });
 
+describe("reactivateCustomer", () => {
+  it("marks the customer active and writes audit plus outbox events", async () => {
+    const { parties, audit, outbox } = deps();
+    const created = await createCustomer({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      fields: validCustomer,
+      parties,
+      audit,
+      outbox,
+    });
+    await deactivateCustomer({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      customerId: created.id,
+      parties,
+      audit,
+      outbox,
+    });
+
+    const reactivated = await reactivateCustomer({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      customerId: created.id,
+      parties,
+      audit,
+      outbox,
+    });
+
+    expect(reactivated.status).toBe("ACTIVE");
+    expect(audit.records.map((record) => record.action)).toContain(
+      "customer.reactivated"
+    );
+    expect(outbox.events.map((event) => event.eventType)).toContain(
+      "CustomerReactivated"
+    );
+  });
+
+  it("rejects reactivating an already active customer", async () => {
+    const { parties, audit, outbox } = deps();
+    const created = await createCustomer({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      fields: validCustomer,
+      parties,
+      audit,
+      outbox,
+    });
+
+    await expect(
+      reactivateCustomer({
+        tenantId: "tenant-a",
+        actorUserId: "user-1",
+        customerId: created.id,
+        parties,
+        audit,
+        outbox,
+      })
+    ).rejects.toBeInstanceOf(PartyAlreadyActiveError);
+  });
+});
+
 describe("updateCustomer", () => {
   it("updates contact details for the owning tenant", async () => {
     const { parties, audit, outbox } = deps();
@@ -209,5 +273,37 @@ describe("updateCustomer", () => {
     expect(outbox.events.map((event) => event.eventType)).toContain(
       "CustomerUpdated"
     );
+  });
+
+  it("rejects updates while the customer is inactive", async () => {
+    const { parties, audit, outbox } = deps();
+    const created = await createCustomer({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      fields: validCustomer,
+      parties,
+      audit,
+      outbox,
+    });
+    await deactivateCustomer({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      customerId: created.id,
+      parties,
+      audit,
+      outbox,
+    });
+
+    await expect(
+      updateCustomer({
+        tenantId: "tenant-a",
+        actorUserId: "user-1",
+        customerId: created.id,
+        fields: { ...validCustomer, phone: "8888888888" },
+        parties,
+        audit,
+        outbox,
+      })
+    ).rejects.toBeInstanceOf(PartyInactiveError);
   });
 });

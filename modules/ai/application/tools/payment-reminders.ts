@@ -32,6 +32,8 @@ export const paymentRemindersTool = defineAiTool({
     "Send an in-app payment reminder for specific overdue customer invoices. Proposes the action only: it cannot run until the user confirms it in the app. Pass invoice ids returned by get_overdue_invoices.",
   category: "action",
   permission: "invoice:update",
+  autonomyLevel: "L3",
+  actionClass: "payment_reminder",
   requiresConfirmation: true,
   inputSchema: paymentRemindersInputSchema,
   outputSchema: paymentRemindersOutputSchema,

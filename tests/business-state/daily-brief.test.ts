@@ -87,6 +87,7 @@ describe("buildDailyBriefView", () => {
       overdue: 0,
       lowStock: 0,
       idleQuotation: 0,
+      unusualExpense: 0,
     });
     expect(view.periodNotes).toEqual([]);
   });
@@ -162,6 +163,7 @@ describe("buildDailyBriefView", () => {
       expenses,
       items,
       canPreparePaymentReminder: true,
+      canPreparePurchase: true,
     });
 
     expect(view.items.map((row) => row.id)).toEqual(["att-1", "att-2"]);
@@ -169,13 +171,15 @@ describe("buildDailyBriefView", () => {
       overdue: 1,
       lowStock: 1,
       idleQuotation: 0,
+      unusualExpense: 0,
     });
     expect(view.items[0]?.actions.map((a) => a.label)).toEqual([
       "Remind customer",
       "Prepare reminder",
     ]);
     expect(view.items[1]?.actions.map((a) => a.label)).toEqual([
-      "Review stock",
+      "Reorder",
+      "Prepare purchase",
     ]);
     expect(view.items[0]?.href).toBe("/app/sales/invoices/inv-1");
     expect(view.items[0]?.amount).toMatchObject({
@@ -216,8 +220,9 @@ describe("countOpenAttentionByType", () => {
         itemFixture({ id: "b", type: "OVERDUE_RECEIVABLE" }),
         itemFixture({ id: "c", type: "LOW_STOCK" }),
         itemFixture({ id: "d", type: "IDLE_QUOTATION" }),
+        itemFixture({ id: "e", type: "UNUSUAL_EXPENSE" }),
       ])
-    ).toEqual({ overdue: 2, lowStock: 1, idleQuotation: 1 });
+    ).toEqual({ overdue: 2, lowStock: 1, idleQuotation: 1, unusualExpense: 1 });
   });
 });
 
@@ -302,16 +307,23 @@ describe("briefActionsForAttentionType", () => {
     ).toEqual(["recommend"]);
   });
 
-  it("maps low stock and idle quote to recommend only", () => {
+  it("maps low stock to reorder plus prepare purchase when allowed", () => {
     expect(
       briefActionsForAttentionType("LOW_STOCK", {
         canPrepareReminder: true,
+        canPreparePurchase: true,
+        resourceId: "prod-1",
       }).map((a) => a.label)
-    ).toEqual(["Review stock"]);
+    ).toEqual(["Reorder", "Prepare purchase"]);
     expect(
       briefActionsForAttentionType("IDLE_QUOTATION", {
         canPrepareReminder: false,
       }).map((a) => a.label)
     ).toEqual(["Follow up"]);
+    expect(
+      briefActionsForAttentionType("UNUSUAL_EXPENSE", {
+        canPrepareReminder: false,
+      }).map((a) => a.label)
+    ).toEqual(["Unusual amount", "Review expense"]);
   });
 });

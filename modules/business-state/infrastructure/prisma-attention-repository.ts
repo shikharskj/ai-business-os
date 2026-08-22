@@ -8,12 +8,13 @@ import type {
   RecordAutomationOutcomeInput,
   SyncAttentionItemsInput,
 } from "@/modules/business-state/domain/attention-repository";
-import type {
-  AttentionItem,
-  AttentionItemStatus,
-  AttentionItemType,
-  AutomationOutcome,
-  AutomationOutcomeKind,
+import {
+  AUTOMATION_OUTCOME_KINDS,
+  type AttentionItem,
+  type AttentionItemStatus,
+  type AttentionItemType,
+  type AutomationOutcome,
+  type AutomationOutcomeKind,
 } from "@/modules/business-state/domain/types";
 import { toPrismaJson } from "@/modules/shared-kernel/json";
 import {
@@ -30,16 +31,12 @@ const ATTENTION_TYPES = new Set<AttentionItemType>([
   "OVERDUE_RECEIVABLE",
   "LOW_STOCK",
   "IDLE_QUOTATION",
+  "UNUSUAL_EXPENSE",
 ]);
 
 const ATTENTION_STATUSES = new Set<AttentionItemStatus>(["OPEN", "DISMISSED"]);
 
-const OUTCOME_KINDS = new Set<AutomationOutcomeKind>([
-  "ATTENTION_DISMISSED",
-  "REMINDER_PROPOSED",
-  "REMINDER_SENT",
-  "PAID_AFTER_REMINDER",
-]);
+const OUTCOME_KINDS = new Set<AutomationOutcomeKind>(AUTOMATION_OUTCOME_KINDS);
 
 function mapType(value: string): AttentionItemType {
   if (!ATTENTION_TYPES.has(value as AttentionItemType)) {
@@ -294,13 +291,21 @@ export function createPrismaAttentionQueueRepository(
     },
 
     async listOutcomes(filter: ListAutomationOutcomesFilter) {
+      const kinds = [
+        ...(filter.kind ? [filter.kind] : []),
+        ...(filter.kinds ?? []),
+      ];
       const rows = await prisma.automationOutcome.findMany({
         where: {
           tenantId: filter.tenantId,
-          ...(filter.kind ? { kind: filter.kind } : {}),
+          ...(kinds.length === 1 ? { kind: kinds[0] } : {}),
+          ...(kinds.length > 1 ? { kind: { in: kinds } } : {}),
           ...(filter.resourceType ? { resourceType: filter.resourceType } : {}),
           ...(filter.resourceIds
             ? { resourceId: { in: filter.resourceIds } }
+            : {}),
+          ...(filter.recordedAfter
+            ? { recordedAt: { gte: filter.recordedAfter } }
             : {}),
         },
         orderBy: { recordedAt: "desc" },

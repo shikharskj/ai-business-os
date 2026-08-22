@@ -11,8 +11,14 @@ import type { PurchasesRepository } from "@/modules/purchases";
 import type { SalesRepository } from "@/modules/sales";
 import type { AccountRepository, JournalRepository } from "@/modules/accounting";
 import type { AttentionQueueRepository } from "@/modules/business-state/domain/attention-repository";
+import type { BusinessStateProjectionRepository } from "@/modules/business-state/domain/projection-repository";
 import type { AuditRepository } from "@/modules/shared-kernel/audit";
 import type { OutboxRepository } from "@/modules/shared-kernel/outbox";
+import type {
+  AutonomyActionClass,
+  AutonomyLevel,
+  TenantAutonomyPolicy,
+} from "@/modules/tenant/domain/autonomy-policy";
 import type { MembershipRole } from "@/modules/tenant/domain/types";
 
 export const AI_TOOL_NAMES = [
@@ -23,6 +29,7 @@ export const AI_TOOL_NAMES = [
   "get_low_stock_products",
   "get_business_metrics",
   "get_cash_position",
+  "explain_period_movement",
   "send_payment_reminders",
 ] as const;
 
@@ -52,6 +59,8 @@ export type AiToolRepositories = {
   notifications: NotificationRepository;
   /** Attention outcomes for reminder proposed/sent (spec 04). */
   attention: AttentionQueueRepository;
+  /** Derived BusinessState for copilot context assembly (spec 07). */
+  projections: BusinessStateProjectionRepository;
   outbox: OutboxRepository;
 };
 
@@ -69,6 +78,8 @@ export type AiToolContext = {
   lowStockThresholdMajor: string;
   repositories: AiToolRepositories;
   audit: AuditRepository;
+  /** Tenant L0–L4 policy. Missing DB row is represented as L4 off. */
+  autonomyPolicy: TenantAutonomyPolicy;
   correlationId?: string;
 };
 
@@ -77,6 +88,10 @@ export type AiToolDefinition = {
   description: string;
   category: AiToolCategory;
   permission: Permission;
+  /** Declared default on the ladder. L5 is not representable. */
+  autonomyLevel: AutonomyLevel;
+  /** Required on action tools that may elevate to L4 under tenant policy. */
+  actionClass?: AutonomyActionClass;
   /** High-risk tools must not run before the user confirms (spec 28). */
   requiresConfirmation: boolean;
   inputSchema: z.ZodType;

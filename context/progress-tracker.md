@@ -8,10 +8,10 @@ This file is the **single source of truth for implementation progress**. The AI 
 
 ## Current Phase
 
-* **Phase:** Post-MVP — Copilot Depth (R3)
-* **Status:** Ready — next `07-copilot-depth.md`
+* **Phase:** Post-MVP — R4 complete; next Business Guardian (R6)
+* **Status:** Next — `16-business-guardian.md`
 * **Active roadmap:** [`context/product-roadmap.md`](product-roadmap.md)
-* **Active specs:** [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) — next: `07-copilot-depth.md`
+* **Active specs:** [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) — current: `16-business-guardian.md`
 * **MVP archive:** [`context/feature-specs-mvp/`](feature-specs-mvp/)
 * **Deferred horizon:** [`context/future-scope.md`](future-scope.md) (do not schedule as current Next)
 * **Launch trust:** MVP `29` / `30` deferred until after Post-MVP + future-scope (not parallel)
@@ -38,7 +38,7 @@ Guardian (R6) → AI Ops (R7) — specs 16–17
 
 North star: an AI-native OS for Indian SMEs that records correctly, understands continuously, tells the owner what matters, and automates routine work under autonomy L0–L4.
 
-**Next implementation unit:** `context/feature-specs-post-mvp/07-copilot-depth.md`. Do not start R5 (`12`–`15`) before R2–R4 unless a metric pull is recorded here. Do not start MVP `29`/`30` until launch readiness.
+**Current implementation unit:** `context/feature-specs-post-mvp/16-business-guardian.md`. Do not start R5 (`12`–`15`) unless a metric pull is recorded here. Do not start MVP `29`/`30` until launch readiness.
 
 The priority is **correctness, attention quality, and automation under guardrails** — not feature parity with billing ERPs.
 
@@ -94,8 +94,8 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 | Production deployment | Not Started |
 | Intelligence Spine (R1) | Complete (`04`) |
 | Operator / Daily Brief (R2) | Complete (`05`–`06`) |
-| Copilot Depth (R3)    | Not Started |
-| Automation Engine (R4)| Not Started |
+| Copilot Depth (R3)    | Complete (`07`) |
+| Automation Engine (R4)| Complete (`08`–`11`) |
 | Coverage Completers (R5) | Not Started |
 | Business Guardian (R6)| Not Started |
 | AI Operations (R7)    | Not Started |
@@ -103,6 +103,46 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 ---
 
 # Completed
+
+* **R4 follow-up fixes:** Autonomy form save preserves `disabledAutomations`. Invoice `due=OVERDUE` requires outstanding > 0. Collections L4 zero-send messages follow reminder status (`not_found` / `not_overdue` / `failed` / `already_sent`). Unconfirmed cron prepares no longer record `REMINDER_PROPOSED`.
+
+* **Automation expansions (`11-automation-expansions.md`):**
+  * Three thin automations on the spec `09` runtime: `quotations.followup` (`QuotationIdle` → in-app follow-up draft, no email), `inventory.reorder` (velocity stub → draft purchase inputs, never posts), `expenses.anomaly` (`ExpenseRecorded` → inform/recommend when already on the queue). All three are `mode: "dry_run"`; L4 money-post classes stay off.
+  * AttentionQueue adds `UNUSUAL_EXPENSE` (same-category amount vs recent average). Daily Brief shows Inform / Follow up / Reorder + L2 Prepare purchase (`purchase:create`, navigate only). Outcomes: `QUOTATION_FOLLOW_UP_PROPOSED`, `REORDER_PREPARED`, `EXPENSE_ANOMALY_FLAGGED`.
+  * Tests: `tests/workflows/automation-expansions.test.ts`. Typecheck and production build succeed. Next: `16-business-guardian.md` (R5 `12`–`15` only if pulled).
+
+* **Collections automation (`10-collections-automation.md`):**
+  * First vertical on the spec `09` runtime: `collections.remind` (`InvoiceOverdue` → rank by amount/days overdue → draft via `previewAiAction` → L4 `executeAiTool` send or L3 prepare when policy is off / over ceiling).
+  * Scheduled overdue scan emits `InvoiceOverdue` catalog events and enqueues runs. Daily idempotency keys plus a 7-day `REMINDER_SENT` cooldown prevent reminder spam. Delivery stays in-app (`send_payment_reminders`).
+  * Outcomes stay queryable: `listCollectionsOutcomes` and `GET /api/business-state/outcomes` (`report:read`) for `REMINDER_PROPOSED` / `REMINDER_SENT` / `PAID_AFTER_REMINDER`. Cron L3 prepares do not record `REMINDER_PROPOSED`; that kind is written on confirmed send (chat/HMAC or L4 `send_payment_reminders`). Daily Brief Prepare is unchanged.
+  * Tests: `tests/workflows/collections-automation.test.ts`. Typecheck passes. Next: `11-automation-expansions.md`.
+
+* **Automation runtime (`09-automation-runtime.md`):**
+  * `modules/workflows/` runner: EVENT → CONDITION → REASONING → ACTION → RESULT → OUTCOME. Outbox `automation` consumer enqueues `workflow_runs`; `processDueWorkflowRuns` claims jobs with tenant concurrency keys, retries/backoff, and dead-letter. Idempotent on `(tenantId, workflowId:eventId)`.
+  * Mutating `mode: "execute"` is L4-only and fail-closed via `evaluateL4Autonomy` before `action`. The runner does not post journals or stock. `proof.noop` is the dry-run proof on `AttentionDismissed`. `registerWorkflow` is the collections plugin point (spec `10`).
+  * Outcome kinds `AUTOMATION_SUCCEEDED` / `FAILED` / `SKIPPED`. Metrics stubs for success/fail/skip. Owner Settings lists recent runs.
+  * Tests: `tests/workflows/automation-runtime.test.ts`. Production build succeeds. Next: `10-collections-automation.md`.
+
+* **Autonomy policy (`08-autonomy-policy.md`):**
+  * Per-tenant `TenantAutonomyPolicy` (missing row = L4 off / empty allow-list): `allowedActionClasses`, `amountThresholds`, `requireConfirmationAbove`, `disabledAutomations`. Migration `20260822120000_add_tenant_autonomy_policy`.
+  * Owner/admin Settings → Autonomy enables L4 payment reminders under an amount ceiling. Policy changes are audited (`autonomy.policy.updated`). Invoice posting is not an allowed L4 class. L5 is not representable.
+  * Tools declare `autonomyLevel`. `send_payment_reminders` is L3 + `payment_reminder`. `executeAiTool` allows L4 only when a trusted caller sets `autonomyAttempt: "L4"` and `evaluateL4Autonomy` passes. Chat/HMAC confirm path unchanged.
+  * Tests: `tests/tenant/autonomy-policy.test.ts`, `tests/ai/autonomy-policy.test.ts`. Production build succeeds. Next: `09-automation-runtime.md`.
+
+* **Sales UX polish (operator pass — invoices, quotations, customers, payments):**
+  * Shared primitives: `formatDisplayDate` on sales tables, ISO-controlled `DatePicker`, searchable `Combobox` for customer/product selects, GST breakdown hides zero CGST/SGST/IGST lines, list filter **Clear** link.
+  * Invoice list: derived outstanding + due date, single payment-facing status badge, customer links, `due=OVERDUE` filter, overdue due-date tone, reorder disabled on transactional lists.
+  * Invoice/quotation detail: overdue copy, GST rate on lines, primary action + overflow menu (Cancel/PDF), non-draft edit redirects to detail with `?locked=1`; forms use searchable selects, DatePicker, pre-GST line subtotal labels.
+  * Customer hub: outstanding card, related invoices/quotations/payments (capped + View all), New invoice / Record payment actions, reactivate inactive customers (`CustomerReactivated` event).
+  * Payments polish + `/app/sales` directory (open receivables when `invoice:read`) + command menu entries for quotations/payments.
+  * Tests: overdue/outstanding list filters, customer reactivate/inactive-update guard. Does **not** complete R4 spec `10`.
+  * Next: `16-business-guardian.md` (unchanged).
+
+* **Copilot depth (`07-copilot-depth.md`):**
+  * Chat context assembly order: system policy → trusted identity note (no tenant/user/role ids) → fenced BusinessState/Attention summary (counts/titles only, `report:read`) → tools → sanitized conversation. Chat route still has no Prisma.
+  * `explain_period_movement` composes dashboard + sales/expense reports into application-computed current vs previous deltas for diagnostic “why” questions. Model must not subtract periods.
+  * Assistant Trust UI labels Verified / Analysis / Recommend. Overdue and period-movement answers can offer Prepare reminder, signed through the existing confirm-token path (same as Daily Brief). ACCOUNTANT/STAFF still cannot confirm without `invoice:update`.
+  * Tests: `tests/ai/copilot-depth.test.ts`, previous-range coverage in `tests/reporting/dashboard.test.ts`. Production build succeeds. Next: `08-autonomy-policy.md`.
 
 * **Document preview + logo export fixes:** WebP logos convert to PNG for invoice/quotation PDF embed (`logoBufferForPdf`) so export matches the HTML preview. Preview asides are `w-full` below `lg` with A4-scaled width from a CSS variable (no inline `width`). Logo upload/remove revalidates invoice and quotation layouts. Tests: `tests/sales/pdf-logo.test.ts`. Next remains `07-copilot-depth.md`.
 
@@ -427,7 +467,7 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 
 # In Progress
 
-Nothing in progress. See **Next Up**.
+None. R4 (`08`–`11`) is complete. Next product spec is [`16-business-guardian.md`](feature-specs-post-mvp/16-business-guardian.md). Do not start R5 (`12`–`15`) unless a metric pull is recorded here.
 
 ---
 
@@ -435,11 +475,10 @@ Nothing in progress. See **Next Up**.
 
 **Active product work** follows [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) one numbered file at a time.
 
-1. **Next implementable spec:** [`07-copilot-depth.md`](feature-specs-post-mvp/07-copilot-depth.md)
-2. Then `08`–`11` (automation)
-3. Specs `12`–`15` (R5) only after R2–R4 unless a metric pull is recorded here
-4. Then `16` Guardian → `17` AI Operations
-5. **Not now:** [`future-scope.md`](future-scope.md); MVP `29`/`30` until launch after Post-MVP + future-scope
+1. **Current spec:** [`16-business-guardian.md`](feature-specs-post-mvp/16-business-guardian.md)
+2. Specs `12`–`15` (R5) only if a metric pull is recorded here
+3. Then `17` AI Operations
+4. **Not now:** [`future-scope.md`](future-scope.md); MVP `29`/`30` until launch after Post-MVP + future-scope
 
 Product sequencing: [`product-roadmap.md`](product-roadmap.md). MVP archive: [`feature-specs-mvp/`](feature-specs-mvp/).
 

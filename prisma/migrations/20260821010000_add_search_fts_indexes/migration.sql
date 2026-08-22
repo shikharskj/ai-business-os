@@ -65,6 +65,8 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS supplier_payments_search_fts_idx ON supp
     )
   );
 
+-- ExpenseCategory::text is STABLE, not IMMUTABLE, so it cannot appear in an
+-- index expression (PG 42P17). Label CASE is immutable and keeps category tokens.
 CREATE INDEX CONCURRENTLY IF NOT EXISTS expenses_search_fts_idx ON expenses
   USING GIN (
     to_tsvector(
@@ -72,6 +74,22 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS expenses_search_fts_idx ON expenses
       coalesce(number, '') || ' ' ||
       coalesce(notes, '') || ' ' ||
       coalesce("vendorGstin", '') || ' ' ||
-      coalesce(category::text, '')
+      coalesce(
+        CASE category
+          WHEN 'RENT' THEN 'RENT'
+          WHEN 'UTILITIES' THEN 'UTILITIES'
+          WHEN 'TRAVEL' THEN 'TRAVEL'
+          WHEN 'OFFICE' THEN 'OFFICE'
+          WHEN 'MARKETING' THEN 'MARKETING'
+          WHEN 'PROFESSIONAL_FEES' THEN 'PROFESSIONAL_FEES'
+          WHEN 'REPAIRS' THEN 'REPAIRS'
+          WHEN 'INSURANCE' THEN 'INSURANCE'
+          WHEN 'BANK_CHARGES' THEN 'BANK_CHARGES'
+          WHEN 'MEALS' THEN 'MEALS'
+          WHEN 'SOFTWARE' THEN 'SOFTWARE'
+          WHEN 'OTHER' THEN 'OTHER'
+        END,
+        ''
+      )
     )
   );

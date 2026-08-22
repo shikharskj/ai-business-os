@@ -39,6 +39,7 @@ export {
   isPostedInvoiceStatus,
   isReceivableInvoiceStatus,
   paymentStatusLabel,
+  isInvoiceOverdue,
   RECEIVABLE_INVOICE_STATUSES,
 } from "@/modules/sales/domain/invoice-status";
 export {
@@ -73,6 +74,10 @@ export {
   convertQuotationToInvoice,
   exportInvoicePdf,
 } from "@/modules/sales/application/invoices";
+export {
+  decorateInvoiceListRows,
+  type InvoiceListRow,
+} from "@/modules/sales/application/invoice-list-rows";
 export { taxContextFromTenant } from "@/modules/sales/application/tax-context";
 export {
   buildInvoiceDocumentView,

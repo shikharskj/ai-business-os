@@ -93,6 +93,7 @@ describe("prompt injection defence", () => {
     expect(AI_SYSTEM_POLICY).toContain("UNTRUSTED-CONTENT");
     expect(AI_SYSTEM_POLICY).toContain("confirmation");
     expect(AI_SYSTEM_POLICY).toContain("Never estimate");
+    expect(AI_SYSTEM_POLICY).toContain("explain_period_movement");
   });
 });
 
@@ -151,6 +152,7 @@ describe("ai module boundaries", () => {
     expect(chatRoute).toMatch(/streamText/);
     expect(chatRoute).toMatch(/parseAssistantChatMessages/);
     expect(chatRoute).toMatch(/createAiToolContext/);
+    expect(chatRoute).toMatch(/assembleAssistantContext/);
     // Stub mode must not skip tenant resolution.
     const contextCall = chatRoute.indexOf("await createAiToolContext");
     const stubCall = chatRoute.indexOf("if (isAssistantStubMode())");
@@ -168,7 +170,7 @@ describe("ai module boundaries", () => {
       "utf8"
     );
 
-    expect(clientBarrel).not.toMatch(/executeAiTool|runAiToolCall|runConfirmedAiAction|resolveAiToolPeriod/);
+    expect(clientBarrel).not.toMatch(/executeAiTool|runAiToolCall|runConfirmedAiAction|resolveAiToolPeriod|assembleAssistantContext|composePeriodMovement/);
     expect(serverBarrel).toMatch(/import ["']server-only["']/);
     expect(serverBarrel).toMatch(/executeAiTool/);
     expect(serverBarrel).toMatch(/runConfirmedAiAction/);

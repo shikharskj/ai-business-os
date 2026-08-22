@@ -21,6 +21,7 @@ export const cashPositionTool = defineAiTool({
     "Current cash position from ledger Cash and Bank account balances. Use this for any cash-on-hand question. Do not infer cash from unpaid invoices or period receipts.",
   category: "read",
   permission: "report:read",
+  autonomyLevel: "L0",
   inputSchema: cashPositionInputSchema,
   outputSchema: cashPositionOutputSchema,
   async execute(_input, context) {

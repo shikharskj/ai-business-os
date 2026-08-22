@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { formatDisplayDate } from "@/components/business/inventory-labels";
 import { MoneyDisplay } from "@/components/business/money-display";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,14 @@ export default async function PaymentDetailPage({
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
       <PageHeader
         title={payment.number}
-        description={payment.customerName}
+        description={
+          <Link
+            href={`/app/sales/customers/${payment.customerId}`}
+            className="font-medium text-foreground hover:underline"
+          >
+            {payment.customerName}
+          </Link>
+        }
         actions={
           <Button
             nativeButton={false}
@@ -54,6 +62,11 @@ export default async function PaymentDetailPage({
           </Button>
         }
       />
+
+      <p className="text-base text-muted-foreground">
+        Payments are recorded permanently. To correct a mistake, record an adjusting entry outside
+        this receipt or contact your administrator.
+      </p>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <Card>
@@ -94,33 +107,27 @@ export default async function PaymentDetailPage({
             <CardTitle>Details</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2 text-base">
-            <p>
-              <span className="text-muted-foreground">Amount </span>
+            <p className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Amount</span>
               <MoneyDisplay value={payment.amount} className="font-medium" />
             </p>
-            <p>
-              <span className="text-muted-foreground">Method </span>
+            <p className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Method</span>
               {PAYMENT_METHOD_LABELS[payment.method]}
             </p>
-            <p>
-              <span className="text-muted-foreground">Received </span>
-              {payment.receivedOn}
+            <p className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Received</span>
+              {formatDisplayDate(payment.receivedOn)}
             </p>
             {payment.reference ? (
-              <p>
-                <span className="text-muted-foreground">Reference </span>
+              <p className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Reference</span>
                 {payment.reference}
               </p>
             ) : null}
-            <p>
-              <Link
-                href={`/app/sales/customers/${payment.customerId}`}
-                className="font-medium hover:underline"
-              >
-                View customer
-              </Link>
-            </p>
-            {payment.notes ? <p>{payment.notes}</p> : null}
+            {payment.notes ? (
+              <p className="pt-2 text-muted-foreground">{payment.notes}</p>
+            ) : null}
           </CardContent>
         </Card>
       </div>

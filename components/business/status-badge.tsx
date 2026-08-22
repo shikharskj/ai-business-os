@@ -31,7 +31,7 @@ export const statusBadgeSizeVariants = cva("", {
       // Matches previous StatusBadge / shadcn Badge sizing.
       sm: "h-5 gap-1 px-2 py-0.5 text-xs [&>svg]:size-3!",
       md: "h-6 gap-1 px-2.5 py-0.5 text-sm [&>svg]:size-3.5!",
-      lg: "h-7 gap-1.5 px-3 py-1 text-sm [&>svg]:size-4!",
+      lg: "h-7 gap-1.5 px-3 py-1 text-sm [&>svg]:size-5!",
     },
   },
   defaultVariants: {

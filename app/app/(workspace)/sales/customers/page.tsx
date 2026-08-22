@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { CustomersDataTable } from "@/components/business/customers-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
+import { ListFilterClear } from "@/components/shell/list-filter-clear";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,10 @@ import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
 import { listCustomersPage, customerSearchSchema } from "@/modules/party";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
+import { outstandingByCustomerIds } from "@/modules/payments";
+import { prismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
+import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
+import { money } from "@/modules/shared-kernel/money";
 
 export default async function CustomersPage({
   searchParams,
@@ -51,6 +56,16 @@ export default async function CustomersPage({
     pageSize,
     parties: prismaPartyRepository,
   });
+  const outstandingMap = await outstandingByCustomerIds({
+    tenantId: tenant.tenantId,
+    customerIds: result.items.map((customer) => customer.id),
+    sales: prismaSalesRepository,
+    payments: prismaPaymentRepository,
+  });
+  const rows = result.items.map((customer) => ({
+    ...customer,
+    outstanding: outstandingMap.get(customer.id) ?? money(0n),
+  }));
   const hasFilters = Boolean(filters.q || filters.status !== "ACTIVE");
   const queryString = toQueryString(params);
 
@@ -111,6 +126,7 @@ export default async function CustomersPage({
         <Button type="submit" variant="outline">
           Filter
         </Button>
+        {hasFilters ? <ListFilterClear href="/app/sales/customers" /> : null}
       </form>
 
       {result.total === 0 ? (
@@ -136,7 +152,7 @@ export default async function CustomersPage({
         />
       ) : (
         <CustomersDataTable
-          items={result.items}
+          items={rows}
           total={result.total}
           page={result.page}
           pageSize={result.pageSize}

@@ -44,7 +44,7 @@ function snapshotMoney(value: DailyBriefView["snapshot"]["sales"]) {
 
 function typeTone(type: DailyBriefView["items"][number]["type"]): BadgeTone {
   if (type === "OVERDUE_RECEIVABLE") return "danger";
-  if (type === "LOW_STOCK") return "warning";
+  if (type === "LOW_STOCK" || type === "UNUSUAL_EXPENSE") return "warning";
   return "neutral";
 }
 
@@ -52,7 +52,7 @@ function rowAccent(type: DailyBriefView["items"][number]["type"]): string {
   if (type === "OVERDUE_RECEIVABLE") {
     return "border-l-[var(--state-error)] bg-[var(--state-error-subtle)]/60";
   }
-  if (type === "LOW_STOCK") {
+  if (type === "LOW_STOCK" || type === "UNUSUAL_EXPENSE") {
     return "border-l-[var(--state-warning)] bg-[var(--state-warning-subtle)]/60";
   }
   return "border-l-border bg-muted/20";
@@ -104,6 +104,11 @@ function formatQueueCounts(
   if (counts.idleQuotation > 0) {
     parts.push(
       `${counts.idleQuotation} idle quote${counts.idleQuotation === 1 ? "" : "s"}`
+    );
+  }
+  if (counts.unusualExpense > 0) {
+    parts.push(
+      `${counts.unusualExpense} unusual expense${counts.unusualExpense === 1 ? "" : "s"}`
     );
   }
   return parts.length > 0 ? parts.join(" · ") : null;
@@ -362,6 +367,9 @@ export function DailyBriefPanel({ brief }: { brief: DailyBriefView }) {
                 const recommendAction = item.actions.find(
                   (row) => row.kind === "recommend"
                 );
+                const informAction = item.actions.find(
+                  (row) => row.kind === "inform"
+                );
                 return (
                   <li key={item.id}>
                     <div
@@ -382,6 +390,14 @@ export function DailyBriefPanel({ brief }: { brief: DailyBriefView }) {
                         <p className="mt-0.5 text-sm text-muted-foreground">
                           {item.body}
                         </p>
+                        {informAction ? (
+                          <p className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {BRIEF_AUTONOMY_CUE_LABELS[informAction.cue]}
+                            <span className="mx-1 font-normal normal-case tracking-normal">
+                              · {informAction.label}
+                            </span>
+                          </p>
+                        ) : null}
                         {recommendAction ? (
                           <p className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                             {BRIEF_AUTONOMY_CUE_LABELS[recommendAction.cue]}
@@ -415,7 +431,20 @@ export function DailyBriefPanel({ brief }: { brief: DailyBriefView }) {
                             />
                           ) : null}
                           <div className="flex flex-wrap items-center gap-2">
-                            {!pending && prepareAction ? (
+                            {!pending && prepareAction?.prepareHref ? (
+                              <Button
+                                nativeButton={false}
+                                variant="default"
+                                size="sm"
+                                render={<Link href={prepareAction.prepareHref} />}
+                              >
+                                <span className="mr-1 text-xs uppercase tracking-wide opacity-80">
+                                  {BRIEF_AUTONOMY_CUE_LABELS[prepareAction.cue]}
+                                </span>
+                                {prepareAction.label}
+                              </Button>
+                            ) : null}
+                            {!pending && prepareAction?.prepareToolName ? (
                               <Button
                                 type="button"
                                 variant="default"

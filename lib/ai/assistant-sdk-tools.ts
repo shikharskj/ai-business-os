@@ -3,6 +3,10 @@ import "server-only";
 import { tool, type ToolSet } from "ai";
 import { z } from "zod";
 
+import { roleHasPermission } from "@/lib/security/permissions";
+import { runAiToolCall } from "@/modules/ai/application/execute-tool";
+import { signPendingPaymentReminder } from "@/modules/ai/application/sign-pending-reminder";
+import { listAiToolsForRole } from "@/modules/ai/application/tools/registry";
 import {
   AI_ACTION_TOKEN_TTL_MS,
   signAiActionToken,
@@ -17,8 +21,10 @@ import type {
 } from "@/modules/ai/domain/assistant-types";
 import { wrapUntrustedContent } from "@/modules/ai/domain/untrusted-content";
 import { resolveAiActionSecret } from "@/modules/ai/infrastructure/action-secret";
-import { runAiToolCall } from "@/modules/ai/application/execute-tool";
-import { listAiToolsForRole } from "@/modules/ai/application/tools/registry";
+import {
+  overdueInvoicesOutputSchema,
+  periodMovementOutputSchema,
+} from "@/modules/ai/schemas/ai-tool.schema";
 import type {
   AiToolContext,
   AiToolName,
@@ -29,23 +35,77 @@ const CONFIRMATION_REQUIRED_MESSAGE =
 
 const TOOL_SUGGESTIONS: Partial<Record<AiToolName, AiAssistantSuggestion>> = {
   get_outstanding_receivables: {
+    kind: "navigate",
     label: "View receivables",
     href: "/app/reports/receivables",
   },
-  get_overdue_invoices: { label: "View invoices", href: "/app/sales/invoices" },
-  get_low_stock_products: { label: "View stock", href: "/app/inventory/stock" },
-  get_sales_summary: { label: "Sales report", href: "/app/reports/sales" },
+  get_overdue_invoices: {
+    kind: "navigate",
+    label: "View invoices",
+    href: "/app/sales/invoices",
+  },
+  get_low_stock_products: {
+    kind: "navigate",
+    label: "View stock",
+    href: "/app/inventory/stock",
+  },
+  get_sales_summary: {
+    kind: "navigate",
+    label: "Sales report",
+    href: "/app/reports/sales",
+  },
   get_expenses_summary: {
+    kind: "navigate",
     label: "Expenses report",
     href: "/app/reports/expenses",
   },
-  get_business_metrics: { label: "Open dashboard", href: "/app" },
-  get_cash_position: { label: "View accounts", href: "/app/accounting/accounts" },
+  get_business_metrics: { kind: "navigate", label: "Open dashboard", href: "/app" },
+  get_cash_position: {
+    kind: "navigate",
+    label: "View accounts",
+    href: "/app/accounting/accounts",
+  },
+  explain_period_movement: {
+    kind: "navigate",
+    label: "Profit report",
+    href: "/app/reports/profit",
+  },
   send_payment_reminders: {
+    kind: "navigate",
     label: "View invoices",
     href: "/app/sales/invoices",
   },
 };
+
+function overdueInvoiceIdsFromOutput(toolName: string, output: unknown): string[] {
+  if (toolName === "get_overdue_invoices") {
+    const parsed = overdueInvoicesOutputSchema.safeParse(output);
+    return parsed.success
+      ? parsed.data.invoices.map((invoice) => invoice.invoiceId)
+      : [];
+  }
+  if (toolName === "explain_period_movement") {
+    const parsed = periodMovementOutputSchema.safeParse(output);
+    return parsed.success ? parsed.data.overdueInvoiceIds : [];
+  }
+  return [];
+}
+
+function pushSuggestion(
+  sideEffects: AssistantStreamSideEffects,
+  suggestion: AiAssistantSuggestion
+) {
+  if (suggestion.kind === "navigate") {
+    if (sideEffects.suggestions.some((existing) => existing.kind === "navigate" && existing.href === suggestion.href)) {
+      return;
+    }
+  } else if (
+    sideEffects.suggestions.some((existing) => existing.kind === "prepare")
+  ) {
+    return;
+  }
+  sideEffects.suggestions.push(suggestion);
+}
 
 export type AssistantStreamSideEffects = {
   facts: AiAssistantFact[];
@@ -166,11 +226,33 @@ export function buildAssistantSdkTools(input: {
           auditRecordId: outcome.auditRecordId,
         });
         const suggestion = TOOL_SUGGESTIONS[outcome.toolName];
+        if (suggestion) {
+          pushSuggestion(input.sideEffects, suggestion);
+        }
+
+        const overdueIds = overdueInvoiceIdsFromOutput(
+          outcome.toolName,
+          outcome.output
+        );
         if (
-          suggestion &&
-          !input.sideEffects.suggestions.some((s) => s.href === suggestion.href)
+          overdueIds.length > 0 &&
+          !input.sideEffects.pendingAction &&
+          roleHasPermission(input.context.role, "invoice:update")
         ) {
-          input.sideEffects.suggestions.push(suggestion);
+          const pending = signPendingPaymentReminder({
+            tenantId: input.context.tenantId,
+            actorUserId: input.context.actorUserId,
+            invoiceIds: overdueIds.slice(0, 10),
+            secret: resolveAiActionSecret(),
+          });
+          if (pending) {
+            pushSuggestion(input.sideEffects, {
+              kind: "prepare",
+              label: "Prepare reminder",
+              cue: "prepare",
+              pendingAction: pending,
+            });
+          }
         }
 
         return fencedToolPayload(definition.name, {

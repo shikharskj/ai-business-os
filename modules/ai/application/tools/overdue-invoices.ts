@@ -13,6 +13,7 @@ export const overdueInvoicesTool = defineAiTool({
     "Unpaid customer invoices whose due date has passed, most overdue first, with the outstanding amount on each.",
   category: "read",
   permission: "invoice:read",
+  autonomyLevel: "L0",
   inputSchema: overdueInvoicesInputSchema,
   outputSchema: overdueInvoicesOutputSchema,
   async execute(input, context) {

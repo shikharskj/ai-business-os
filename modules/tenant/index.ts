@@ -1,5 +1,17 @@
 export type { BusinessProfile, MembershipRole, TenantContext, TenantMembership } from "@/modules/tenant/domain/types";
 export {
+  AUTONOMY_ACTION_CLASSES,
+  AUTONOMY_LEVELS,
+  defaultAutonomyPolicy,
+  evaluateL4Autonomy,
+  isAutonomyActionClass,
+  type AutonomyActionClass,
+  type AutonomyDecision,
+  type AutonomyDenialReason,
+  type AutonomyLevel,
+  type TenantAutonomyPolicy,
+} from "@/modules/tenant/domain/autonomy-policy";
+export {
   TenantAccessDeniedError,
   TenantError,
   TenantMembershipUnavailableError,
@@ -17,6 +29,21 @@ export {
   parseTenantLifecycleEvent,
   type TenantLifecycleEvent,
 } from "@/modules/tenant/schemas/org-lifecycle.schema";
+export {
+  autonomyPolicyUpdateSchema,
+  type AutonomyPolicyUpdateInput,
+  type AutonomyPolicyUpdateParsed,
+} from "@/modules/tenant/schemas/autonomy-policy.schema";
+export {
+  AUTONOMY_POLICY_AUDIT_ACTION,
+  AUTONOMY_POLICY_AUDIT_RESOURCE,
+  getAutonomyPolicy,
+  updateAutonomyPolicy,
+} from "@/modules/tenant/application/autonomy-policy";
+export {
+  createMemoryAutonomyPolicyRepository,
+  type AutonomyPolicyRepository,
+} from "@/modules/tenant/infrastructure/autonomy-policy-repository";
 export {
   attachExistingOrganizationToBusiness,
   createBusinessWithOrganization,

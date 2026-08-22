@@ -34,7 +34,7 @@ export function AssistantLauncher() {
           />
         }
       >
-        <Bot className="size-4" />
+        <Bot className="size-5" />
       </SheetTrigger>
       <SheetContent
         side="right"
@@ -65,7 +65,7 @@ export function AssistantLauncher() {
                 />
               }
             >
-              <X className="size-4" />
+              <X className="size-5" />
             </SheetClose>
           </div>
         </SheetHeader>

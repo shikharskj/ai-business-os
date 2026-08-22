@@ -23,7 +23,9 @@ import { createMemoryOutboxRepository } from "@/modules/shared-kernel/outbox";
 import { businessDate } from "@/modules/shared-kernel/dates";
 import { money } from "@/modules/shared-kernel/money";
 import type { MembershipRole } from "@/modules/tenant/domain/types";
+import { defaultAutonomyPolicy } from "@/modules/tenant/domain/autonomy-policy";
 import { createMemoryAttentionQueueRepository } from "@/modules/business-state/infrastructure/memory-attention-repository";
+import { createMemoryBusinessStateProjectionRepository } from "@/modules/business-state/infrastructure/memory-projection-repository";
 
 export const TENANT_A = "tenant-a";
 export const TENANT_B = "tenant-b";
@@ -243,9 +245,11 @@ export function toolContext(options?: {
       journals: createMemoryJournalRepository(),
       notifications,
       attention: createMemoryAttentionQueueRepository(),
+      projections: createMemoryBusinessStateProjectionRepository(),
       outbox: createMemoryOutboxRepository(),
     },
     audit,
+    autonomyPolicy: defaultAutonomyPolicy(tenantId),
     auditRecords: audit.records,
     notificationRecords: notifications.records,
     correlationId: "corr-1",

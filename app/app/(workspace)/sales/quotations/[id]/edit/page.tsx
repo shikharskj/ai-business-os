@@ -1,18 +1,18 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { QuotationForm } from "@/components/business/quotation-form";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { authorize } from "@/lib/security";
-import { todayInTimezone } from "@/modules/shared-kernel/dates";
-import { toMajorString } from "@/modules/shared-kernel/money";
 import { listCustomers } from "@/modules/party";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 import { listProducts } from "@/modules/catalog";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 import { getQuotation, QuotationNotFoundError } from "@/modules/sales";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
+import { todayInTimezone } from "@/modules/shared-kernel/dates";
+import { toMajorString } from "@/modules/shared-kernel/money";
 import { businessLogoUrl } from "@/modules/tenant";
 
 export default async function EditQuotationPage({
@@ -38,20 +38,26 @@ export default async function EditQuotationPage({
   }
 
   if (quotation.status !== "DRAFT") {
-    notFound();
+    redirect(`/app/sales/quotations/${quotation.id}?locked=1`);
   }
 
-  const [customers, products] = await Promise.all([
+  const [activeCustomers, quotationCustomer, products] = await Promise.all([
     listCustomers({
       tenantId: tenant.tenantId,
       status: "ACTIVE",
       parties: prismaPartyRepository,
     }),
+    prismaPartyRepository.findCustomerById(tenant.tenantId, quotation.customerId),
     listProducts({
       tenantId: tenant.tenantId,
       catalog: prismaCatalogRepository,
     }),
   ]);
+
+  const customerMap = new Map(activeCustomers.map((customer) => [customer.id, customer]));
+  if (quotationCustomer && !customerMap.has(quotationCustomer.id)) {
+    customerMap.set(quotationCustomer.id, quotationCustomer);
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
@@ -73,7 +79,7 @@ export default async function EditQuotationPage({
         today={todayInTimezone(tenant.business.timezone)}
         seller={tenant.business}
         logoUrl={businessLogoUrl(tenant.business.logoDocumentId)}
-        customers={customers.map((customer) => ({
+        customers={[...customerMap.values()].map((customer) => ({
           id: customer.id,
           name: customer.name,
           gstin: customer.gstin,

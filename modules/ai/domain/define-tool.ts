@@ -8,6 +8,10 @@ import type {
   AiToolDefinition,
   AiToolName,
 } from "@/modules/ai/domain/tool-types";
+import type {
+  AutonomyActionClass,
+  AutonomyLevel,
+} from "@/modules/tenant/domain/autonomy-policy";
 
 function firstIssueMessage(error: z.ZodError): string {
   const issue = error.issues[0];
@@ -31,6 +35,8 @@ export function defineAiTool<
   description: string;
   category: AiToolCategory;
   permission: Permission;
+  autonomyLevel: AutonomyLevel;
+  actionClass?: AutonomyActionClass;
   requiresConfirmation?: boolean;
   inputSchema: InputSchema;
   outputSchema: OutputSchema;
@@ -44,6 +50,8 @@ export function defineAiTool<
     description: config.description,
     category: config.category,
     permission: config.permission,
+    autonomyLevel: config.autonomyLevel,
+    actionClass: config.actionClass,
     requiresConfirmation: config.requiresConfirmation ?? false,
     inputSchema: config.inputSchema,
     outputSchema: config.outputSchema,

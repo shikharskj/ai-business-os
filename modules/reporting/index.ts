@@ -34,7 +34,9 @@ export {
 export { isPeriodKey, periodDateRange } from "@/modules/reporting/domain/period";
 export {
   DASHBOARD_CHART_RANGE_PRESETS,
+  previousDashboardDateRange,
   resolveDashboardDateRange,
+  shiftBusinessDateByMonths,
 } from "@/modules/reporting/domain/dashboard-range";
 export {
   expenseReportToCsv,

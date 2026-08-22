@@ -68,7 +68,7 @@ export function DataTablePagination({
             render={<Link href={buildHref({ page: 1 })} aria-label="First page" />}
             disabled={page <= 1}
           >
-            <ChevronsLeft className="size-4" />
+            <ChevronsLeft className="size-5" />
           </Button>
           <Button
             variant="outline"
@@ -79,7 +79,7 @@ export function DataTablePagination({
             }
             disabled={page <= 1}
           >
-            <ChevronLeft className="size-4" />
+            <ChevronLeft className="size-5" />
           </Button>
           <span className="min-w-24 text-center text-sm font-medium">
             Page {page} of {Math.max(count, 1)}
@@ -91,7 +91,7 @@ export function DataTablePagination({
             render={<Link href={buildHref({ page: page + 1 })} aria-label="Next page" />}
             disabled={count === 0 || page >= count}
           >
-            <ChevronRight className="size-4" />
+            <ChevronRight className="size-5" />
           </Button>
           <Button
             variant="outline"
@@ -100,7 +100,7 @@ export function DataTablePagination({
             render={<Link href={buildHref({ page: count })} aria-label="Last page" />}
             disabled={count === 0 || page >= count}
           >
-            <ChevronsRight className="size-4" />
+            <ChevronsRight className="size-5" />
           </Button>
         </div>
       </div>

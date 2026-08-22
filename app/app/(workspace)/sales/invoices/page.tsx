@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { InvoicesDataTable } from "@/components/business/invoices-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
+import { ListFilterClear } from "@/components/shell/list-filter-clear";
 import { DatePicker } from "@/components/date-picker";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -19,11 +20,13 @@ import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
 import {
   INVOICE_STATUSES,
+  decorateInvoiceListRows,
   listInvoicesPage,
   invoiceSearchSchema,
 } from "@/modules/sales";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
-import { businessDate } from "@/modules/shared-kernel/dates";
+import { prismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
+import { businessDate, todayInTimezone } from "@/modules/shared-kernel/dates";
 
 const STATUS_FILTER_LABELS: Record<(typeof INVOICE_STATUSES)[number] | "ALL", string> = {
   ALL: "All",
@@ -41,6 +44,8 @@ export default async function InvoicesPage({
   searchParams: Promise<{
     q?: string;
     status?: string;
+    due?: string;
+    customerId?: string;
     from?: string;
     to?: string;
     page?: string;
@@ -50,28 +55,52 @@ export default async function InvoicesPage({
   const tenant = await authorize("invoice:read");
   const params = await searchParams;
   const { page, pageSize } = parseListTableParams(params);
+  const asOf = todayInTimezone(tenant.business.timezone);
   const parseResult = invoiceSearchSchema.safeParse({
     q: params.q,
     status: params.status,
+    due: params.due,
+    customerId: params.customerId,
     from: params.from || undefined,
     to: params.to || undefined,
   });
   const filters = parseResult.success
     ? parseResult.data
-    : { q: "", status: "ALL" as const, from: undefined, to: undefined };
+    : {
+        q: "",
+        status: "ALL" as const,
+        due: "ALL" as const,
+        customerId: undefined,
+        from: undefined,
+        to: undefined,
+      };
   const canCreate = roleHasPermission(tenant.membership.role, "invoice:create");
   const result = await listInvoicesPage({
     tenantId: tenant.tenantId,
     query: filters.q,
     status: filters.status,
+    customerId: filters.customerId,
+    due: filters.due,
+    overdueAsOf: filters.due === "OVERDUE" ? businessDate(asOf) : undefined,
     fromDate: filters.from ? businessDate(filters.from) : undefined,
     toDate: filters.to ? businessDate(filters.to) : undefined,
     page,
     pageSize,
     sales: prismaSalesRepository,
   });
+  const rows = await decorateInvoiceListRows({
+    tenantId: tenant.tenantId,
+    invoices: result.items,
+    payments: prismaPaymentRepository,
+    asOf: businessDate(asOf),
+  });
   const hasFilters = Boolean(
-    filters.q || filters.status !== "ALL" || filters.from || filters.to
+    filters.q ||
+      filters.status !== "ALL" ||
+      filters.due !== "ALL" ||
+      filters.customerId ||
+      filters.from ||
+      filters.to
   );
   const queryString = toQueryString(params);
 
@@ -96,6 +125,9 @@ export default async function InvoicesPage({
       <form className="flex flex-wrap items-end gap-3" method="get">
         {pageSize !== 10 ? (
           <input type="hidden" name="pageSize" value={pageSize} />
+        ) : null}
+        {filters.customerId ? (
+          <input type="hidden" name="customerId" value={filters.customerId} />
         ) : null}
         <div className="flex min-w-56 flex-1 flex-col gap-2">
           <label htmlFor="q" className="text-base font-medium">
@@ -131,6 +163,24 @@ export default async function InvoicesPage({
             </SelectContent>
           </Select>
         </div>
+        <div className="flex w-40 flex-col gap-2">
+          <label htmlFor="due" className="text-base font-medium">
+            Due
+          </label>
+          <Select
+            name="due"
+            defaultValue={filters.due}
+            items={{ ALL: "All", OVERDUE: "Overdue" }}
+          >
+            <SelectTrigger id="due" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All</SelectItem>
+              <SelectItem value="OVERDUE">Overdue</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex w-44 flex-col gap-2">
           <label htmlFor="from" className="text-base font-medium">
             From
@@ -156,6 +206,7 @@ export default async function InvoicesPage({
         <Button type="submit" variant="outline">
           Filter
         </Button>
+        {hasFilters ? <ListFilterClear href="/app/sales/invoices" /> : null}
       </form>
 
       {result.total === 0 ? (
@@ -181,7 +232,7 @@ export default async function InvoicesPage({
         />
       ) : (
         <InvoicesDataTable
-          items={result.items}
+          items={rows}
           total={result.total}
           page={result.page}
           pageSize={result.pageSize}

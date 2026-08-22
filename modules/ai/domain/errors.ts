@@ -1,4 +1,5 @@
 import type { Permission } from "@/lib/security/permissions";
+import type { AutonomyDenialReason } from "@/modules/tenant/domain/autonomy-policy";
 
 export class AiToolError extends Error {
   /** Stable machine code used in audit metadata and tool-result messages. */
@@ -59,6 +60,37 @@ export class AiToolResourceNotFoundError extends AiToolError {
       `${resource} was not found in this business.`
     );
     this.name = "AiToolResourceNotFoundError";
+  }
+}
+
+const AUTONOMY_DENIAL_MESSAGES: Record<AutonomyDenialReason, string> = {
+  class_not_allowed:
+    "This action is not allowed to run automatically. Confirm it instead, or enable it in autonomy policy.",
+  automation_disabled:
+    "This automation is disabled for this business.",
+  missing_threshold:
+    "Automatic execution is not configured for this action.",
+  missing_amount:
+    "Automatic execution needs a verified amount from business records.",
+  invalid_amount:
+    "Automatic execution could not verify the amount against policy.",
+  over_threshold:
+    "This action is above the automatic-send limit. Confirm it instead.",
+  confirmation_required:
+    "This action requires confirmation under the current policy.",
+};
+
+/**
+ * An L4 attempt was refused by tenant autonomy policy. Confirmation (L3) is
+ * still available; this is not an authorization failure.
+ */
+export class AiAutonomyPolicyError extends AiToolError {
+  public readonly reason: AutonomyDenialReason;
+
+  constructor(reason: AutonomyDenialReason) {
+    super("TOOL_AUTONOMY_DENIED", AUTONOMY_DENIAL_MESSAGES[reason]);
+    this.name = "AiAutonomyPolicyError";
+    this.reason = reason;
   }
 }
 

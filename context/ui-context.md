@@ -620,7 +620,17 @@ Row order within a page can be changed with the drag handle; order is persisted 
 
 **Nested or detail tables** (line items on invoice/quotation detail, payments on invoice detail, etc.) stay on the simple `Table` primitive — do not use the shared DataTable there.
 
-Wrap list tables in a shell: `overflow-hidden rounded-md border border-border bg-card`. Keep a toolbar row for GET filter forms above the table; omit `page` on filter submit so results reset to page 1.
+**Sales list rows:** Invoices show amount, derived outstanding, due date (warning tone when overdue), and one payment-facing status badge (`Draft` / `Unpaid` / `Partially paid` / `Paid` / `Cancelled`). Customer names link to the customer hub. Transactional lists (invoices, quotations, payments) disable drag reorder; customers/products may keep reorder when useful.
+
+**Sales detail pages:** One primary header action (Post, Record payment, Mark sent, etc.); secondary actions (Cancel, Export PDF) live in the overflow menu. Overdue receivables show semantic overdue copy beside the due date. Line tables show GST rate and tax amount. Non-draft edit URLs redirect to detail with `?locked=1` instead of 404.
+
+**Customer hub:** Detail page is the sales record for a party — outstanding card, capped related invoices/quotations/payments with “View all” filtered links, New invoice / Record payment when permitted, reactivate for inactive customers.
+
+**Sales forms:** Customer and product fields use the searchable `Combobox`; business dates use the shared `DatePicker` (ISO `value` / `onValueChange`). Line rows show pre-GST subtotal (qty × rate − discount); tax amounts come from the server preview only. “New customer” / “New product” are text links to full create pages (no inline modals).
+
+**Sales hub (`/app/sales`):** Directory cards for Quotations, Invoices, Customers, and Payments (permission-filtered). When the member has `invoice:read`, show open receivables and an overdue shortcut.
+
+Wrap list tables in a shell: `overflow-hidden rounded-md border border-border bg-card`. Keep a toolbar row for GET filter forms above the table; omit `page` on filter submit so results reset to page 1. Include a **Clear** link that drops filter query params (same path, no query).
 
 Tables should:
 
@@ -1116,10 +1126,10 @@ Rules:
 
 * Ranked by severity; each row links to a domain record.
 * Verified amounts come from facts / BusinessState — never invent figures in marketing copy.
-* Queue type counts (overdue / low stock / idle quote) summarize open AttentionQueue rows on the same card — not a second Alerts list.
+* Queue type counts (overdue / low stock / idle quote / unusual expense) summarize open AttentionQueue rows on the same card — not a second Alerts list.
 * Period notes (expense ratio, negative profit, payables vs receivables) are L0 inform from dashboard overview money; they are not AttentionQueue rows and have no queue dismiss.
 * When AI is down, render a **deterministic** brief from BusinessState (same rows, quieter copy; period notes still from overview facts).
-* Actions from the brief use the same confirmation pattern as assistant pending actions. Overdue rows: L1 Recommend “Remind customer”; L2 Prepare reminder (only when the member has `invoice:update`) → `POST /api/assistant/actions/propose` then Confirm on the shared pending-action card → `POST /api/assistant/actions/confirm`. Read-only roles such as ACCOUNTANT keep Recommend + View/Dismiss and never see a Prepare control that would 403. Low stock / idle quote: Recommend + View link only (no prepare).
+* Actions from the brief use the same confirmation pattern as assistant pending actions. Overdue rows: L1 Recommend “Remind customer”; L2 Prepare reminder (only when the member has `invoice:update`) → `POST /api/assistant/actions/propose` then Confirm on the shared pending-action card → `POST /api/assistant/actions/confirm`. Read-only roles such as ACCOUNTANT keep Recommend + View/Dismiss and never see a Prepare control that would 403. Low stock: Recommend “Reorder”; L2 Prepare purchase (only when the member has `purchase:create`) navigates to new bill and does not post. Idle quote: Recommend “Follow up” + View (no auto-email). Unusual expense: Inform + Recommend “Review expense” + View (no recategorize).
 * If confirm fails, keep the pending preview with the error, **Try again**, and **Cancel**. Keep **View** and **Dismiss** on the row so a transient failure does not trap the item behind error-only client state.
 * Show the first five open queue rows; “Show more” reveals the rest. Header counts use visible (non-dismissed) rows so optimistic dismiss stays honest.
 * Cue that yesterday’s sales/cash-in/expenses are yesterday; KPIs and chart follow the range filter above the canvas.
@@ -1144,6 +1154,8 @@ Label AI and automation affordances consistently:
 | Auto (policy) | L4 — may run within tenant limits |
 
 Keep these quieter than primary CTAs; they support trust, they are not badges for decoration.
+
+Owner/admin Settings → Autonomy is where L4 for payment reminders is enabled, with amount ceilings. Chat and Daily Brief still show Confirm until that policy allows a trusted L4 caller (automation runtime in spec `09`; collections vertical in spec `10` auto-sends in-app reminders under that ceiling). Purchase and expense posting cannot be enabled for L4. Settings also lists recent automation runs (optional history — not a new nav item).
 
 ---
 
@@ -1170,6 +1182,15 @@ Three customers account for 68% of the outstanding amount.
 ```
 
 The user should be able to understand **where important numbers came from**.
+
+The assistant sheet labels these bands explicitly:
+
+```text
+Verified     → fact cards/tables from tools
+Analysis     → model prose (not a source of figures)
+Recommend    → next-step lines and prepare chips
+Confirm      → pending mutation preview (existing L3 card)
+```
 
 ---
 

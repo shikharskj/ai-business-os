@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { splitAssistantAnswer } from "@/modules/ai/domain/assistant-answer";
 import type {
   AiAssistantFact,
   AiAssistantPendingAction,
@@ -41,6 +42,7 @@ export function AssistantMessageView({
   activitySteps,
   onConfirm,
   onCancel,
+  onPrepare,
 }: {
   text: string;
   facts: AiAssistantFact[];
@@ -52,8 +54,16 @@ export function AssistantMessageView({
   activitySteps: AssistantActivityStep[];
   onConfirm: () => void;
   onCancel: () => void;
+  onPrepare: (pending: AiAssistantPendingAction & { token: string }) => void;
 }) {
   const showActivity = isStreaming || activitySteps.length > 0;
+  const { analysis, recommendations } = splitAssistantAnswer(text);
+  const navigateSuggestions = suggestions.filter(
+    (suggestion) => suggestion.kind === "navigate"
+  );
+  const prepareSuggestions = pendingAction
+    ? []
+    : suggestions.filter((suggestion) => suggestion.kind === "prepare");
 
   return (
     <div className="flex flex-col gap-3">
@@ -61,7 +71,27 @@ export function AssistantMessageView({
         <AssistantActivity steps={activitySteps} isStreaming={isStreaming} />
       ) : null}
 
-      {text ? <AssistantProse text={text} /> : null}
+      {analysis ? (
+        <section className="flex flex-col gap-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Analysis
+          </p>
+          <AssistantProse text={analysis} />
+        </section>
+      ) : null}
+
+      {recommendations.length > 0 ? (
+        <section className="flex flex-col gap-1.5">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Recommend
+          </p>
+          <ul className="flex flex-col gap-1 pl-4 text-base text-foreground list-disc">
+            {recommendations.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {facts.length > 0 ? <FactsSurface facts={facts} /> : null}
 
@@ -80,9 +110,23 @@ export function AssistantMessageView({
         </p>
       ))}
 
-      {suggestions.length > 0 ? (
+      {prepareSuggestions.length > 0 || navigateSuggestions.length > 0 ? (
         <div className="flex flex-wrap gap-2">
-          {suggestions.map((suggestion) => (
+          {prepareSuggestions.map((suggestion) => (
+            <Button
+              key={suggestion.label}
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => onPrepare(suggestion.pendingAction)}
+            >
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Prepare
+              </span>
+              {suggestion.label}
+            </Button>
+          ))}
+          {navigateSuggestions.map((suggestion) => (
             <Button
               key={suggestion.href}
               variant="outline"
@@ -105,6 +149,9 @@ function FactsSurface({ facts }: { facts: AiAssistantFact[] }) {
 
   return (
     <section className="rounded-xl border border-border bg-card p-3 shadow-sm">
+      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Verified
+      </p>
       {useTable ? (
         <Table>
           <TableHeader>

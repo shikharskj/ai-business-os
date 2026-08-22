@@ -217,12 +217,15 @@ describe("ai tool authorization (27)", () => {
     expect(staffTools).toContain("get_low_stock_products");
     expect(staffTools).not.toContain("get_sales_summary");
     expect(staffTools).not.toContain("get_cash_position");
+    expect(staffTools).not.toContain("explain_period_movement");
 
     const accountantTools = listAiToolsForRole("ACCOUNTANT").map(
       (tool) => tool.name
     );
     expect(accountantTools).toContain("get_sales_summary");
     expect(accountantTools).toContain("get_cash_position");
+    expect(accountantTools).toContain("explain_period_movement");
+    expect(accountantTools).not.toContain("send_payment_reminders");
   });
 
   it("refuses a tool the role lacks permission for and audits the denial", async () => {

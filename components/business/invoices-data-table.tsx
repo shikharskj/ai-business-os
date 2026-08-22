@@ -3,28 +3,25 @@
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 
+import { formatDisplayDate } from "@/components/business/inventory-labels";
 import { MoneyDisplay } from "@/components/business/money-display";
 import { StatusBadge } from "@/components/business/status-badge";
-import {
-  INVOICE_STATUS_LABELS,
-  INVOICE_STATUS_TONES,
-} from "@/components/business/status-tone";
+import { invoicePaymentBadgePresentation } from "@/components/business/status-tone";
 import { useListTableHref } from "@/components/business/list-table-client";
 import { DataTable } from "@/components/data-table";
 import type { DataTableFeatures } from "@/components/data-table/data-table-features";
-import type { SalesInvoice } from "@/modules/sales/domain/types";
-import { paymentStatusLabel } from "@/modules/sales/domain/invoice-status";
+import type { InvoiceListRow } from "@/modules/sales/application/invoice-list-rows";
 import type { PageSize } from "@/modules/shared-kernel/list-page";
 
 type InvoicesDataTableProps = {
-  items: SalesInvoice[];
+  items: InvoiceListRow[];
   total: number;
   page: number;
   pageSize: PageSize;
   queryString: string;
 };
 
-const columns: ColumnDef<DataTableFeatures, SalesInvoice>[] = [
+const columns: ColumnDef<DataTableFeatures, InvoiceListRow>[] = [
   {
     accessorKey: "number",
     header: "Number",
@@ -37,13 +34,38 @@ const columns: ColumnDef<DataTableFeatures, SalesInvoice>[] = [
       </Link>
     ),
   },
-  { accessorKey: "customerName", header: "Customer" },
+  {
+    accessorKey: "customerName",
+    header: "Customer",
+    cell: ({ row }) => (
+      <Link
+        href={`/app/sales/customers/${row.original.customerId}`}
+        className="font-medium hover:underline"
+      >
+        {row.original.customerName}
+      </Link>
+    ),
+  },
   {
     accessorKey: "issuedOn",
     header: "Date",
+    cell: ({ row }) => formatDisplayDate(row.original.issuedOn),
+  },
+  {
+    id: "dueOn",
+    header: "Due",
     cell: ({ row }) => {
-      const date = new Date(row.original.issuedOn);
-      return date.toLocaleDateString("en-IN", { timeZone: "UTC" });
+      if (!row.original.dueOn) {
+        return "—";
+      }
+      if (row.original.isOverdue) {
+        return (
+          <StatusBadge tone="warning">
+            {formatDisplayDate(row.original.dueOn)}
+          </StatusBadge>
+        );
+      }
+      return formatDisplayDate(row.original.dueOn);
     },
   },
   {
@@ -56,18 +78,21 @@ const columns: ColumnDef<DataTableFeatures, SalesInvoice>[] = [
     ),
   },
   {
-    accessorKey: "status",
-    header: "Status",
+    id: "outstanding",
+    header: () => <span className="block text-right">Outstanding</span>,
     cell: ({ row }) => (
-      <StatusBadge tone={INVOICE_STATUS_TONES[row.original.status]}>
-        {INVOICE_STATUS_LABELS[row.original.status]}
-      </StatusBadge>
+      <div className="text-right">
+        <MoneyDisplay value={row.original.outstanding} />
+      </div>
     ),
   },
   {
-    id: "payment",
-    header: "Payment",
-    cell: ({ row }) => paymentStatusLabel(row.original.status),
+    id: "status",
+    header: "Status",
+    cell: ({ row }) => {
+      const badge = invoicePaymentBadgePresentation(row.original.status);
+      return <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>;
+    },
   },
 ];
 
@@ -90,6 +115,7 @@ export function InvoicesDataTable({
       total={total}
       buildHref={buildHref}
       listKey="invoices"
+      enableReorder={false}
     />
   );
 }

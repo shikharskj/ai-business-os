@@ -24,6 +24,7 @@ import { createMemoryBusinessStateProjectionRepository } from "@/modules/busines
 import { createMemoryAttentionQueueRepository } from "@/modules/business-state/infrastructure/memory-attention-repository";
 import type { BusinessStateConsumerDeps } from "@/modules/business-state";
 import { createMemoryCatalogRepository } from "@/modules/catalog";
+import { createMemoryExpenseRepository } from "@/modules/expenses";
 import { createMemoryInventoryRepository } from "@/modules/inventory";
 import { createMemoryPaymentRepository } from "@/modules/payments";
 import { createMemorySalesRepository } from "@/modules/sales";
@@ -38,6 +39,7 @@ function stubBusinessStateDeps(): BusinessStateConsumerDeps {
     payments: createMemoryPaymentRepository(),
     catalog: createMemoryCatalogRepository(),
     inventory: createMemoryInventoryRepository(),
+    expenses: createMemoryExpenseRepository(),
     accounts: createMemoryAccountRepository(),
     journals: createMemoryJournalRepository(),
     projections: createMemoryBusinessStateProjectionRepository(),

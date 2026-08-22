@@ -19,12 +19,14 @@ export const ATTENTION_TYPE_LABELS = {
   OVERDUE_RECEIVABLE: "Overdue",
   LOW_STOCK: "Low stock",
   IDLE_QUOTATION: "Idle quote",
+  UNUSUAL_EXPENSE: "Unusual expense",
 } as const;
 
 export const ATTENTION_RECORD_LABELS: Record<string, string> = {
   SalesInvoice: "View invoice",
   Product: "View stock",
   Quotation: "View quotation",
+  Expense: "View expense",
 };
 
 export type DailyBriefMoneyDto = {
@@ -37,6 +39,7 @@ export type DailyBriefCounts = {
   overdue: number;
   lowStock: number;
   idleQuotation: number;
+  unusualExpense: number;
 };
 
 export type DailyBriefPeriodNote = {
@@ -97,12 +100,14 @@ export function countOpenAttentionByType(
   let overdue = 0;
   let lowStock = 0;
   let idleQuotation = 0;
+  let unusualExpense = 0;
   for (const item of items) {
     if (item.type === "OVERDUE_RECEIVABLE") overdue += 1;
     else if (item.type === "LOW_STOCK") lowStock += 1;
     else if (item.type === "IDLE_QUOTATION") idleQuotation += 1;
+    else if (item.type === "UNUSUAL_EXPENSE") unusualExpense += 1;
   }
-  return { overdue, lowStock, idleQuotation };
+  return { overdue, lowStock, idleQuotation, unusualExpense };
 }
 
 /**
@@ -172,6 +177,8 @@ export function buildDailyBriefView(input: {
   items: AttentionItem[];
   /** Same capability as propose/confirm (`invoice:update`). */
   canPreparePaymentReminder: boolean;
+  /** Same capability as creating a bill (`purchase:create`). */
+  canPreparePurchase?: boolean;
   overview?: Pick<
     DashboardOverview,
     "revenue" | "expenses" | "profit" | "receivables" | "payables"
@@ -198,6 +205,8 @@ export function buildDailyBriefView(input: {
       ...attentionItemToDto(item),
       actions: briefActionsForAttentionType(item.type, {
         canPrepareReminder: input.canPreparePaymentReminder,
+        canPreparePurchase: input.canPreparePurchase === true,
+        resourceId: item.resourceId,
       }),
     })),
   };

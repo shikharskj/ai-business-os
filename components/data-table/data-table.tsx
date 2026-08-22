@@ -68,7 +68,7 @@ function DragHandle({
       {...attributes}
       {...listeners}
     >
-      <GripVertical className="size-4" />
+      <GripVertical className="size-5" />
     </button>
   );
 }

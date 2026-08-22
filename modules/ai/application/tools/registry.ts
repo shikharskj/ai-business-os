@@ -7,6 +7,7 @@ import { expensesSummaryTool } from "@/modules/ai/application/tools/expenses-sum
 import { lowStockTool } from "@/modules/ai/application/tools/low-stock";
 import { overdueInvoicesTool } from "@/modules/ai/application/tools/overdue-invoices";
 import { paymentRemindersTool } from "@/modules/ai/application/tools/payment-reminders";
+import { periodMovementTool } from "@/modules/ai/application/tools/period-movement";
 import { receivablesTool } from "@/modules/ai/application/tools/receivables";
 import { salesSummaryTool } from "@/modules/ai/application/tools/sales-summary";
 import { AiToolNotFoundError } from "@/modules/ai/domain/errors";
@@ -18,8 +19,9 @@ import type {
 import type { MembershipRole } from "@/modules/tenant/domain/types";
 
 /**
- * The complete set of tools the AI may use. Read tools answer questions; the
- * single action tool (spec 28) cannot run without an explicit confirmation.
+ * The complete set of tools the AI may use. Read tools answer questions (L0).
+ * send_payment_reminders is L3 by default (HMAC confirm). L4 auto-send is
+ * only via executeAiTool({ autonomyAttempt: "L4" }) when tenant policy allows.
  */
 export const AI_TOOLS: readonly AiToolDefinition[] = [
   salesSummaryTool,
@@ -29,6 +31,7 @@ export const AI_TOOLS: readonly AiToolDefinition[] = [
   lowStockTool,
   businessMetricsTool,
   cashPositionTool,
+  periodMovementTool,
   paymentRemindersTool,
 ];
 

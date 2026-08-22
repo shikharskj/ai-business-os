@@ -31,9 +31,9 @@ import type { AiAssistantActionOutcome } from "@/modules/ai/domain/assistant-typ
 
 const STARTERS = [
   "Who owes me money?",
-  "How are sales this month?",
-  "What is low in stock?",
+  "Why did profit change this month?",
   "What should I focus on today?",
+  "What is low in stock?",
 ] as const;
 
 type ConfirmErrorBody = { error?: { message?: string; code?: string } };
@@ -82,6 +82,9 @@ export function AssistantPanel({
   const [input, setInput] = useState("");
   const [actionByMessage, setActionByMessage] = useState<
     Record<string, AssistantActionState>
+  >({});
+  const [preparedByMessage, setPreparedByMessage] = useState<
+    Record<string, AssistantPendingActionWire>
   >({});
   const [banner, setBanner] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -196,6 +199,8 @@ export function AssistantPanel({
           }
 
           const meta = metaFromParts(message.parts);
+          const pendingAction =
+            meta.pendingAction ?? preparedByMessage[message.id] ?? null;
           const isLast = message.id === messages[messages.length - 1]?.id;
           const streamingThis = isStreaming && isLast;
           const action =
@@ -213,16 +218,26 @@ export function AssistantPanel({
                 facts={meta.facts}
                 suggestions={meta.suggestions}
                 notices={meta.notices}
-                pendingAction={meta.pendingAction}
-                action={meta.pendingAction ? action : { status: "cancelled" }}
+                pendingAction={pendingAction}
+                action={pendingAction ? action : { status: "cancelled" }}
                 isStreaming={streamingThis}
                 activitySteps={activitySteps}
                 onConfirm={() => {
-                  if (meta.pendingAction) {
-                    void confirmPending(message.id, meta.pendingAction);
+                  if (pendingAction) {
+                    void confirmPending(message.id, pendingAction);
                   }
                 }}
                 onCancel={() => cancelPending(message.id)}
+                onPrepare={(pending) => {
+                  setPreparedByMessage((prev) => ({
+                    ...prev,
+                    [message.id]: pending,
+                  }));
+                  setActionByMessage((prev) => ({
+                    ...prev,
+                    [message.id]: { status: "proposed" },
+                  }));
+                }}
               />
             </div>
           );
@@ -301,7 +316,7 @@ export function AssistantPanel({
                 aria-label="Send"
                 className="size-9 rounded-full bg-foreground text-background shadow-sm transition-all duration-150 hover:bg-foreground/90 active:scale-95 disabled:bg-muted-foreground/20 disabled:text-muted-foreground/50 disabled:opacity-100"
               >
-                <SendHorizonal className="size-4.25" />
+                <SendHorizonal className="size-5.25" />
               </Button>
             </div>
           </div>

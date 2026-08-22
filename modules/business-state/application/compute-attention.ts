@@ -1,4 +1,6 @@
 import type { CatalogRepository } from "@/modules/catalog";
+import type { ExpenseRepository } from "@/modules/expenses";
+import { EXPENSE_CATEGORY_LABELS } from "@/modules/expenses/domain/types";
 import {
   listLowStockProducts,
   parseLowStockThreshold,
@@ -17,13 +19,16 @@ import {
   idleQuotationNaturalKey,
   lowStockNaturalKey,
   overdueReceivableNaturalKey,
+  unusualExpenseNaturalKey,
 } from "@/modules/business-state/domain/attention-keys";
+import { findUnusualExpenses } from "@/modules/business-state/domain/expense-anomaly";
 import {
   ATTENTION_SEVERITY,
   IDLE_QUOTATION_DAYS,
   type AttentionItemDraft,
 } from "@/modules/business-state/domain/types";
 import {
+  addBusinessDays,
   todayInTimezone,
   type BusinessDate,
 } from "@/modules/shared-kernel/dates";
@@ -39,6 +44,7 @@ export type ComputeAttentionQueueInput = {
   payments: PaymentRepository;
   catalog: CatalogRepository;
   inventory: InventoryRepository;
+  expenses: ExpenseRepository;
 };
 
 function daysBetween(fromDate: BusinessDate, toDate: BusinessDate): number {
@@ -61,7 +67,7 @@ function overdueSeverity(daysOverdue: number): number {
 
 /**
  * Builds current AttentionQueue drafts from domain truth (overdue invoices,
- * low stock, idle SENT/ACCEPTED quotations). Does not invent money.
+ * low stock, idle SENT/ACCEPTED quotations, unusual expenses). Does not invent money.
  */
 export async function computeAttentionQueue(
   input: ComputeAttentionQueueInput
@@ -95,6 +101,14 @@ export async function computeAttentionQueue(
       today,
       idleDays,
       sales: input.sales,
+    }))
+  );
+
+  drafts.push(
+    ...(await computeUnusualExpenseItems({
+      tenantId: input.tenantId,
+      today,
+      expenses: input.expenses,
     }))
   );
 
@@ -225,6 +239,52 @@ async function computeIdleQuotationItems(input: {
   }
 
   return drafts;
+}
+
+async function computeUnusualExpenseItems(input: {
+  tenantId: string;
+  today: BusinessDate;
+  expenses: ExpenseRepository;
+}): Promise<AttentionItemDraft[]> {
+  const fromDate = addBusinessDays(input.today, -90);
+  const expenses = await input.expenses.listExpenses({
+    tenantId: input.tenantId,
+    fromDate,
+    toDate: input.today,
+  });
+  const matches = findUnusualExpenses({
+    expenses,
+    tenantId: input.tenantId,
+    today: input.today,
+  });
+
+  return matches.map((match) => {
+    const amountMajor = toMajorString(match.expense.grandTotal);
+    const averageMajor = toMajorString(match.categoryAverage);
+    const category =
+      EXPENSE_CATEGORY_LABELS[match.expense.category] ?? match.expense.category;
+    return {
+      naturalKey: unusualExpenseNaturalKey(match.expense.id),
+      type: "UNUSUAL_EXPENSE" as const,
+      severity: ATTENTION_SEVERITY.UNUSUAL_EXPENSE,
+      title: `${match.expense.number} looks unusually high`,
+      body: `${match.expense.number} (${category}) is ${moneyLabel(
+        amountMajor,
+        match.expense.grandTotal.currency
+      )}, at least ${match.multiplier}× the recent ${category.toLowerCase()} average of ${moneyLabel(
+        averageMajor,
+        match.categoryAverage.currency
+      )} from ${match.sampleCount} earlier expense${
+        match.sampleCount === 1 ? "" : "s"
+      }.`,
+      href: `/app/expenses/${match.expense.id}`,
+      resourceType: "Expense",
+      resourceId: match.expense.id,
+      amount: match.expense.grandTotal,
+      currency: match.expense.grandTotal.currency,
+      factId: attentionFactId("UNUSUAL_EXPENSE", match.expense.id),
+    };
+  });
 }
 
 function isIdleQuotation(

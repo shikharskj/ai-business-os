@@ -20,6 +20,8 @@ import {
 } from "@/modules/business-state";
 import { createProduct } from "@/modules/catalog";
 import { createMemoryCatalogRepository } from "@/modules/catalog";
+import { createMemoryExpenseRepository } from "@/modules/expenses";
+import type { Expense } from "@/modules/expenses/domain/types";
 import {
   clearOutboxConsumers,
   createMemoryOutboxDispatchRepository,
@@ -107,6 +109,32 @@ function quotationFixture(
     updatedAt: new Date(),
     ...overrides,
     issuedOn,
+  };
+}
+
+function expenseFixture(
+  overrides: Partial<Expense> & Pick<Expense, "id" | "tenantId" | "number">
+): Expense {
+  const grandTotal = overrides.grandTotal ?? money(100_00n);
+  return {
+    category: "OFFICE",
+    incurredOn: businessDate("2026-08-10"),
+    method: "CASH",
+    vendorGstin: null,
+    notes: null,
+    taxableAmount: grandTotal,
+    taxRateBps: 0,
+    cgst: zero,
+    sgst: zero,
+    igst: zero,
+    totalTax: zero,
+    grandTotal,
+    supplyType: "NONE",
+    treatment: "EXEMPT",
+    journalId: "jr-exp",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
   };
 }
 
@@ -205,6 +233,7 @@ describe("attention queue (post-mvp 04)", () => {
       payments: createMemoryPaymentRepository(),
       catalog,
       inventory,
+      expenses: createMemoryExpenseRepository(),
       ...(await seededAccounting()),
       projections: createMemoryBusinessStateProjectionRepository(),
       attention,
@@ -251,6 +280,7 @@ describe("attention queue (post-mvp 04)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       ...(await seededAccounting()),
       projections: createMemoryBusinessStateProjectionRepository(),
       attention,
@@ -262,6 +292,62 @@ describe("attention queue (post-mvp 04)", () => {
     expect(open[0]?.type).toBe("IDLE_QUOTATION");
     expect(open[0]?.resourceId).toBe("qt-idle");
     expect(open[0]?.href).toBe("/app/sales/quotations/qt-idle");
+  });
+
+  it("surfaces unusual expenses versus the recent category average", async () => {
+    const expenses = createMemoryExpenseRepository([
+      expenseFixture({
+        id: "exp-1",
+        tenantId: "tenant-a",
+        number: "EXP/1",
+        incurredOn: businessDate("2026-08-08"),
+        grandTotal: money(100_00n),
+      }),
+      expenseFixture({
+        id: "exp-2",
+        tenantId: "tenant-a",
+        number: "EXP/2",
+        incurredOn: businessDate("2026-08-09"),
+        grandTotal: money(100_00n),
+      }),
+      expenseFixture({
+        id: "exp-3",
+        tenantId: "tenant-a",
+        number: "EXP/3",
+        incurredOn: businessDate("2026-08-10"),
+        grandTotal: money(100_00n),
+      }),
+      expenseFixture({
+        id: "exp-spike",
+        tenantId: "tenant-a",
+        number: "EXP/4",
+        incurredOn: businessDate("2026-08-20"),
+        grandTotal: money(500_00n),
+      }),
+    ]);
+    const attention = createMemoryAttentionQueueRepository();
+
+    await rebuildBusinessStateProjections({
+      tenantId: "tenant-a",
+      timezone: "Asia/Kolkata",
+      lowStockThresholdMajor: "5.0000",
+      sales: createMemorySalesRepository(),
+      payments: createMemoryPaymentRepository(),
+      catalog: createMemoryCatalogRepository(),
+      inventory: createMemoryInventoryRepository(),
+      expenses,
+      ...(await seededAccounting()),
+      projections: createMemoryBusinessStateProjectionRepository(),
+      attention,
+      families: ["attentionQueue"],
+    });
+
+    const open = await listOpenAttention({ tenantId: "tenant-a", attention });
+    expect(open).toHaveLength(1);
+    expect(open[0]?.type).toBe("UNUSUAL_EXPENSE");
+    expect(open[0]?.resourceId).toBe("exp-spike");
+    expect(open[0]?.href).toBe("/app/expenses/exp-spike");
+    expect(toMajorString(open[0]!.amount!)).toBe("500.00");
   });
 
   it("dismisses an item idempotently, records an outcome, and does not mutate invoices", async () => {
@@ -285,6 +371,7 @@ describe("attention queue (post-mvp 04)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       ...(await seededAccounting()),
       projections: createMemoryBusinessStateProjectionRepository(),
       attention,
@@ -339,6 +426,7 @@ describe("attention queue (post-mvp 04)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       ...(await seededAccounting()),
       projections: createMemoryBusinessStateProjectionRepository(),
       attention,
@@ -367,6 +455,7 @@ describe("attention queue (post-mvp 04)", () => {
       payments,
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       ...(await seededAccounting()),
       projections: createMemoryBusinessStateProjectionRepository(),
       attention,
@@ -433,6 +522,7 @@ describe("attention queue (post-mvp 04)", () => {
         payments: createMemoryPaymentRepository(),
         catalog: createMemoryCatalogRepository(),
         inventory: createMemoryInventoryRepository(),
+        expenses: createMemoryExpenseRepository(),
         ...(await seededAccounting()),
         projections: createMemoryBusinessStateProjectionRepository(),
         attention,
@@ -474,6 +564,7 @@ describe("attention queue (post-mvp 04)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       ...(await seededAccounting()),
       projections: createMemoryBusinessStateProjectionRepository(),
       attention,
@@ -580,6 +671,7 @@ describe("attention queue (post-mvp 04)", () => {
       payments: createMemoryPaymentRepository(),
       catalog,
       inventory,
+      expenses: createMemoryExpenseRepository(),
       ...accounting,
       projections,
       attention,
@@ -603,6 +695,7 @@ describe("attention queue (post-mvp 04)", () => {
       payments: createMemoryPaymentRepository(),
       catalog,
       inventory,
+      expenses: createMemoryExpenseRepository(),
       ...accounting,
       projections,
       attention,
@@ -623,6 +716,7 @@ describe("attention queue (post-mvp 04)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       ...accounting,
       projections,
       attention,
@@ -638,6 +732,7 @@ describe("attention queue (post-mvp 04)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       ...accounting,
       projections,
       attention,
@@ -658,6 +753,7 @@ describe("attention queue (post-mvp 04)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       ...accounting,
       projections,
       attention,
@@ -674,6 +770,7 @@ describe("attention queue (post-mvp 04)", () => {
       payments: createMemoryPaymentRepository(),
       catalog: createMemoryCatalogRepository(),
       inventory: createMemoryInventoryRepository(),
+      expenses: createMemoryExpenseRepository(),
       ...accounting,
       projections,
       attention,

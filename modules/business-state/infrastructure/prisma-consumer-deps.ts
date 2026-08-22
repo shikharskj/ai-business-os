@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 
 import { createPrismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
+import { createPrismaExpenseRepository } from "@/modules/expenses/infrastructure/prisma-expenses-repository";
 import { createPrismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";
 import { createPrismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
 import { createPrismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
@@ -24,6 +25,7 @@ export function createPrismaBusinessStateConsumerDeps(
     payments: createPrismaPaymentRepository(prisma),
     catalog: createPrismaCatalogRepository(prisma),
     inventory: createPrismaInventoryRepository(prisma),
+    expenses: createPrismaExpenseRepository(prisma),
     accounts: createPrismaAccountRepository(prisma),
     journals: createPrismaJournalRepository(prisma),
     projections: createPrismaBusinessStateProjectionRepository(prisma),

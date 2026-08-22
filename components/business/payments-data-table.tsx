@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 
+import { formatDisplayDate } from "@/components/business/inventory-labels";
 import { MoneyDisplay } from "@/components/business/money-display";
 import { useListTableHref } from "@/components/business/list-table-client";
 import { DataTable } from "@/components/data-table";
@@ -19,6 +20,16 @@ type PaymentsDataTableProps = {
   queryString: string;
 };
 
+function allocationSummary(payment: CustomerPayment): string {
+  if (payment.allocations.length === 0) {
+    return "—";
+  }
+  if (payment.allocations.length === 1) {
+    return payment.allocations[0]!.invoiceNumber;
+  }
+  return `${payment.allocations.length} invoices`;
+}
+
 const columns: ColumnDef<DataTableFeatures, CustomerPayment>[] = [
   {
     accessorKey: "number",
@@ -32,12 +43,34 @@ const columns: ColumnDef<DataTableFeatures, CustomerPayment>[] = [
       </Link>
     ),
   },
-  { accessorKey: "customerName", header: "Customer" },
-  { accessorKey: "receivedOn", header: "Date" },
+  {
+    accessorKey: "customerName",
+    header: "Customer",
+    cell: ({ row }) => (
+      <Link
+        href={`/app/sales/customers/${row.original.customerId}`}
+        className="font-medium hover:underline"
+      >
+        {row.original.customerName}
+      </Link>
+    ),
+  },
+  {
+    accessorKey: "receivedOn",
+    header: "Date",
+    cell: ({ row }) => formatDisplayDate(row.original.receivedOn),
+  },
   {
     accessorKey: "method",
     header: "Method",
     cell: ({ row }) => PAYMENT_METHOD_LABELS[row.original.method],
+  },
+  {
+    id: "allocations",
+    header: "Invoices",
+    cell: ({ row }) => (
+      <span className="font-mono text-xs">{allocationSummary(row.original)}</span>
+    ),
   },
   {
     id: "amount",
@@ -69,6 +102,7 @@ export function PaymentsDataTable({
       total={total}
       buildHref={buildHref}
       listKey="payments"
+      enableReorder={false}
     />
   );
 }

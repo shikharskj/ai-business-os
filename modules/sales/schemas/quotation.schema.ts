@@ -74,6 +74,7 @@ export function toQuotationFields(input: QuotationFormInput) {
 export const quotationSearchSchema = z.object({
   q: z.string().trim().optional().default(""),
   status: z.enum(["ALL", ...QUOTATION_STATUSES]).optional().default("ALL"),
+  customerId: z.string().uuid().optional(),
   from: businessDateSchema.optional(),
   to: businessDateSchema.optional(),
 });

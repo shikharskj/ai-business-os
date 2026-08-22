@@ -7,6 +7,7 @@ import {
   lowStockOutputSchema,
   overdueInvoicesOutputSchema,
   paymentRemindersOutputSchema,
+  periodMovementOutputSchema,
   receivablesOutputSchema,
   salesSummaryOutputSchema,
   type MoneyView,
@@ -73,6 +74,8 @@ export function factsFromToolResult(input: {
       return metricsFacts(input.output);
     case "get_cash_position":
       return cashPositionFacts(input.output);
+    case "explain_period_movement":
+      return periodMovementFacts(input.output);
     case "send_payment_reminders":
       return reminderFacts(input.output);
     default:
@@ -334,6 +337,63 @@ function cashPositionFacts(output: unknown): AiAssistantFact[] {
       label: "Bank",
       value: formatMoneyView(data.bank),
       href: "/app/accounting/ledger",
+    }),
+  ];
+}
+
+function periodMovementFacts(output: unknown): AiAssistantFact[] {
+  const parsed = periodMovementOutputSchema.safeParse(output);
+  if (!parsed.success) {
+    return [];
+  }
+  const data = parsed.data;
+  const source: AiToolName = "explain_period_movement";
+  const period = `${data.currentRange.fromDate}:${data.currentRange.toDate}`;
+
+  return [
+    fact({
+      sourceTool: source,
+      key: `profit:${period}`,
+      label: `Profit — ${data.currentRange.label}`,
+      value: formatMoneyView(data.profit.current),
+      detail: `Previous period ${formatMoneyView(data.profit.previous)} · change ${formatMoneyView(
+        data.profit.delta
+      )} (${data.profit.direction})`,
+      href: "/app/reports/profit",
+    }),
+    fact({
+      sourceTool: source,
+      key: `sales:${period}`,
+      label: `Sales — ${data.currentRange.label}`,
+      value: formatMoneyView(data.revenue.current),
+      detail: `Previous period ${formatMoneyView(data.revenue.previous)} · change ${formatMoneyView(
+        data.revenue.delta
+      )} (${data.revenue.direction})`,
+      href: "/app/reports/sales",
+    }),
+    fact({
+      sourceTool: source,
+      key: `expenses:${period}`,
+      label: `Expenses — ${data.currentRange.label}`,
+      value: formatMoneyView(data.expenses.current),
+      detail: `Previous period ${formatMoneyView(data.expenses.previous)} · change ${formatMoneyView(
+        data.expenses.delta
+      )} (${data.expenses.direction})`,
+      href: "/app/reports/expenses",
+    }),
+    fact({
+      sourceTool: source,
+      key: `driver:${period}`,
+      label: "Movement driver",
+      value:
+        data.driver.kind === "sales"
+          ? "Sales"
+          : data.driver.kind === "expenses"
+            ? "Expenses"
+            : data.driver.kind === "stable"
+              ? "Unchanged"
+              : "Sales and expenses",
+      detail: data.driver.summary,
     }),
   ];
 }

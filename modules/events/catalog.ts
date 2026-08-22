@@ -36,6 +36,7 @@ export const DOMAIN_EVENT_TYPES = [
   "CustomerCreated",
   "CustomerUpdated",
   "CustomerDeactivated",
+  "CustomerReactivated",
   "SupplierCreated",
   "SupplierUpdated",
   "SupplierDeactivated",
@@ -45,7 +46,7 @@ export const DOMAIN_EVENT_TYPES = [
   "JournalPosted",
   "JournalReversed",
   "AccountingPeriodClosed",
-  // Post-MVP (emitters land with later specs; AttentionDismissed / AutomationOutcomeRecorded emit in spec 04)
+  // Post-MVP (InvoiceOverdue emits from the collections overdue scan in spec 10)
   "InvoiceOverdue",
   "QuotationIdle",
   "AttentionDismissed",
@@ -148,6 +149,37 @@ export const quotationAcceptedPayloadSchema = z
   })
   .passthrough();
 
+export const invoiceOverduePayloadSchema = z
+  .object({
+    number: z.string().optional(),
+    customerName: z.string().optional(),
+    dueOn: z.string().optional(),
+    asOf: z.string().optional(),
+  })
+  .passthrough();
+
+export const quotationIdlePayloadSchema = z
+  .object({
+    number: z.string().optional(),
+    customerName: z.string().optional(),
+    status: z.string().optional(),
+    issuedOn: z.string().optional(),
+    asOf: z.string().optional(),
+    idleDays: z.number().optional(),
+  })
+  .passthrough();
+
+export const stockLowPayloadSchema = z
+  .object({
+    productName: z.string().optional(),
+    sku: z.string().optional(),
+    quantityMajor: z.string().optional(),
+    unitOfMeasurement: z.string().optional(),
+    thresholdMajor: z.string().optional(),
+    asOf: z.string().optional(),
+  })
+  .passthrough();
+
 export const attentionDismissedPayloadSchema = z
   .object({
     attentionItemId: z.string().optional(),
@@ -179,6 +211,9 @@ export const DOMAIN_EVENT_PAYLOAD_SCHEMAS: Partial<
   InventoryAdjusted: inventoryMovementPayloadSchema,
   InventoryMoved: inventoryMovementPayloadSchema,
   QuotationAccepted: quotationAcceptedPayloadSchema,
+  InvoiceOverdue: invoiceOverduePayloadSchema,
+  QuotationIdle: quotationIdlePayloadSchema,
+  StockLow: stockLowPayloadSchema,
   AttentionDismissed: attentionDismissedPayloadSchema,
   AutomationOutcomeRecorded: automationOutcomeRecordedPayloadSchema,
 };

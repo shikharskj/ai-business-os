@@ -50,17 +50,68 @@ function inclusiveDayWindow(
 }
 
 function monthsBackFromToday(today: BusinessDate, months: number): BusinessDate {
-  const [year, month, day] = today.split("-").map(Number) as [number, number, number];
-  const targetYear = year;
-  const targetMonth = month - months;
-  // Compute the last valid day in the target month
-  const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate();
+  return shiftBusinessDateByMonths(today, -months);
+}
+
+/**
+ * Shift a calendar date by whole months, clamping the day when the target
+ * month is shorter (31 Mar → 28/29 Feb).
+ */
+export function shiftBusinessDateByMonths(
+  date: BusinessDate,
+  months: number
+): BusinessDate {
+  const [year, month, day] = date.split("-").map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  const utc = new Date(Date.UTC(year, month - 1 + months, 1));
+  const lastDayOfTargetMonth = new Date(
+    Date.UTC(utc.getUTCFullYear(), utc.getUTCMonth() + 1, 0)
+  ).getUTCDate();
   const clampedDay = Math.min(day, lastDayOfTargetMonth);
-  const utc = new Date(Date.UTC(targetYear, targetMonth - 1, clampedDay));
+  utc.setUTCDate(clampedDay);
   const y = utc.getUTCFullYear();
   const m = String(utc.getUTCMonth() + 1).padStart(2, "0");
   const d = String(utc.getUTCDate()).padStart(2, "0");
   return businessDate(`${y}-${m}-${d}`);
+}
+
+function inclusiveDayCount(fromDate: BusinessDate, toDate: BusinessDate): number {
+  const from = new Date(`${fromDate}T00:00:00.000Z`).getTime();
+  const to = new Date(`${toDate}T00:00:00.000Z`).getTime();
+  return Math.round((to - from) / 86_400_000) + 1;
+}
+
+/**
+ * Immediately previous comparison window for diagnostic “why” questions.
+ * `this_month` uses the matching month-to-date in the prior calendar month;
+ * other presets use an equal-length window ending the day before `fromDate`.
+ */
+export function previousDashboardDateRange(
+  range: DashboardDateRange
+): DashboardDateRange {
+  if (range.preset === "this_month") {
+    const fromDate = shiftBusinessDateByMonths(range.fromDate, -1);
+    const toDate = shiftBusinessDateByMonths(range.toDate, -1);
+    return {
+      preset: "custom",
+      fromDate,
+      toDate: toDate < fromDate ? fromDate : toDate,
+      label: "Previous period",
+    };
+  }
+
+  const days = inclusiveDayCount(range.fromDate, range.toDate);
+  const toDate = addBusinessDays(range.fromDate, -1);
+  const fromDate = addBusinessDays(toDate, -(days - 1));
+  return {
+    preset: "custom",
+    fromDate,
+    toDate,
+    label: "Previous period",
+  };
 }
 
 export function resolveDashboardDateRange(input: {

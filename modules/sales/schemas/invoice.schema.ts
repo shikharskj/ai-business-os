@@ -74,6 +74,8 @@ export function toInvoiceFields(input: InvoiceFormInput) {
 export const invoiceSearchSchema = z.object({
   q: z.string().trim().optional().default(""),
   status: z.enum(["ALL", ...INVOICE_STATUSES]).optional().default("ALL"),
+  due: z.enum(["ALL", "OVERDUE"]).optional().default("ALL"),
+  customerId: z.string().uuid().optional(),
   from: businessDateSchema.optional(),
   to: businessDateSchema.optional(),
 });

@@ -13,6 +13,7 @@ export const businessMetricsTool = defineAiTool({
     "Headline business metrics for a period: revenue, expenses, profit, receivables, payables, money received and paid, overdue invoices, and low-stock count. Same figures as the dashboard.",
   category: "read",
   permission: "report:read",
+  autonomyLevel: "L0",
   inputSchema: businessMetricsInputSchema,
   outputSchema: businessMetricsOutputSchema,
   async execute(input, context) {

@@ -63,13 +63,6 @@ export const assistantFactSchema = z
   })
   .strict();
 
-export const assistantSuggestionSchema = z
-  .object({
-    label: z.string().min(1),
-    href: assistantAppHrefSchema,
-  })
-  .strict();
-
 export const assistantPendingActionSchema = z
   .object({
     toolName: toolNameSchema,
@@ -82,6 +75,28 @@ export const assistantPendingActionSchema = z
     argumentsJson: z.string(),
   })
   .strict();
+
+export const assistantPendingActionWireSchema = assistantPendingActionSchema.extend({
+  token: z.string().min(1).max(8000),
+});
+
+export const assistantSuggestionSchema = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("navigate"),
+      label: z.string().min(1),
+      href: assistantAppHrefSchema,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("prepare"),
+      label: z.string().min(1),
+      cue: z.literal("prepare"),
+      pendingAction: assistantPendingActionWireSchema,
+    })
+    .strict(),
+]);
 
 /** Validated before it leaves the server — nothing unshaped reaches the UI. */
 export const assistantAnswerSchema = z

@@ -1,4 +1,5 @@
 import type { Money } from "@/modules/shared-kernel/money";
+import { isZero } from "@/modules/shared-kernel/money";
 import { MoneyDisplay } from "@/components/business/money-display";
 import type { GstSupplyType } from "@/modules/tax/domain/types";
 
@@ -35,18 +36,24 @@ export function GstBreakdown({
         <span className="text-muted-foreground">Taxable</span>
         <MoneyDisplay value={taxableAmount} />
       </div>
-      <div className="flex justify-between gap-4">
-        <span className="text-muted-foreground">CGST</span>
-        <MoneyDisplay value={cgst} />
-      </div>
-      <div className="flex justify-between gap-4">
-        <span className="text-muted-foreground">SGST</span>
-        <MoneyDisplay value={sgst} />
-      </div>
-      <div className="flex justify-between gap-4">
-        <span className="text-muted-foreground">IGST</span>
-        <MoneyDisplay value={igst} />
-      </div>
+      {!isZero(cgst) ? (
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">CGST</span>
+          <MoneyDisplay value={cgst} />
+        </div>
+      ) : null}
+      {!isZero(sgst) ? (
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">SGST</span>
+          <MoneyDisplay value={sgst} />
+        </div>
+      ) : null}
+      {!isZero(igst) ? (
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">IGST</span>
+          <MoneyDisplay value={igst} />
+        </div>
+      ) : null}
       <div className="flex justify-between gap-4">
         <span className="text-muted-foreground">Total tax</span>
         <MoneyDisplay value={totalTax} />

@@ -1,10 +1,5 @@
-import {
-  AI_ACTION_TOKEN_TTL_MS,
-  signAiActionToken,
-} from "@/modules/ai/domain/action-token";
-import { previewAiAction } from "@/modules/ai/domain/assistant-actions";
+import { signPendingPaymentReminder } from "@/modules/ai/application/sign-pending-reminder";
 import type { AiAssistantPendingAction } from "@/modules/ai/domain/assistant-types";
-import type { AiToolName } from "@/modules/ai/domain/tool-types";
 import type { AttentionQueueRepository } from "@/modules/business-state/domain/attention-repository";
 import {
   AttentionItemNotFoundError,
@@ -48,38 +43,16 @@ export async function proposeBriefPaymentReminder(
     throw new AttentionItemNotFoundError();
   }
 
-  const toolInput = { invoiceIds: [item.resourceId] };
-  const proposal = previewAiAction({
-    toolName: "send_payment_reminders",
-    input: toolInput,
+  const pending = signPendingPaymentReminder({
+    tenantId: input.tenantId,
+    actorUserId: input.actorUserId,
+    invoiceIds: [item.resourceId],
+    secret: input.secret,
+    now: input.now,
   });
-  if (!proposal) {
+  if (!pending) {
     throw new Error("Could not prepare payment reminder preview.");
   }
 
-  const toolName = "send_payment_reminders" as AiToolName;
-  const argumentsJson = JSON.stringify(toolInput);
-  const now = input.now ?? Date.now();
-  const pending: AiAssistantPendingAction = {
-    toolName,
-    title: proposal.title,
-    summary: proposal.summary,
-    impact: proposal.impact,
-    fields: proposal.fields,
-    argumentsJson,
-  };
-
-  return {
-    ...pending,
-    token: signAiActionToken({
-      secret: input.secret,
-      payload: {
-        tenantId: input.tenantId,
-        actorUserId: input.actorUserId,
-        toolName,
-        argumentsJson,
-        expiresAt: now + AI_ACTION_TOKEN_TTL_MS,
-      },
-    }),
-  };
+  return pending;
 }
