@@ -9,6 +9,24 @@ import type {
 import type { AutomationOutcome } from "@/modules/business-state/domain/types";
 import { createPrismaAttentionQueueRepository } from "@/modules/business-state/infrastructure/prisma-attention-repository";
 
+function automationOutcomeEventPayload(input: {
+  kind: string;
+  idempotencyKey: string;
+  attentionItemId: string | null;
+  resourceType: string | null;
+  resourceId: string | null;
+}): Record<string, unknown> {
+  return {
+    outcome: input.kind,
+    idempotencyKey: input.idempotencyKey,
+    ...(input.attentionItemId
+      ? { attentionItemId: input.attentionItemId }
+      : {}),
+    ...(input.resourceType ? { resourceType: input.resourceType } : {}),
+    ...(input.resourceId ? { resourceId: input.resourceId } : {}),
+  };
+}
+
 /**
  * Persist an automation/attention outcome row. Idempotent on
  * (tenantId, idempotencyKey). Emits AutomationOutcomeRecorded on first insert.
@@ -41,13 +59,13 @@ export async function recordAutomationOutcome(input: RecordAutomationOutcomeInpu
           eventType: "AutomationOutcomeRecorded",
           aggregateType: "AutomationRun",
           aggregateId: result.outcome.id,
-          payload: {
-            outcome: input.kind,
-            attentionItemId: result.outcome.attentionItemId ?? undefined,
-            resourceType: result.outcome.resourceType ?? undefined,
-            resourceId: result.outcome.resourceId ?? undefined,
+          payload: automationOutcomeEventPayload({
+            kind: input.kind,
             idempotencyKey: input.idempotencyKey,
-          },
+            attentionItemId: result.outcome.attentionItemId,
+            resourceType: result.outcome.resourceType,
+            resourceId: result.outcome.resourceId,
+          }),
           correlationId: input.correlationId,
         });
       }
@@ -77,13 +95,13 @@ export async function recordAutomationOutcome(input: RecordAutomationOutcomeInpu
       eventType: "AutomationOutcomeRecorded",
       aggregateType: "AutomationRun",
       aggregateId: result.outcome.id,
-      payload: {
-        outcome: input.kind,
-        attentionItemId: result.outcome.attentionItemId ?? undefined,
-        resourceType: result.outcome.resourceType ?? undefined,
-        resourceId: result.outcome.resourceId ?? undefined,
+      payload: automationOutcomeEventPayload({
+        kind: input.kind,
         idempotencyKey: input.idempotencyKey,
-      },
+        attentionItemId: result.outcome.attentionItemId,
+        resourceType: result.outcome.resourceType,
+        resourceId: result.outcome.resourceId,
+      }),
       correlationId: input.correlationId,
     });
   }

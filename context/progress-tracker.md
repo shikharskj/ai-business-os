@@ -108,7 +108,7 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
   * Tenant-scoped `AttentionItem` projection (overdue receivable, low stock, idle SENT/ACCEPTED quotation) with ranked severity, href, optional money fact, OPEN/DISMISSED. Migration `20260822060000_add_attention_queue`.
   * Rebuild from domain truth (`rebuildBusinessStateProjections` family `attentionQueue`); outbox consumer + scheduled overdue scan refresh the queue. Dismiss is preserved across rebuilds; resolved issues drop so a later recurrence can surface.
   * APIs: `GET /api/business-state/attention` (open, ranked) and `POST /api/business-state/attention/dismiss` (idempotent). Authz `report:read`. Dismiss emits `AttentionDismissed` and does not mutate invoices or stock. `GET /api/business-state` includes `attention.openCount`.
-  * Outcome hooks (`AutomationOutcome` + `AutomationOutcomeRecorded`): `ATTENTION_DISMISSED`, `REMINDER_PROPOSED` / `REMINDER_SENT` from confirmed payment reminders, `PAID_AFTER_REMINDER` when a reminded invoice is paid.
+  * Outcome hooks (`AutomationOutcome` + `AutomationOutcomeRecorded`): `ATTENTION_DISMISSED`, `REMINDER_PROPOSED` / `REMINDER_SENT` from confirmed payment reminders, `PAID_AFTER_REMINDER` when a reminded invoice is paid. `REMINDER_SENT` is recorded only when `channel.deliver` actually created a notification (`delivered !== null`); `already_sent` still records `REMINDER_PROPOSED`. Outbox payloads omit null/undefined fields so `toPrismaJson` can persist `AutomationOutcomeRecorded`.
   * Tests: `tests/business-state/attention-queue.test.ts`. Next: `05-daily-brief-ui.md`.
 
 * **Cash position model (`03-cash-position-model.md`):**

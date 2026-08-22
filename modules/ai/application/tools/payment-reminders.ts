@@ -119,7 +119,7 @@ export const paymentRemindersTool = defineAiTool({
           tenantId: context.tenantId,
           invoiceId: row.invoiceId,
           asOf: report.asOf,
-          delivered: true,
+          delivered: delivered !== null,
           attention: context.repositories.attention,
           outbox: context.repositories.outbox,
         });

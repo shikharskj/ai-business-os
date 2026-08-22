@@ -483,6 +483,17 @@ describe("attention queue (post-mvp 04)", () => {
       tenantId: "tenant-a",
       invoiceId: "inv-overdue",
       asOf: "2026-08-21",
+      delivered: false,
+      attention,
+    });
+    expect(attention.outcomes.map((row) => row.kind)).toEqual([
+      "REMINDER_PROPOSED",
+    ]);
+
+    await recordPaymentReminderOutcomes({
+      tenantId: "tenant-a",
+      invoiceId: "inv-overdue",
+      asOf: "2026-08-21",
       delivered: true,
       attention,
     });
