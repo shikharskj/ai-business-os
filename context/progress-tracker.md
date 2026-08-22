@@ -104,6 +104,13 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 
 # Completed
 
+* **Tax invoice theme alignment:** Live preview uses semantic tokens (`card` / `foreground` / `muted-foreground` / `border` / `primary` lettermark square). PDF export mirrors the same layout via light paper palette in `invoice-document-theme.ts` (always light for print). Stronger totals row; party hairline dividers. Tests: `tests/sales/invoice-document.test.ts`. Next remains `07-copilot-depth.md`.
+
+* **Invoice detail polish:** Responsive sticky tax-invoice preview (~47% scale, 15% shorter than prior preview) with Activity timeline underneath; Details + GST before Lines; Payments always shown (empty state + Record payment); allocated/outstanding + View journal (`report:read`); customer link; `formatDisplayDate` on business dates. Shared `EntityActivityPanel` (vertical rail timeline) + `AuditRepository.listForResource` for invoice.* audit events. Tests: `tests/shared-kernel/audit.test.ts`, `tests/shared-kernel/entity-activity-label.test.ts`. Next remains `07-copilot-depth.md`.
+
+* **GST tax invoice preview + PDF:** Create/edit invoices show a live A4 Tax Invoice (logo or letter-mark, billed by/to, HSN lines, GST totals). Export uses the same `InvoiceDocumentView`; pdfkit draws the PDF from tax-engine amounts (`previewInvoice` / posted invoice). UI previews use `InvoiceDocumentPreview` at ~47% scale. Business logo upload on Settings (`logoDocumentId`, JPEG/PNG/WebP). Image documents download `inline`. Invoice status actions import `isPostedInvoiceStatus` from domain (not the sales barrel) so pdfkit/`fs` stay server-only. Tests: `tests/sales/invoice-document.test.ts`, `tests/tenant/business-logo.test.ts`, `tests/shared-kernel/amount-in-words.test.ts`.
+* **GST quotation document parity:** `buildQuotationDocumentView`, `QuotationDocumentPreview`, and `renderQuotationPdfBytes` mirror the invoice stack (title QUOTATION, valid until, quoted by/to). Live preview on create/edit/view; PDF export gated to SENT/ACCEPTED via `exportQuotationPdf` (`ownerRecordType: QUOTATION`). Quotation detail layout matches invoice (GST + Details, lines, sticky preview, activity timeline with quotation.* audit labels). Tests: `tests/sales/quotation-document.test.ts`. Next remains `07-copilot-depth.md`.
+
 * **Fixed top bar + canvas spacing:** Workspace shell is `h-svh` with scroll only in `main` so the app top bar stays fixed; page headers scroll with content. Doubled `/app` canvas gaps (`gap-8` / `lg:gap-12`, outer `gap-12`). Next remains `07-copilot-depth.md`.
 
 * **Needs attention + Recent activity typography:** Bumped Daily Brief and activity rail copy off `text-[10px]` / dense `text-xs` / `size="xs"` onto workspace hierarchy (`text-base` titles/amounts, `text-sm`–`text-base` body, `text-xs` cues only, `sm` buttons / default badges). Shared `PendingActionCard` cues/fields matched. Dashboard period meta sits on the PageHeader description row via `descriptionEnd` (right-aligned with “Overview of …”, `text-base`). Brief greeting personalizes with Clerk first name + smile (`Good morning, Name 🙂`). Next remains `07-copilot-depth.md`.
@@ -266,7 +273,7 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
   * Per-tenant number series `INV/{FY}/{seq}`. Status: draft / posted / unpaid / partially paid / paid / cancelled. Draft-only edits; posted amounts are immutable (cancel draft only).
   * `postInvoice` in one transaction: validate lines, persist posted status + journal link, inventory stock-out (`SALE`/`OUT` via `recordInventoryMovement`), balanced journal (Dr Receivable, Cr Sales, Cr Output GST; Dr COGS / Cr Inventory for tracked goods), audit + outbox (`SalesInvoicePosted`).
   * Quotation conversion: accepted quotation → draft invoice (copy lines), quotation marked `CONVERTED`; cannot convert twice.
-  * Server-side PDF export stored via documents adapter (`ownerRecordType: INVOICE`).
+  * Server-side GST Tax Invoice PDF (pdfkit) stored via documents adapter (`ownerRecordType: INVOICE`). Create/edit live preview shares `InvoiceDocumentView`. Optional business logo on Settings.
   * Permissions `invoice:*`. Sales → Invoices UI with GST breakdown and payment status display (allocations in spec `17`).
   * Tests: `tests/sales/invoices.test.ts` (posting, journal balance, inventory movement, conversion, cross-tenant rejection).
 

@@ -1,7 +1,7 @@
 import "server-only";
 import PDFDocument from "pdfkit";
 
-import type { InvoiceDocumentView } from "@/modules/sales/application/invoice-document-view";
+import type { QuotationDocumentView } from "@/modules/sales/application/quotation-document-view";
 import {
   INVOICE_DOCUMENT_CONTENT_WIDTH,
   INVOICE_DOCUMENT_LAYOUT,
@@ -42,7 +42,7 @@ function drawParty(
   y: number,
   width: number,
   label: string,
-  party: InvoiceDocumentView["seller"]
+  party: QuotationDocumentView["seller"]
 ): number {
   doc
     .strokeColor(paper.border)
@@ -90,8 +90,8 @@ function drawParty(
   return cursor;
 }
 
-export async function renderInvoicePdfBytes(
-  view: InvoiceDocumentView,
+export async function renderQuotationPdfBytes(
+  view: QuotationDocumentView,
   logo?: { bytes: Uint8Array; contentType: string } | null
 ): Promise<Uint8Array> {
   const doc = new PDFDocument({
@@ -148,7 +148,7 @@ export async function renderInvoicePdfBytes(
   const metaX = PAGE_MARGIN + CONTENT_WIDTH - 200;
   const metaRows: [string, string][] = [
     ["Issue date", view.issuedOn || "—"],
-    ["Due date", view.dueOn || "—"],
+    ["Valid until", view.validUntil || "—"],
     ["Place of supply", view.placeOfSupply || "—"],
   ];
   if (view.supplyTypeLabel) {
@@ -177,7 +177,7 @@ export async function renderInvoicePdfBytes(
     PAGE_MARGIN,
     billedY,
     colWidth,
-    "Billed by",
+    "Quoted by",
     view.seller
   );
   const rightBottom = drawParty(
@@ -185,7 +185,7 @@ export async function renderInvoicePdfBytes(
     PAGE_MARGIN + colWidth + 16,
     billedY,
     colWidth,
-    "Billed to",
+    "Quoted to",
     view.buyer
   );
 
@@ -325,7 +325,7 @@ export async function renderInvoicePdfBytes(
   doc
     .fontSize(7)
     .fillColor(paper.muted)
-    .text("Computer-generated tax invoice.", PAGE_MARGIN, 780, {
+    .text("Computer-generated quotation.", PAGE_MARGIN, 780, {
       width: CONTENT_WIDTH,
       lineBreak: false,
     });

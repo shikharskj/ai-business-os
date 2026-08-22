@@ -35,6 +35,7 @@ export type BusinessProfile = {
   currency: string;
   defaultGstRateBps: number;
   lowStockThreshold: string;
+  logoDocumentId?: string | null;
   closedThroughPeriodKey: string | null;
 };
 

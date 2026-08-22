@@ -33,6 +33,8 @@ export {
   formatIndianNumber,
 } from "@/modules/shared-kernel/format-money";
 
+export { amountInIndianWords } from "@/modules/shared-kernel/amount-in-words";
+
 export {
   moneyInputSchema,
   businessDateSchema,
@@ -55,7 +57,9 @@ export {
 
 export {
   type AuditInput,
+  type AuditRecordView,
   type AuditRepository,
+  type ListAuditForResourceInput,
   createPrismaAuditRepository,
   createMemoryAuditRepository,
 } from "@/modules/shared-kernel/audit";

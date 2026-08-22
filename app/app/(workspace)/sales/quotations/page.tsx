@@ -65,7 +65,7 @@ export default async function QuotationsPage({
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
       <PageHeader
         title="Quotations"
-        description="Sales quotes with GST preview. Invoices are not created from here yet."
+        description="Sales quotes with GST preview, live document preview, and PDF export after send."
         actions={
           canCreate ? (
             <Button

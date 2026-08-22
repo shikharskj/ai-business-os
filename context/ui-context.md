@@ -768,7 +768,7 @@ Add customer
  → Sheet/Dialog
 
 Create invoice
- → Dedicated workflow/page
+ → Dedicated workflow/page with a live A4 tax-invoice preview
 
 Record payment
  → Dialog or focused page depending on complexity
@@ -1388,15 +1388,36 @@ Example invoice:
 
 ```text
 INV-1024                  Paid
-ABC Traders
+ABC Traders (link to customer)
 
-₹45,000
+GST breakdown | Details (dates, allocated/outstanding, journal link)
+Lines
+Payments (empty state or receipt table)
 
-Invoice Details
-Payment Details
-Accounting
-Activity
+Right column:
+Sticky tax-invoice preview (~47% scale)
+Activity timeline (audit: created / updated / posted / cancelled)
 ```
+
+Invoice detail uses a responsive two-column layout: workspace cards on the left (Details + GST, Lines, Payments) and a sticky right column with the compact tax-invoice preview plus an Activity timeline underneath (`lg+`). Customer name links to the customer record. Posted invoices with a journal expose **View journal** when the user has `report:read`. Activity lists audit rows for `resource: invoice` only as a vertical timeline (rail + dots).
+
+Create and edit invoice screens use a two-column workspace: the form on the left and a sticky live preview on the right (stacked on small screens). The preview is a compact (~47% scale) rendering of the same GST Tax Invoice layout used for export; edits refresh the preview live. Preview markup uses workspace semantic tokens (`bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-primary`); exported PDF always uses a light “paper” hex palette mirrored from those tokens so prints stay readable in any app theme. GST figures appear only after the tax engine prices the draft (`previewInvoice`); the UI does not compute tax.
+
+Example quotation:
+
+```text
+QTN-1024                  Sent
+ABC Traders (link to customer)
+
+GST breakdown | Details (status, dates, converted-invoice link)
+Lines
+
+Right column:
+Sticky quotation preview (~47% scale)
+Activity timeline (audit: created / updated / sent / accepted / converted / cancelled)
+```
+
+Quotation detail mirrors invoice detail: GST + Details side by side, lines below, sticky quotation preview and Activity on the right. Create/edit quotation screens use the same two-column live-preview pattern. Document title is **QUOTATION** with **Quoted by / Quoted to** party labels and **Valid until** instead of due date. PDF export is available only when status is **Sent** or **Accepted** (`exportQuotationPdf`); draft and cancelled quotations show a validation error. Preview and PDF reuse the same theme approach as tax invoices (`invoice-document-theme` paper palette for PDF; semantic tokens in HTML).
 
 ---
 

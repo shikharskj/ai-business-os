@@ -1,14 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useActionState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import {
   createInvoiceAction,
+  previewInvoiceTotalsAction,
   updateInvoiceAction,
   type InvoiceActionState,
 } from "@/app/app/(workspace)/sales/invoices/actions";
+import {
+  INVOICE_DOCUMENT_PREVIEW_SCALE,
+  InvoiceDocumentPreview,
+} from "@/components/business/invoice-document";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,13 +28,26 @@ import { GST_STATE_CODES } from "@/modules/tax/domain/gstin";
 import { gstinStateCode, stateCodeFromName } from "@/modules/tax/domain/gstin";
 import { toMajorString } from "@/modules/shared-kernel/money";
 import { toQuantityMajorString } from "@/modules/inventory/domain/quantity";
+import {
+  buildInvoiceDocumentView,
+  quantityLabelFromDraft,
+  type InvoiceDocumentView,
+} from "@/modules/sales/application/invoice-document-view";
 import type { SalesInvoice } from "@/modules/sales/domain/types";
+import type { BusinessProfile } from "@/modules/tenant/domain/types";
 
 export type InvoiceCustomerOption = {
   id: string;
   name: string;
   gstin: string | null;
+  phone: string | null;
+  email: string | null;
+  billingAddressLine1: string | null;
+  billingAddressLine2: string | null;
+  city: string | null;
   state: string | null;
+  postalCode: string | null;
+  country: string | null;
 };
 
 export type InvoiceProductOption = {
@@ -38,6 +56,7 @@ export type InvoiceProductOption = {
   sku: string;
   unitOfMeasurement: string;
   sellingPriceMajor: string;
+  hsnSac: string | null;
 };
 
 type LineDraft = {
@@ -94,11 +113,15 @@ export function InvoiceForm({
   products,
   today,
   invoice,
+  seller,
+  logoUrl,
 }: {
   customers: InvoiceCustomerOption[];
   products: InvoiceProductOption[];
   today: string;
   invoice?: SalesInvoice;
+  seller: BusinessProfile;
+  logoUrl: string | null;
 }) {
   const action = invoice ? updateInvoiceAction : createInvoiceAction;
   const [state, formAction, isPending] = useActionState(
@@ -112,6 +135,9 @@ export function InvoiceForm({
     invoice?.placeOfSupplyStateCode ??
       customerPlaceOfSupply(customers.find((row) => row.id === customerId))
   );
+  const [issuedOn, setIssuedOn] = useState(invoice?.issuedOn ?? today);
+  const [dueOn, setDueOn] = useState(invoice?.dueOn ?? "");
+  const [notes, setNotes] = useState(invoice?.notes ?? "");
   const [lines, setLines] = useState<LineDraft[]>(
     invoice
       ? invoice.lines.map((line) => ({
@@ -124,12 +150,87 @@ export function InvoiceForm({
         }))
       : [{ ...emptyLine, productId: products[0]?.id ?? "", unitPrice: products[0]?.sellingPriceMajor ?? "" }]
   );
+  const [engineView, setEngineView] = useState<InvoiceDocumentView | null>(null);
 
   const customerItems = useMemo(
     () => Object.fromEntries(customers.map((customer) => [customer.id, customer.name])),
     [customers]
   );
   const stateItems = useMemo(() => GST_STATE_CODES, []);
+  const selectedCustomer = customers.find((row) => row.id === customerId) ?? null;
+
+  const draftLines = useMemo(
+    () =>
+      lines.map((line) => {
+        const product = products.find((row) => row.id === line.productId);
+        return {
+          description: product?.name ?? "Select a product",
+          hsnSac: product?.hsnSac ?? null,
+          quantityLabel: quantityLabelFromDraft({
+            quantity: line.quantity,
+            unitOfMeasurement: product?.unitOfMeasurement ?? "",
+          }),
+          unitPrice: line.unitPrice ? `₹${line.unitPrice}` : "—",
+          discount: line.discount ? `₹${line.discount}` : "₹0.00",
+        };
+      }),
+    [lines, products]
+  );
+
+  const localView = useMemo(
+    () =>
+      buildInvoiceDocumentView({
+        number: invoice?.number ?? "Draft",
+        issuedOn,
+        dueOn: dueOn || null,
+        notes: notes || null,
+        placeOfSupplyStateCode: placeOfSupply,
+        seller,
+        buyer: selectedCustomer,
+        logoUrl,
+        draftLines,
+      }),
+    [draftLines, dueOn, invoice?.number, issuedOn, logoUrl, notes, placeOfSupply, selectedCustomer, seller]
+  );
+
+  const preview = engineView
+    ? {
+        ...engineView,
+        issuedOn: localView.issuedOn,
+        dueOn: localView.dueOn,
+        notes: localView.notes,
+        placeOfSupply: localView.placeOfSupply,
+        seller: localView.seller,
+        buyer: localView.buyer,
+        logoUrl: localView.logoUrl,
+        lettermark: localView.lettermark,
+      }
+    : localView;
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void previewInvoiceTotalsAction({
+        invoiceId: invoice?.id,
+        number: invoice?.number,
+        customerId,
+        issuedOn,
+        dueOn: dueOn || undefined,
+        notes: notes || undefined,
+        placeOfSupplyStateCode: placeOfSupply,
+        lines,
+      }).then((result) => {
+        if (cancelled) {
+          return;
+        }
+        setEngineView(result.view ?? null);
+      });
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [customerId, dueOn, invoice?.id, invoice?.number, issuedOn, lines, notes, placeOfSupply]);
 
   function updateLine(index: number, patch: Partial<LineDraft>) {
     setLines((current) =>
@@ -140,254 +241,272 @@ export function InvoiceForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-6">
-      {invoice ? (
-        <input type="hidden" name="invoiceId" value={invoice.id} />
-      ) : null}
-      <input type="hidden" name="customerId" value={customerId} />
-      <input type="hidden" name="placeOfSupplyStateCode" value={placeOfSupply} />
-      <input type="hidden" name="lineCount" value={String(lines.length)} />
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,34rem)]">
+      <form action={formAction} className="flex flex-col gap-6">
+        {invoice ? (
+          <input type="hidden" name="invoiceId" value={invoice.id} />
+        ) : null}
+        <input type="hidden" name="customerId" value={customerId} />
+        <input type="hidden" name="placeOfSupplyStateCode" value={placeOfSupply} />
+        <input type="hidden" name="lineCount" value={String(lines.length)} />
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <label htmlFor="customerId" className="text-base font-medium">
-            Customer
-          </label>
-          <Select
-            value={customerId}
-            onValueChange={(value) => {
-              const next = String(value ?? "");
-              setCustomerId(next);
-              setPlaceOfSupply(
-                customerPlaceOfSupply(customers.find((row) => row.id === next))
-              );
-            }}
-            items={customerItems}
-          >
-            <SelectTrigger id="customerId" className="w-full">
-              <SelectValue placeholder="Select a customer" />
-            </SelectTrigger>
-            <SelectContent>
-              {customers.map((customer) => (
-                <SelectItem key={customer.id} value={customer.id}>
-                  {customer.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FieldError name="customerId" fieldErrors={state.fieldErrors} />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label htmlFor="placeOfSupplyStateCode" className="text-base font-medium">
-            Place of supply
-          </label>
-          <Select
-            value={placeOfSupply}
-            onValueChange={(value) => setPlaceOfSupply(String(value ?? ""))}
-            items={stateItems}
-          >
-            <SelectTrigger id="placeOfSupplyStateCode" className="w-full">
-              <SelectValue placeholder="Select a state" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(GST_STATE_CODES).map(([code, name]) => (
-                <SelectItem key={code} value={code}>
-                  {name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FieldError
-            name="placeOfSupplyStateCode"
-            fieldErrors={state.fieldErrors}
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label htmlFor="issuedOn" className="text-base font-medium">
-            Invoice date
-          </label>
-          <Input
-            id="issuedOn"
-            name="issuedOn"
-            type="date"
-            required
-            defaultValue={invoice?.issuedOn ?? today}
-          />
-          <FieldError name="issuedOn" fieldErrors={state.fieldErrors} />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label htmlFor="dueOn" className="text-base font-medium">
-            Due date
-          </label>
-          <Input
-            id="dueOn"
-            name="dueOn"
-            type="date"
-            defaultValue={invoice?.dueOn ?? ""}
-          />
-          <FieldError name="dueOn" fieldErrors={state.fieldErrors} />
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-medium">Lines</h2>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              setLines((current) => [
-                ...current,
-                {
-                  ...emptyLine,
-                  productId: products[0]?.id ?? "",
-                  unitPrice: products[0]?.sellingPriceMajor ?? "",
-                },
-              ])
-            }
-          >
-            <Plus className="size-5" />
-            Add line
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          GST is calculated by the tax engine when you save. Do not enter tax amounts here.
-        </p>
-        <FieldError name="lines" fieldErrors={state.fieldErrors} />
-
-        <div className="flex flex-col gap-4">
-          {lines.map((line, index) => (
-            <div
-              key={index}
-              className="grid gap-3 rounded-md border border-border p-4 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto]"
+        <section className="grid gap-4 md:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="customerId" className="text-base font-medium">
+              Customer
+            </label>
+            <Select
+              value={customerId}
+              onValueChange={(value) => {
+                const next = String(value ?? "");
+                setCustomerId(next);
+                setPlaceOfSupply(
+                  customerPlaceOfSupply(customers.find((row) => row.id === next))
+                );
+              }}
+              items={customerItems}
             >
-              <input
-                type="hidden"
-                name={`line-${index}-productId`}
-                value={line.productId}
-              />
-              <div className="flex flex-col gap-2">
-                <label className="text-base font-medium" htmlFor={`line-${index}-product`}>
-                  Product / service
-                </label>
-                <Select
+              <SelectTrigger id="customerId" className="w-full">
+                <SelectValue placeholder="Select a customer" />
+              </SelectTrigger>
+              <SelectContent>
+                {customers.map((customer) => (
+                  <SelectItem key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldError name="customerId" fieldErrors={state.fieldErrors} />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="placeOfSupplyStateCode" className="text-base font-medium">
+              Place of supply
+            </label>
+            <Select
+              value={placeOfSupply}
+              onValueChange={(value) => setPlaceOfSupply(String(value ?? ""))}
+              items={stateItems}
+            >
+              <SelectTrigger id="placeOfSupplyStateCode" className="w-full">
+                <SelectValue placeholder="Select a state" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(GST_STATE_CODES).map(([code, name]) => (
+                  <SelectItem key={code} value={code}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldError
+              name="placeOfSupplyStateCode"
+              fieldErrors={state.fieldErrors}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="issuedOn" className="text-base font-medium">
+              Invoice date
+            </label>
+            <Input
+              id="issuedOn"
+              name="issuedOn"
+              type="date"
+              required
+              value={issuedOn}
+              onChange={(event) => setIssuedOn(event.target.value)}
+            />
+            <FieldError name="issuedOn" fieldErrors={state.fieldErrors} />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor="dueOn" className="text-base font-medium">
+              Due date
+            </label>
+            <Input
+              id="dueOn"
+              name="dueOn"
+              type="date"
+              value={dueOn}
+              onChange={(event) => setDueOn(event.target.value)}
+            />
+            <FieldError name="dueOn" fieldErrors={state.fieldErrors} />
+          </div>
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base font-medium">Lines</h2>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                setLines((current) => [
+                  ...current,
+                  {
+                    ...emptyLine,
+                    productId: products[0]?.id ?? "",
+                    unitPrice: products[0]?.sellingPriceMajor ?? "",
+                  },
+                ])
+              }
+            >
+              <Plus className="size-5" />
+              Add line
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            GST is calculated by the tax engine when you save. Do not enter tax amounts here.
+          </p>
+          <FieldError name="lines" fieldErrors={state.fieldErrors} />
+
+          <div className="flex flex-col gap-4">
+            {lines.map((line, index) => (
+              <div
+                key={index}
+                className="grid gap-3 rounded-md border border-border p-4 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto]"
+              >
+                <input
+                  type="hidden"
+                  name={`line-${index}-productId`}
                   value={line.productId}
-                  onValueChange={(value) => {
-                    const productId = String(value ?? "");
-                    const product = products.find((row) => row.id === productId);
-                    updateLine(index, {
-                      productId,
-                      unitPrice: product?.sellingPriceMajor ?? line.unitPrice,
-                    });
-                  }}
-                  items={Object.fromEntries(
-                    products.map((product) => [
-                      product.id,
-                      `${product.name} (${product.sku})`,
-                    ])
-                  )}
-                >
-                  <SelectTrigger id={`line-${index}-product`} className="w-full">
-                    <SelectValue placeholder="Select a product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FieldError name={`lines.${index}.productId`} fieldErrors={state.fieldErrors} />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-base font-medium" htmlFor={`line-${index}-quantity`}>
-                  Quantity
-                </label>
-                <Input
-                  id={`line-${index}-quantity`}
-                  name={`line-${index}-quantity`}
-                  inputMode="decimal"
-                  required
-                  value={line.quantity}
-                  onChange={(event) =>
-                    updateLine(index, { quantity: event.target.value })
-                  }
                 />
-                <FieldError name={`lines.${index}.quantity`} fieldErrors={state.fieldErrors} />
+                <div className="flex flex-col gap-2">
+                  <label className="text-base font-medium" htmlFor={`line-${index}-product`}>
+                    Product / service
+                  </label>
+                  <Select
+                    value={line.productId}
+                    onValueChange={(value) => {
+                      const productId = String(value ?? "");
+                      const product = products.find((row) => row.id === productId);
+                      updateLine(index, {
+                        productId,
+                        unitPrice: product?.sellingPriceMajor ?? line.unitPrice,
+                      });
+                    }}
+                    items={Object.fromEntries(
+                      products.map((product) => [
+                        product.id,
+                        `${product.name} (${product.sku})`,
+                      ])
+                    )}
+                  >
+                    <SelectTrigger id={`line-${index}-product`} className="w-full">
+                      <SelectValue placeholder="Select a product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FieldError name={`lines.${index}.productId`} fieldErrors={state.fieldErrors} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-base font-medium" htmlFor={`line-${index}-quantity`}>
+                    Quantity
+                  </label>
+                  <Input
+                    id={`line-${index}-quantity`}
+                    name={`line-${index}-quantity`}
+                    inputMode="decimal"
+                    required
+                    value={line.quantity}
+                    onChange={(event) =>
+                      updateLine(index, { quantity: event.target.value })
+                    }
+                  />
+                  <FieldError name={`lines.${index}.quantity`} fieldErrors={state.fieldErrors} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-base font-medium" htmlFor={`line-${index}-unitPrice`}>
+                    Rate (₹)
+                  </label>
+                  <Input
+                    id={`line-${index}-unitPrice`}
+                    name={`line-${index}-unitPrice`}
+                    inputMode="decimal"
+                    required
+                    value={line.unitPrice}
+                    onChange={(event) =>
+                      updateLine(index, { unitPrice: event.target.value })
+                    }
+                  />
+                  <FieldError name={`lines.${index}.unitPrice`} fieldErrors={state.fieldErrors} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-base font-medium" htmlFor={`line-${index}-discount`}>
+                    Discount (₹)
+                  </label>
+                  <Input
+                    id={`line-${index}-discount`}
+                    name={`line-${index}-discount`}
+                    inputMode="decimal"
+                    value={line.discount}
+                    onChange={(event) =>
+                      updateLine(index, { discount: event.target.value })
+                    }
+                  />
+                  <FieldError name={`lines.${index}.discount`} fieldErrors={state.fieldErrors} />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={lines.length === 1}
+                    aria-label="Remove line"
+                    onClick={() =>
+                      setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))
+                    }
+                  >
+                    <Trash2 className="size-5" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-base font-medium" htmlFor={`line-${index}-unitPrice`}>
-                  Rate (₹)
-                </label>
-                <Input
-                  id={`line-${index}-unitPrice`}
-                  name={`line-${index}-unitPrice`}
-                  inputMode="decimal"
-                  required
-                  value={line.unitPrice}
-                  onChange={(event) =>
-                    updateLine(index, { unitPrice: event.target.value })
-                  }
-                />
-                <FieldError name={`lines.${index}.unitPrice`} fieldErrors={state.fieldErrors} />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-base font-medium" htmlFor={`line-${index}-discount`}>
-                  Discount (₹)
-                </label>
-                <Input
-                  id={`line-${index}-discount`}
-                  name={`line-${index}-discount`}
-                  inputMode="decimal"
-                  value={line.discount}
-                  onChange={(event) =>
-                    updateLine(index, { discount: event.target.value })
-                  }
-                />
-                <FieldError name={`lines.${index}.discount`} fieldErrors={state.fieldErrors} />
-              </div>
-              <div className="flex items-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={lines.length === 1}
-                  aria-label="Remove line"
-                  onClick={() =>
-                    setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))
-                  }
-                >
-                  <Trash2 className="size-5" />
-                </Button>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        </section>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="notes" className="text-base font-medium">
+            Notes
+          </label>
+          <Textarea
+            id="notes"
+            name="notes"
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+          />
         </div>
-      </section>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="notes" className="text-base font-medium">
-          Notes
-        </label>
-        <Textarea id="notes" name="notes" defaultValue={invoice?.notes ?? ""} />
-      </div>
+        {state.error ? (
+          <p className="text-base text-destructive" role="alert">
+            {state.error}
+          </p>
+        ) : null}
 
-      {state.error ? (
-        <p className="text-base text-destructive" role="alert">
-          {state.error}
-        </p>
-      ) : null}
+        <Button type="submit" disabled={isPending || customers.length === 0 || products.length === 0}>
+          {isPending
+            ? "Saving…"
+            : invoice
+              ? "Save invoice"
+              : "Create invoice"}
+        </Button>
+      </form>
 
-      <Button type="submit" disabled={isPending || customers.length === 0 || products.length === 0}>
-        {isPending
-          ? "Saving…"
-          : invoice
-            ? "Save invoice"
-            : "Create invoice"}
-      </Button>
-    </form>
+      <aside
+        className="lg:sticky lg:top-4 lg:shrink-0"
+        style={{ width: `calc(210mm * ${INVOICE_DOCUMENT_PREVIEW_SCALE})` }}
+      >        <p className="mb-2 text-sm font-medium text-muted-foreground">Preview</p>
+        <div className="max-h-[min(70vh,36rem)] overflow-auto rounded-xl bg-muted/40 p-2">
+          <InvoiceDocumentPreview view={preview} />
+        </div>
+      </aside>
+    </div>
   );
 }

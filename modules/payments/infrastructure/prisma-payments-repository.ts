@@ -157,6 +157,10 @@ export function createPrismaPaymentRepository(
     },
 
     async createPayment(input) {
+      const allocationCreates = input.allocations.map((allocation) => ({
+        invoiceId: allocation.invoiceId,
+        amount: toDecimalForPrisma(allocation.amount),
+      }));
       const record = await client.customerPayment.create({
         data: {
           id: input.id,
@@ -171,11 +175,7 @@ export function createPrismaPaymentRepository(
           notes: input.notes,
           journalId: input.journalId,
           allocations: {
-            create: input.allocations.map((allocation) => ({
-              tenantId: input.tenantId,
-              invoiceId: allocation.invoiceId,
-              amount: toDecimalForPrisma(allocation.amount),
-            })),
+            create: allocationCreates,
           },
         },
         include: paymentInclude,

@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export function PageHeader({
   title,
   description,
@@ -5,10 +7,10 @@ export function PageHeader({
   actions,
 }: {
   title: string;
-  description?: string;
+  description?: ReactNode;
   /** Sits on the description row (right on sm+), under the title. */
-  descriptionEnd?: React.ReactNode;
-  actions?: React.ReactNode;
+  descriptionEnd?: ReactNode;
+  actions?: ReactNode;
 }) {
   const hasDescriptionRow = Boolean(description || descriptionEnd);
 
@@ -19,9 +21,9 @@ export function PageHeader({
         {hasDescriptionRow ? (
           <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
             {description ? (
-              <p className="min-w-0 text-base text-muted-foreground">
+              <div className="min-w-0 text-base text-muted-foreground">
                 {description}
-              </p>
+              </div>
             ) : null}
             {descriptionEnd ? (
               <div className="shrink-0 sm:text-right">{descriptionEnd}</div>

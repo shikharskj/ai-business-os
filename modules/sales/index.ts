@@ -59,6 +59,7 @@ export {
   sendQuotation,
   acceptQuotation,
   cancelQuotation,
+  exportQuotationPdf,
 } from "@/modules/sales/application/quotations";
 export {
   createInvoice,
@@ -74,16 +75,33 @@ export {
 } from "@/modules/sales/application/invoices";
 export { taxContextFromTenant } from "@/modules/sales/application/tax-context";
 export {
+  buildInvoiceDocumentView,
+  businessLettermark,
+  buyerPartyFromCustomer,
+  quantityLabelFromDraft,
+  type InvoiceDocumentView,
+  type InvoiceDocumentBuyerInput,
+  type InvoiceDocumentDraftLine,
+} from "@/modules/sales/application/invoice-document-view";
+export {
   createMemorySalesRepository,
   type SalesRepository,
 } from "@/modules/sales/infrastructure/repositories";
 export {
+  buildQuotationDocumentView,
+  type QuotationDocumentView,
+  type QuotationDocumentBuyerInput,
+  type QuotationDocumentDraftLine,
+} from "@/modules/sales/application/quotation-document-view";
+export {
   quotationInputSchema,
+  quotationLineInputSchema,
   quotationSearchSchema,
   toQuotationFields,
 } from "@/modules/sales/schemas/quotation.schema";
 export {
   invoiceInputSchema,
+  invoiceLineInputSchema,
   invoiceSearchSchema,
   toInvoiceFields,
 } from "@/modules/sales/schemas/invoice.schema";

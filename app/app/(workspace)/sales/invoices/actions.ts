@@ -27,16 +27,21 @@ import {
   prismaTaxRateRepository,
 } from "@/modules/tax/infrastructure/prisma-tax-repositories";
 import {
+  buildInvoiceDocumentView,
   cancelInvoice,
   createInvoice,
   exportInvoicePdf,
   invoiceInputSchema,
+  invoiceLineInputSchema,
   postInvoice,
+  previewInvoice,
   SalesError,
   taxContextFromTenant,
   toInvoiceFields,
   updateInvoice,
+  type InvoiceDocumentView,
 } from "@/modules/sales";
+import { businessLogoUrl } from "@/modules/tenant";
 import { createPrismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
 import type { SalesRepository } from "@/modules/sales/infrastructure/repositories";
 import type { AuditRepository } from "@/modules/shared-kernel/audit";
@@ -272,9 +277,10 @@ export async function exportInvoicePdfAction(
       exportInvoicePdf({
         tenantId: tenant.tenantId,
         actorUserId: tenant.membership.userId,
-        businessName: tenant.business.name,
+        business: tenant.business,
         invoiceId,
         sales: createPrismaSalesRepository(tx),
+        parties: createPrismaPartyRepository(tx),
         documents: prismaDocumentRepository,
         storage: getStorageAdapter(),
         audit: createPrismaAuditRepository(tx),
@@ -289,3 +295,89 @@ export async function exportInvoicePdfAction(
     throw error;
   }
 }
+
+export type InvoicePreviewState = {
+  view?: InvoiceDocumentView;
+  error?: string;
+};
+
+export async function previewInvoiceTotalsAction(input: {
+  invoiceId?: string;
+  number?: string;
+  customerId: string;
+  issuedOn: string;
+  dueOn?: string;
+  notes?: string;
+  placeOfSupplyStateCode: string;
+  lines: Array<{
+    productId: string;
+    quantity: string;
+    unitPrice: string;
+    discount: string;
+  }>;
+}): Promise<InvoicePreviewState> {
+  try {
+    const tenant = await authorize(
+      input.invoiceId ? "invoice:update" : "invoice:create"
+    );
+    const completeLines = input.lines.filter((line) => {
+      try {
+        invoiceLineInputSchema.parse(line);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    if (!input.customerId || completeLines.length === 0) {
+      return {};
+    }
+
+    const fields = toInvoiceFields(
+      invoiceInputSchema.parse({
+        customerId: input.customerId,
+        issuedOn: input.issuedOn,
+        dueOn: input.dueOn || undefined,
+        notes: input.notes || undefined,
+        placeOfSupplyStateCode: input.placeOfSupplyStateCode,
+        lines: completeLines,
+      })
+    );
+
+    const parties = createPrismaPartyRepository(prisma);
+    const catalog = createPrismaCatalogRepository(prisma);
+    const [prepared, customer] = await Promise.all([
+      previewInvoice({
+        tenantId: tenant.tenantId,
+        fields,
+        taxContext: taxContextFromTenant(tenant),
+        parties,
+        catalog,
+        taxRates: prismaTaxRateRepository,
+        hsnSac: prismaHsnSacRepository,
+      }),
+      parties.findCustomerById(tenant.tenantId, input.customerId),
+    ]);
+
+    return {
+      view: buildInvoiceDocumentView({
+        number: input.number?.trim() || "Draft",
+        issuedOn: fields.issuedOn,
+        dueOn: fields.dueOn ?? null,
+        notes: fields.notes ?? null,
+        placeOfSupplyStateCode: fields.placeOfSupplyStateCode ?? "",
+        seller: tenant.business,
+        buyer: customer,
+        logoUrl: businessLogoUrl(tenant.business.logoDocumentId),
+        prepared,
+      }),
+    };
+  } catch (error) {
+    const mapped = mapError(error);
+    if (mapped) {
+      return { error: mapped.error ?? "Could not price this draft yet." };
+    }
+    throw error;
+  }
+}
+

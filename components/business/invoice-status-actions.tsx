@@ -8,7 +8,7 @@ import {
   postInvoiceAction,
 } from "@/app/app/(workspace)/sales/invoices/actions";
 import { Button } from "@/components/ui/button";
-import { isPostedInvoiceStatus } from "@/modules/sales";
+import { isPostedInvoiceStatus } from "@/modules/sales/domain/invoice-status";
 import type { SalesInvoiceStatus } from "@/modules/sales/domain/types";
 
 export function InvoiceStatusActions({

@@ -12,6 +12,15 @@ import {
   uploadDocument,
 } from "@/modules/documents";
 import { prismaDocumentRepository } from "@/modules/documents/infrastructure/prisma-document-repository";
+import {
+  BUSINESS_LOGO_MAX_BYTES,
+  clearBusinessLogo,
+  setBusinessLogo,
+} from "@/modules/tenant";
+import {
+  prismaBusinessRepository,
+} from "@/modules/tenant/infrastructure/prisma-repositories";
+import { TenantError } from "@/modules/tenant/domain/errors";
 
 export type DocumentActionState = {
   error?: string;
@@ -82,7 +91,12 @@ export async function deleteBusinessDocumentAction(
       audit,
     });
 
+    if (tenant.business.logoDocumentId === documentId) {
+      await prismaBusinessRepository.setLogoDocumentId(tenant.tenantId, null);
+    }
+
     revalidatePath("/app/settings/documents");
+    revalidatePath("/app/settings");
     return {};
   } catch (error) {
     if (error instanceof AuthorizationError) {
@@ -95,5 +109,74 @@ export async function deleteBusinessDocumentAction(
 
     console.error("Delete document error:", error);
     return { error: "Unable to remove document." };
+  }
+}
+
+export async function uploadBusinessLogoAction(
+  _prevState: DocumentActionState,
+  formData: FormData
+): Promise<DocumentActionState> {
+  try {
+    const tenant = await authorize("settings:update");
+    await authorize("document:upload");
+    const file = formData.get("file");
+
+    if (!(file instanceof File)) {
+      return { error: "Choose a logo image to upload." };
+    }
+
+    if (file.size > BUSINESS_LOGO_MAX_BYTES) {
+      return { error: "Logo must be 2 MB or smaller." };
+    }
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    await setBusinessLogo({
+      tenantId: tenant.tenantId,
+      actorUserId: tenant.membership.userId,
+      filename: file.name,
+      bytes,
+      business: prismaBusinessRepository,
+      documents: prismaDocumentRepository,
+      storage: getStorageAdapter(),
+      audit,
+    });
+
+    revalidatePath("/app/settings");
+    revalidatePath("/app/sales/invoices");
+    return {};
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return { error: "You don't have permission to update the logo." };
+    }
+    if (error instanceof DocumentError || error instanceof TenantError) {
+      return { error: error.message };
+    }
+    return { error: "Unable to upload logo." };
+  }
+}
+
+export async function removeBusinessLogoAction(): Promise<DocumentActionState> {
+  try {
+    const tenant = await authorize("settings:update");
+    await authorize("document:delete");
+    await clearBusinessLogo({
+      tenantId: tenant.tenantId,
+      actorUserId: tenant.membership.userId,
+      business: prismaBusinessRepository,
+      documents: prismaDocumentRepository,
+      storage: getStorageAdapter(),
+      audit,
+    });
+    revalidatePath("/app/settings");
+    revalidatePath("/app/sales/invoices");
+    return {};
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return { error: "You don't have permission to remove the logo." };
+    }
+    if (error instanceof DocumentError || error instanceof TenantError) {
+      return { error: error.message };
+    }
+    return { error: "Unable to remove logo." };
   }
 }

@@ -13,7 +13,11 @@ import type {
 } from "@/modules/accounting/infrastructure/repositories";
 import { CatalogNotFoundError } from "@/modules/catalog/domain/errors";
 import type { CatalogRepository } from "@/modules/catalog/infrastructure/repositories";
-import { uploadDocument } from "@/modules/documents/application/documents";
+import {
+  downloadDocument,
+  uploadDocument,
+} from "@/modules/documents/application/documents";
+import { DocumentNotFoundError } from "@/modules/documents/domain/errors";
 import type { DocumentRepository } from "@/modules/documents/infrastructure/repositories";
 import type { StorageAdapter } from "@/lib/storage/types";
 import { PartyInactiveError, PartyNotFoundError } from "@/modules/party/domain/errors";
@@ -30,6 +34,8 @@ import {
   computeInvoiceCogsLines,
 } from "@/modules/sales/application/build-invoice-journal";
 import { renderInvoicePdfBytes } from "@/modules/sales/application/invoice-pdf";
+import { buildInvoiceDocumentView } from "@/modules/sales/application/invoice-document-view";
+import type { BusinessProfile } from "@/modules/tenant/domain/types";
 import {
   InvoiceAlreadyPostedError,
   InvoiceNotFoundError,
@@ -82,9 +88,10 @@ export type InvoicePostDeps = InvoiceUseCaseDeps & {
 export type InvoicePdfDeps = {
   tenantId: string;
   actorUserId: string;
-  businessName: string;
+  business: BusinessProfile;
   invoiceId: string;
   sales: SalesRepository;
+  parties: PartyRepository;
   documents: DocumentRepository;
   storage: StorageAdapter;
   audit: AuditRepository;
@@ -691,7 +698,43 @@ export async function exportInvoicePdf(input: InvoicePdfDeps) {
     throw new InvoiceValidationError("Post the invoice before exporting a PDF.");
   }
 
-  const bytes = renderInvoicePdfBytes(invoice, input.businessName);
+  const customer = await input.parties.findCustomerById(
+    input.tenantId,
+    invoice.customerId
+  );
+
+  let logo: { bytes: Uint8Array; contentType: string } | null = null;
+  if (input.business.logoDocumentId) {
+    try {
+      const downloaded = await downloadDocument({
+        tenantId: input.tenantId,
+        documentId: input.business.logoDocumentId,
+        documents: input.documents,
+        storage: input.storage,
+      });
+      logo = {
+        bytes: downloaded.body,
+        contentType: downloaded.record.contentType,
+      };
+    } catch (error) {
+      if (!(error instanceof DocumentNotFoundError)) {
+        throw error;
+      }
+    }
+  }
+
+  const view = buildInvoiceDocumentView({
+    number: invoice.number,
+    issuedOn: invoice.issuedOn,
+    dueOn: invoice.dueOn,
+    notes: invoice.notes,
+    placeOfSupplyStateCode: invoice.placeOfSupplyStateCode,
+    seller: input.business,
+    buyer: customer,
+    logoUrl: null,
+    prepared: invoice,
+  });
+  const bytes = await renderInvoicePdfBytes(view, logo);
   return uploadDocument({
     tenantId: input.tenantId,
     actorUserId: input.actorUserId,

@@ -1,10 +1,12 @@
 import Link from "next/link";
 
+import { BusinessLogoForm } from "@/components/business/business-logo-form";
 import { EditBusinessProfileForm } from "@/components/business/edit-business-profile-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/shell/page-header";
 import { authorize } from "@/lib/security";
+import { businessLogoUrl } from "@/modules/tenant";
 
 export default async function BusinessSettingsPage({
   searchParams,
@@ -42,6 +44,15 @@ export default async function BusinessSettingsPage({
       {params.saved ? (
         <p className="text-base text-muted-foreground">Business profile saved.</p>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Invoice logo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <BusinessLogoForm logoUrl={businessLogoUrl(tenant.business.logoDocumentId)} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent>
