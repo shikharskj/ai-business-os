@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Building2, ChevronRight } from "lucide-react";
 import {
   Sidebar,
@@ -30,8 +30,9 @@ import {
   filterWorkspaceNav,
   findGroupIdForPath,
   getDefaultOpenGroupState,
+  getSidebarPersistClientSnapshot,
+  getSidebarPersistServerSnapshot,
   pathMatches,
-  readPersistedGroupState,
   writePersistedGroupState,
   WORKSPACE_FOOTER_NAV,
   WORKSPACE_MAIN_NAV,
@@ -290,39 +291,60 @@ export function AppSidebar({
     [role],
   );
 
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
-    getDefaultOpenGroupState,
+  const persistedGroups = useSyncExternalStore(
+    () => () => {},
+    getSidebarPersistClientSnapshot,
+    getSidebarPersistServerSnapshot,
   );
-  const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
-    const persisted = readPersistedGroupState();
-    if (persisted) {
-      setOpenGroups((current) => ({ ...current, ...persisted }));
-    }
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
+  const baselineOpenGroups = useMemo(() => {
+    const base = { ...getDefaultOpenGroupState(), ...persistedGroups };
     const activeGroupId = findGroupIdForPath(pathname);
-    if (!activeGroupId) return;
-    setOpenGroups((current) => {
-      if (current[activeGroupId]) return current;
-      return { ...current, [activeGroupId]: true };
-    });
-  }, [pathname]);
+    if (activeGroupId) {
+      base[activeGroupId] = true;
+    }
+    return base;
+  }, [persistedGroups, pathname]);
+
+  const [userToggles, setUserToggles] = useState<Record<string, boolean>>({});
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  const skipInitialPersistRef = useRef(true);
+
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    const activeGroupId = findGroupIdForPath(pathname);
+    if (activeGroupId) {
+      setUserToggles((current) => {
+        if (!(activeGroupId in current)) return current;
+        const next = { ...current };
+        delete next[activeGroupId];
+        return next;
+      });
+    }
+  }
+
+  const openGroups = useMemo(
+    () => ({ ...baselineOpenGroups, ...userToggles }),
+    [baselineOpenGroups, userToggles],
+  );
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (skipInitialPersistRef.current) {
+      skipInitialPersistRef.current = false;
+      return;
+    }
     writePersistedGroupState(openGroups);
-  }, [openGroups, hydrated]);
+  }, [openGroups]);
 
-  const onToggleGroup = useCallback((groupId: string) => {
-    setOpenGroups((current) => ({
-      ...current,
-      [groupId]: !(current[groupId] ?? getDefaultOpenGroupState()[groupId]),
-    }));
-  }, []);
+  const onToggleGroup = useCallback(
+    (groupId: string) => {
+      setUserToggles((current) => ({
+        ...current,
+        [groupId]: !(openGroups[groupId] ?? getDefaultOpenGroupState()[groupId]),
+      }));
+    },
+    [openGroups],
+  );
 
   const moduleNav = mainNav.filter(
     (item) => item.type === "group" || item.href !== "/app",

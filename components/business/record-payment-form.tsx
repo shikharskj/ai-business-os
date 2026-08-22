@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 
 import {
   recordCustomerPaymentAction,
@@ -24,6 +26,7 @@ import { MoneyDisplay } from "@/components/business/money-display";
 import { formatINR } from "@/modules/shared-kernel/format-money";
 import { money, moneyFromMajor, toMajorString } from "@/modules/shared-kernel/money";
 import { FORM_PLACEHOLDERS } from "@/lib/forms/placeholders";
+import { buildEntityCreateHref } from "@/lib/navigation/entity-create-return";
 import {
   PAYMENT_METHOD_LABELS,
   PAYMENT_METHODS,
@@ -139,9 +142,24 @@ function RecordPaymentFormFields({
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <label htmlFor="customerId" className="text-base font-medium">
-            Customer
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor="customerId" className="text-base font-medium">
+              Customer
+            </label>
+            <Link
+              href={buildEntityCreateHref({
+                entity: "customer",
+                returnTo: "/app/sales/payments/new",
+                preserveQuery: selectedCustomerId
+                  ? { customerId: selectedCustomerId }
+                  : undefined,
+              })}
+              className="flex items-center gap-2 text-sm font-medium text-(--state-info) hover:font-semibold"
+            >
+              <Plus className="size-4" />
+              <span>New customer</span>
+            </Link>
+          </div>
           <Combobox
             id="customerId"
             value={selectedCustomerId}

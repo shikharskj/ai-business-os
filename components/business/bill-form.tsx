@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import { Plus, Trash2 } from "lucide-react";
@@ -13,6 +14,10 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FORM_PLACEHOLDERS } from "@/lib/forms/placeholders";
+import {
+  buildEntityCreateHref,
+  resolveInitialEntityId,
+} from "@/lib/navigation/entity-create-return";
 import {
   Select,
   SelectContent,
@@ -91,16 +96,62 @@ function FieldError({
   );
 }
 
+function buildInitialBillLines(
+  products: BillProductOption[],
+  initialProductId?: string,
+  initialLineIndex?: number
+): LineDraft[] {
+  const firstProduct = products[0];
+  const lines: LineDraft[] = [
+    {
+      ...emptyLine,
+      productId: firstProduct?.id ?? "",
+      unitPrice: firstProduct?.purchasePriceMajor ?? "",
+    },
+  ];
+
+  if (!initialProductId || !products.some((row) => row.id === initialProductId)) {
+    return lines;
+  }
+
+  const product = products.find((row) => row.id === initialProductId);
+  if (!product) {
+    return lines;
+  }
+
+  const lineIndex = initialLineIndex ?? 0;
+  while (lines.length <= lineIndex) {
+    lines.push({
+      ...emptyLine,
+      productId: firstProduct?.id ?? "",
+      unitPrice: firstProduct?.purchasePriceMajor ?? "",
+    });
+  }
+
+  lines[lineIndex] = {
+    ...lines[lineIndex],
+    productId: product.id,
+    unitPrice: product.purchasePriceMajor,
+  };
+  return lines;
+}
+
 export function BillForm({
   suppliers,
   products,
   today,
   purchase,
+  initialSupplierId,
+  initialProductId,
+  initialLineIndex,
 }: {
   suppliers: BillSupplierOption[];
   products: BillProductOption[];
   today: string;
   purchase?: Purchase;
+  initialSupplierId?: string;
+  initialProductId?: string;
+  initialLineIndex?: number;
 }) {
   const action = purchase ? updatePurchaseAction : createPurchaseAction;
   const [state, formAction, isPending] = useActionState(
@@ -108,7 +159,8 @@ export function BillForm({
     {} as PurchaseActionState
   );
   const [supplierId, setSupplierId] = useState(
-    purchase?.supplierId ?? suppliers[0]?.id ?? ""
+    purchase?.supplierId ??
+      resolveInitialEntityId(suppliers, initialSupplierId)
   );
   const [placeOfSupply, setPlaceOfSupply] = useState(
     purchase?.placeOfSupplyStateCode ??
@@ -124,13 +176,7 @@ export function BillForm({
           unitPrice: toMajorString(line.unitPrice),
           discount: toMajorString(line.discount),
         }))
-      : [
-          {
-            ...emptyLine,
-            productId: products[0]?.id ?? "",
-            unitPrice: products[0]?.purchasePriceMajor ?? "",
-          },
-        ]
+      : buildInitialBillLines(products, initialProductId, initialLineIndex)
   );
 
   const supplierItems = useMemo(
@@ -158,9 +204,22 @@ export function BillForm({
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <label htmlFor="supplierId" className="text-base font-medium">
-            Supplier
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor="supplierId" className="text-base font-medium">
+              Supplier
+            </label>
+            <Link
+              href={buildEntityCreateHref({
+                entity: "supplier",
+                returnTo: "/app/purchases/bills/new",
+                preserveQuery: supplierId ? { supplierId } : undefined,
+              })}
+              className="flex items-center gap-2 text-sm font-medium text-(--state-info) hover:font-semibold"
+            >
+              <Plus className="size-4" />
+              <span>New supplier</span>
+            </Link>
+          </div>
           <Select
             value={supplierId}
             onValueChange={(value) => {
@@ -278,9 +337,25 @@ export function BillForm({
                 value={line.productId}
               />
               <div className="flex flex-col gap-2">
-                <label className="text-base font-medium" htmlFor={`line-${index}-product`}>
-                  Product / service
-                </label>
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-base font-medium" htmlFor={`line-${index}-product`}>
+                    Product / service
+                  </label>
+                  <Link
+                    href={buildEntityCreateHref({
+                      entity: "product",
+                      returnTo: "/app/purchases/bills/new",
+                      preserveQuery: {
+                        supplierId: supplierId || undefined,
+                        lineIndex: String(index),
+                      },
+                    })}
+                    className="flex items-center gap-2 text-xs font-medium text-(--state-info) hover:font-semibold"
+                  >
+                    <Plus className="size-4" />
+                    New product
+                  </Link>
+                </div>
                 <Select
                   value={line.productId}
                   onValueChange={(value) => {

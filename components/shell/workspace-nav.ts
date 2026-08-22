@@ -397,6 +397,22 @@ export function getDefaultOpenGroupState(
   return state;
 }
 
+export const EMPTY_SIDEBAR_GROUP_STATE: Record<string, boolean> = {};
+
+let cachedClientPersistedGroups: Record<string, boolean> | undefined;
+
+export function getSidebarPersistClientSnapshot(): Record<string, boolean> {
+  if (cachedClientPersistedGroups === undefined) {
+    cachedClientPersistedGroups =
+      readPersistedGroupState() ?? EMPTY_SIDEBAR_GROUP_STATE;
+  }
+  return cachedClientPersistedGroups;
+}
+
+export function getSidebarPersistServerSnapshot(): Record<string, boolean> {
+  return EMPTY_SIDEBAR_GROUP_STATE;
+}
+
 export function readPersistedGroupState(): Record<string, boolean> | null {
   if (typeof window === "undefined") return null;
   try {
@@ -416,4 +432,5 @@ export function writePersistedGroupState(state: Record<string, boolean>): void {
     SIDEBAR_NAV_GROUPS_STORAGE_KEY,
     JSON.stringify(state),
   );
+  cachedClientPersistedGroups = state;
 }

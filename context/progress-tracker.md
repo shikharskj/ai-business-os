@@ -104,6 +104,12 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 
 # Completed
 
+* **Entity create + return-to-form:**
+  * `lib/navigation/entity-create-return.ts` — allowlisted `returnTo`, href/redirect builders, initial entity id helpers.
+  * Create customer/product/supplier actions redirect back to originating form when `returnTo` is valid; pre-select via query params; `entityCreated` flash toast on form pages.
+  * Inline **+ New customer/product/supplier** on record payment, supplier payment, bill, invoice, and quotation forms; empty-state page buttons wired with `returnTo`.
+  * Tests: `tests/navigation/entity-create-return.test.ts`, `tests/feedback/flash-toast-map.test.ts`.
+
 * **Skeleton layout fidelity:**
   * Shared primitives in `components/shell/page-skeletons/shared.tsx`: `PageHeaderSkeleton` (`showDescriptionEnd`, `actionCount`), `ListFilterFormSkeleton`, `DataTableSkeleton`, `NativeTableSkeleton`.
   * Dashboard skeleton mirrors `DashboardCanvas` (`lg:grid-cols-3`, 4 KPI cards `min-h-36`, chart card, daily brief + activity rail).

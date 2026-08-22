@@ -11,7 +11,11 @@ import { SubmitButton } from "@/components/ui/submit-button";
 
 const initialState: ProductActionState = {};
 
-export function CreateProductForm() {
+export function CreateProductForm({
+  returnTo = null,
+}: {
+  returnTo?: string | null;
+}) {
   const [state, formAction, isPending] = useActionState(
     createProductAction,
     initialState
@@ -19,6 +23,9 @@ export function CreateProductForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
+      {returnTo ? (
+        <input type="hidden" name="returnTo" value={returnTo} />
+      ) : null}
       <ProductFormFields
         defaultValues={state.values}
         fieldErrors={state.fieldErrors}

@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { FORM_PLACEHOLDERS } from "@/lib/forms/placeholders";
+import { buildEntityCreateHref, resolveInitialEntityId } from "@/lib/navigation/entity-create-return";
 import { GST_STATE_CODES } from "@/modules/tax/domain/gstin";
 import { gstinStateCode, stateCodeFromName } from "@/modules/tax/domain/gstin";
 import { toMajorString } from "@/modules/shared-kernel/money";
@@ -118,6 +119,46 @@ function FieldError({
   );
 }
 
+function buildInitialQuotationLines(
+  products: QuotationProductOption[],
+  initialProductId?: string,
+  initialLineIndex?: number
+): LineDraft[] {
+  const firstProduct = products[0];
+  const lines: LineDraft[] = [
+    {
+      ...emptyLine,
+      productId: firstProduct?.id ?? "",
+      unitPrice: firstProduct?.sellingPriceMajor ?? "",
+    },
+  ];
+
+  if (!initialProductId || !products.some((row) => row.id === initialProductId)) {
+    return lines;
+  }
+
+  const product = products.find((row) => row.id === initialProductId);
+  if (!product) {
+    return lines;
+  }
+
+  const lineIndex = initialLineIndex ?? 0;
+  while (lines.length <= lineIndex) {
+    lines.push({
+      ...emptyLine,
+      productId: firstProduct?.id ?? "",
+      unitPrice: firstProduct?.sellingPriceMajor ?? "",
+    });
+  }
+
+  lines[lineIndex] = {
+    ...lines[lineIndex],
+    productId: product.id,
+    unitPrice: product.sellingPriceMajor,
+  };
+  return lines;
+}
+
 export function QuotationForm({
   customers,
   products,
@@ -125,6 +166,9 @@ export function QuotationForm({
   quotation,
   seller,
   logoUrl,
+  initialCustomerId,
+  initialProductId,
+  initialLineIndex,
 }: {
   customers: QuotationCustomerOption[];
   products: QuotationProductOption[];
@@ -132,6 +176,9 @@ export function QuotationForm({
   quotation?: Quotation;
   seller: BusinessProfile;
   logoUrl: string | null;
+  initialCustomerId?: string;
+  initialProductId?: string;
+  initialLineIndex?: number;
 }) {
   const action = quotation ? updateQuotationAction : createQuotationAction;
   const [state, formAction, isPending] = useActionState(
@@ -139,7 +186,8 @@ export function QuotationForm({
     {} as QuotationActionState
   );
   const [customerId, setCustomerId] = useState(
-    quotation?.customerId ?? customers[0]?.id ?? ""
+    quotation?.customerId ??
+      resolveInitialEntityId(customers, initialCustomerId)
   );
   const [placeOfSupply, setPlaceOfSupply] = useState(
     quotation?.placeOfSupplyStateCode ??
@@ -161,7 +209,7 @@ export function QuotationForm({
           unitPrice: toMajorString(line.unitPrice),
           discount: toMajorString(line.discount),
         }))
-      : [{ ...emptyLine, productId: products[0]?.id ?? "", unitPrice: products[0]?.sellingPriceMajor ?? "" }]
+      : buildInitialQuotationLines(products, initialProductId, initialLineIndex)
   );
   const [engineView, setEngineView] = useState<QuotationDocumentView | null>(null);
 
@@ -276,9 +324,14 @@ export function QuotationForm({
                 Customer
               </label>
               <Link
-                href="/app/sales/customers/new"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                href={buildEntityCreateHref({
+                  entity: "customer",
+                  returnTo: "/app/sales/quotations/new",
+                  preserveQuery: customerId ? { customerId } : undefined,
+                })}
+                className="flex items-center gap-2 text-sm font-medium text-(--state-info) hover:font-semibold"
               >
+                <Plus className="size-4" />
                 New customer
               </Link>
             </div>
@@ -405,9 +458,17 @@ export function QuotationForm({
                       Product / service
                     </label>
                     <Link
-                      href="/app/inventory/products/new"
-                      className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                      href={buildEntityCreateHref({
+                        entity: "product",
+                        returnTo: "/app/sales/quotations/new",
+                        preserveQuery: {
+                          customerId: customerId || undefined,
+                          lineIndex: String(index),
+                        },
+                      })}
+                      className="flex items-center gap-2 text-xs font-medium text-(--state-info) hover:font-semibold"
                     >
+                      <Plus className="size-4" />
                       New product
                     </Link>
                   </div>

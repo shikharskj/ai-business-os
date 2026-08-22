@@ -5,6 +5,11 @@ import { PageHeader } from "@/components/shell/page-header";
 import { DocumentPreviewPageShell } from "@/components/shell/document-form-preview-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  buildEntityCreateHref,
+  parseInitialLineIndex,
+  resolveInitialEntityId,
+} from "@/lib/navigation/entity-create-return";
 import { authorize } from "@/lib/security";
 import { todayInTimezone } from "@/modules/shared-kernel/dates";
 import { toMajorString } from "@/modules/shared-kernel/money";
@@ -14,8 +19,17 @@ import { listProducts } from "@/modules/catalog";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 import { businessLogoUrl } from "@/modules/tenant";
 
-export default async function NewQuotationPage() {
+export default async function NewQuotationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    customerId?: string;
+    productId?: string;
+    lineIndex?: string;
+  }>;
+}) {
   const tenant = await authorize("quotation:create");
+  const params = await searchParams;
   const [customers, products] = await Promise.all([
     listCustomers({
       tenantId: tenant.tenantId,
@@ -27,6 +41,12 @@ export default async function NewQuotationPage() {
       catalog: prismaCatalogRepository,
     }),
   ]);
+  const initialCustomerId = resolveInitialEntityId(customers, params.customerId);
+  const initialProductId =
+    params.productId && products.some((product) => product.id === params.productId)
+      ? params.productId
+      : undefined;
+  const initialLineIndex = parseInitialLineIndex(params.lineIndex);
 
   return (
     <DocumentPreviewPageShell>
@@ -58,8 +78,17 @@ export default async function NewQuotationPage() {
                   <Link
                     href={
                       customers.length === 0
-                        ? "/app/sales/customers/new"
-                        : "/app/inventory/products/new"
+                        ? buildEntityCreateHref({
+                            entity: "customer",
+                            returnTo: "/app/sales/quotations/new",
+                          })
+                        : buildEntityCreateHref({
+                            entity: "product",
+                            returnTo: "/app/sales/quotations/new",
+                            preserveQuery: initialCustomerId
+                              ? { customerId: initialCustomerId }
+                              : undefined,
+                          })
                     }
                   />
                 }
@@ -74,6 +103,9 @@ export default async function NewQuotationPage() {
           today={todayInTimezone(tenant.business.timezone)}
           seller={tenant.business}
           logoUrl={businessLogoUrl(tenant.business.logoDocumentId)}
+          initialCustomerId={initialCustomerId}
+          initialProductId={initialProductId}
+          initialLineIndex={initialLineIndex}
           customers={customers.map((customer) => ({
             id: customer.id,
             name: customer.name,

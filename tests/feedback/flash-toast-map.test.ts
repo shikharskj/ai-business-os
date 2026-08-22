@@ -19,6 +19,17 @@ describe("resolveFlashToast", () => {
     expect(result?.paramKeys).toEqual(["created"]);
   });
 
+  it("maps entityCreated on form return targets", () => {
+    const params = new URLSearchParams(
+      "customerId=cust_1&entityCreated=customer"
+    );
+    const result = resolveFlashToast("/app/sales/payments/new", params);
+
+    expect(result?.message.title).toBe("Customer created");
+    expect(result?.message.description).toBe("Continue on this form.");
+    expect(result?.paramKeys).toEqual(["entityCreated"]);
+  });
+
   it("maps invited=1 on members page", () => {
     const params = new URLSearchParams("invited=1");
     const result = resolveFlashToast("/app/settings/members", params);

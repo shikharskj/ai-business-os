@@ -170,6 +170,32 @@ export function resolveFlashToast(
     return { message, paramKeys: ["saved"] };
   }
 
+  const entityCreated = params.get("entityCreated");
+  if (
+    entityCreated === "customer" ||
+    entityCreated === "product" ||
+    entityCreated === "supplier"
+  ) {
+    const labels: Record<typeof entityCreated, FlashToastMessage> = {
+      customer: {
+        title: "Customer created",
+        description: "Continue on this form.",
+        type: "success",
+      },
+      product: {
+        title: "Product created",
+        description: "Continue on this form.",
+        type: "success",
+      },
+      supplier: {
+        title: "Supplier created",
+        description: "Continue on this form.",
+        type: "success",
+      },
+    };
+    return { message: labels[entityCreated], paramKeys: ["entityCreated"] };
+  }
+
   if (params.get("created") === "1") {
     const message =
       matchByPrefix(pathname, ENTITY_CREATED_MESSAGES) ?? {

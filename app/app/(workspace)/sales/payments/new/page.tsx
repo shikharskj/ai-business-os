@@ -4,6 +4,7 @@ import { RecordPaymentForm } from "@/components/business/record-payment-form";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { buildEntityCreateHref } from "@/lib/navigation/entity-create-return";
 import { authorize } from "@/lib/security";
 import { todayInTimezone } from "@/modules/shared-kernel/dates";
 import { listCustomers } from "@/modules/party";
@@ -11,6 +12,7 @@ import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-par
 import { listOpenReceivableInvoices } from "@/modules/payments";
 import { prismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
+import { Plus } from "lucide-react";
 
 export default async function NewPaymentPage({
   searchParams,
@@ -64,8 +66,16 @@ export default async function NewPaymentPage({
             <div>
               <Button
                 nativeButton={false}
-                render={<Link href="/app/sales/customers/new" />}
+                render={
+                  <Link
+                    href={buildEntityCreateHref({
+                      entity: "customer",
+                      returnTo: "/app/sales/payments/new",
+                    })}
+                  />
+                }
               >
+                <Plus className="size-4" />
                 New customer
               </Button>
             </div>

@@ -987,6 +987,12 @@ Page-level skeletons must reuse the same layout grid, filter form structure, and
 
 Prefer component-faithful skeletons over anonymous blocks. Keep deprecated `FilterRowSkeleton` / `TableRowsSkeleton` only for non-list templates (detail, report) until migrated.
 
+### Inline entity create + return-to-form
+
+Document and payment forms expose **+ New customer / product / supplier** links beside entity pickers. Links pass a validated `returnTo` query param to the create page; on success the create action redirects back to the originating form with the new entity id pre-selected (`customerId`, `supplierId`, or `productId`) and an `entityCreated` flash toast — not `created=1` (which would show the wrong message on form routes).
+
+Helpers live in `lib/navigation/entity-create-return.ts`. List-page “New …” links do not use `returnTo` and still land on the entity detail page after create.
+
 Buttons should communicate submission state:
 
 ```text

@@ -11,7 +11,11 @@ import { SubmitButton } from "@/components/ui/submit-button";
 
 const initialState: SupplierActionState = {};
 
-export function CreateSupplierForm() {
+export function CreateSupplierForm({
+  returnTo = null,
+}: {
+  returnTo?: string | null;
+}) {
   const [state, formAction, isPending] = useActionState(
     createSupplierAction,
     initialState
@@ -19,6 +23,9 @@ export function CreateSupplierForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
+      {returnTo ? (
+        <input type="hidden" name="returnTo" value={returnTo} />
+      ) : null}
       <CustomerFormFields
         heading="Supplier details"
         defaultValues={state.values}

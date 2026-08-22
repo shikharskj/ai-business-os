@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 
 import {
   recordSupplierPaymentAction,
@@ -22,6 +24,7 @@ import { MoneyDisplay } from "@/components/business/money-display";
 import { formatINR } from "@/modules/shared-kernel/format-money";
 import { money, moneyFromMajor, toMajorString } from "@/modules/shared-kernel/money";
 import { FORM_PLACEHOLDERS } from "@/lib/forms/placeholders";
+import { buildEntityCreateHref } from "@/lib/navigation/entity-create-return";
 import {
   PAYMENT_METHOD_LABELS,
   PAYMENT_METHODS,
@@ -148,9 +151,24 @@ function RecordSupplierPaymentFormFields({
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <label htmlFor="supplierId" className="text-base font-medium">
-            Supplier
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor="supplierId" className="text-base font-medium">
+              Supplier
+            </label>
+            <Link
+              href={buildEntityCreateHref({
+                entity: "supplier",
+                returnTo: "/app/purchases/payments/new",
+                preserveQuery: selectedSupplierId
+                  ? { supplierId: selectedSupplierId }
+                  : undefined,
+              })}
+              className="flex items-center gap-2 text-sm font-medium text-(--state-info) hover:font-semibold"
+            >
+              <Plus className="size-4" />
+              <span>New supplier</span>
+            </Link>
+          </div>
           <Select
             value={selectedSupplierId}
             onValueChange={(value) => {

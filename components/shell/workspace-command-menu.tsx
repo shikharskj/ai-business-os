@@ -67,6 +67,11 @@ export function WorkspaceCommandMenu({ role }: { role: MembershipRole }) {
           setRecordResults([]);
           return;
         }
+        const contentType = response.headers.get("content-type") ?? "";
+        if (!contentType.includes("application/json")) {
+          setRecordResults([]);
+          return;
+        }
         const data = (await response.json()) as SearchResponse;
         if (!data.results || !Array.isArray(data.results)) {
           setRecordResults([]);

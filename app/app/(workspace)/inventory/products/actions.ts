@@ -5,6 +5,10 @@ import { redirect } from "next/navigation";
 import { ZodError } from "zod";
 
 import { prisma } from "@/lib/db";
+import {
+  buildRedirectAfterEntityCreate,
+  parseReturnToValue,
+} from "@/lib/navigation/entity-create-return";
 import { authorize, AuthorizationError } from "@/lib/security";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
@@ -110,6 +114,18 @@ export async function createProductAction(
   }
 
   revalidatePath("/app/inventory/products");
+  const returnTo = parseReturnToValue(String(formData.get("returnTo") || ""));
+  if (returnTo) {
+    const redirectUrl = buildRedirectAfterEntityCreate({
+      entity: "product",
+      entityId: productId,
+      returnTo: returnTo.href,
+    });
+    if (redirectUrl) {
+      revalidatePath(returnTo.pathname);
+      redirect(redirectUrl);
+    }
+  }
   redirect(`/app/inventory/products/${productId}?created=1`);
 }
 
