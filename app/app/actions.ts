@@ -220,7 +220,6 @@ export async function updateAutonomyPolicyAction(
     paymentReminderRequireConfirmationAbove: String(
       formData.get("paymentReminderRequireConfirmationAbove") ?? ""
     ).trim(),
-    disabledAutomations: [] as string[],
   };
 
   try {

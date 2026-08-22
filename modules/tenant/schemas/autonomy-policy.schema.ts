@@ -26,7 +26,7 @@ export const autonomyPolicyUpdateSchema = z
     enablePaymentReminderL4: z.boolean(),
     paymentReminderAmountThreshold: optionalAmountMajorSchema,
     paymentReminderRequireConfirmationAbove: optionalAmountMajorSchema,
-    disabledAutomations: z.array(z.string().min(1).max(80)).max(50).default([]),
+    disabledAutomations: z.array(z.string().min(1).max(80)).max(50).optional(),
   })
   .strict()
   .superRefine((value, ctx) => {

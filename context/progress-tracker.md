@@ -104,6 +104,8 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 
 # Completed
 
+* **R4 follow-up fixes:** Autonomy form save preserves `disabledAutomations`. Invoice `due=OVERDUE` requires outstanding > 0. Collections L4 zero-send messages follow reminder status (`not_found` / `not_overdue` / `failed` / `already_sent`). Unconfirmed cron prepares no longer record `REMINDER_PROPOSED`.
+
 * **Automation expansions (`11-automation-expansions.md`):**
   * Three thin automations on the spec `09` runtime: `quotations.followup` (`QuotationIdle` → in-app follow-up draft, no email), `inventory.reorder` (velocity stub → draft purchase inputs, never posts), `expenses.anomaly` (`ExpenseRecorded` → inform/recommend when already on the queue). All three are `mode: "dry_run"`; L4 money-post classes stay off.
   * AttentionQueue adds `UNUSUAL_EXPENSE` (same-category amount vs recent average). Daily Brief shows Inform / Follow up / Reorder + L2 Prepare purchase (`purchase:create`, navigate only). Outcomes: `QUOTATION_FOLLOW_UP_PROPOSED`, `REORDER_PREPARED`, `EXPENSE_ANOMALY_FLAGGED`.
@@ -112,7 +114,7 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 * **Collections automation (`10-collections-automation.md`):**
   * First vertical on the spec `09` runtime: `collections.remind` (`InvoiceOverdue` → rank by amount/days overdue → draft via `previewAiAction` → L4 `executeAiTool` send or L3 prepare when policy is off / over ceiling).
   * Scheduled overdue scan emits `InvoiceOverdue` catalog events and enqueues runs. Daily idempotency keys plus a 7-day `REMINDER_SENT` cooldown prevent reminder spam. Delivery stays in-app (`send_payment_reminders`).
-  * Outcomes stay queryable: `listCollectionsOutcomes` and `GET /api/business-state/outcomes` (`report:read`) for `REMINDER_PROPOSED` / `REMINDER_SENT` / `PAID_AFTER_REMINDER`. Confirm path and Daily Brief Prepare are unchanged.
+  * Outcomes stay queryable: `listCollectionsOutcomes` and `GET /api/business-state/outcomes` (`report:read`) for `REMINDER_PROPOSED` / `REMINDER_SENT` / `PAID_AFTER_REMINDER`. Cron L3 prepares do not record `REMINDER_PROPOSED`; that kind is written on confirmed send (chat/HMAC or L4 `send_payment_reminders`). Daily Brief Prepare is unchanged.
   * Tests: `tests/workflows/collections-automation.test.ts`. Typecheck passes. Next: `11-automation-expansions.md`.
 
 * **Automation runtime (`09-automation-runtime.md`):**

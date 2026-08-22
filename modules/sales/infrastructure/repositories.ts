@@ -10,7 +10,9 @@ import type {
 import type { QuotationStatus } from "@/modules/sales/domain/types";
 import type { ListPageParams, ListPageResult } from "@/modules/shared-kernel/list-page";
 import { paginateArray } from "@/modules/shared-kernel/list-page";
-import { isReceivableInvoiceStatus } from "@/modules/sales/domain/invoice-status";
+import { isInvoiceOverdue } from "@/modules/sales/domain/invoice-status";
+import type { PaymentRepository } from "@/modules/payments/infrastructure/repositories";
+import { money } from "@/modules/shared-kernel/money";
 
 export type CreateQuotationRecordInput = {
   tenantId: string;
@@ -130,7 +132,10 @@ function withInvoiceLineIds(
 
 export function createMemorySalesRepository(
   initial: Quotation[] = [],
-  initialInvoices: SalesInvoice[] = []
+  initialInvoices: SalesInvoice[] = [],
+  options?: {
+    payments?: Pick<PaymentRepository, "allocatedTotalsForInvoices">;
+  }
 ): SalesRepository & {
   records: Quotation[];
   invoices: SalesInvoice[];
@@ -391,6 +396,17 @@ export function createMemorySalesRepository(
     async listInvoices(filter) {
       const query = filter.query?.trim().toLowerCase() ?? "";
       const statuses = filter.statuses;
+      const overdueAsOf = filter.overdueAsOf;
+      const dueOverdue = filter.due === "OVERDUE" && overdueAsOf;
+      const allocated = dueOverdue
+        ? await options?.payments?.allocatedTotalsForInvoices(
+            filter.tenantId,
+            invoices
+              .filter((record) => record.tenantId === filter.tenantId)
+              .map((record) => record.id)
+          )
+        : undefined;
+
       return invoices
         .filter((record) => record.tenantId === filter.tenantId)
         .filter((record) => {
@@ -402,11 +418,22 @@ export function createMemorySalesRepository(
               return false;
             }
           }
-          if (filter.due === "OVERDUE" && filter.overdueAsOf) {
-            if (!record.dueOn || record.dueOn >= filter.overdueAsOf) {
-              return false;
-            }
-            if (!isReceivableInvoiceStatus(record.status)) {
+          if (dueOverdue && overdueAsOf) {
+            const paid =
+              allocated?.get(record.id) ??
+              money(0n, record.grandTotal.currency);
+            const outstandingMinor =
+              paid.amountMinor >= record.grandTotal.amountMinor
+                ? 0n
+                : record.grandTotal.amountMinor - paid.amountMinor;
+            if (
+              !isInvoiceOverdue({
+                dueOn: record.dueOn,
+                status: record.status,
+                outstandingMinor,
+                asOf: overdueAsOf,
+              })
+            ) {
               return false;
             }
           }

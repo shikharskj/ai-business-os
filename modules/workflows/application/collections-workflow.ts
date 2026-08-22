@@ -1,7 +1,9 @@
 import { executeAiTool } from "@/modules/ai/application/execute-tool";
 import { previewAiAction } from "@/modules/ai/domain/assistant-actions";
-import { paymentRemindersOutputSchema } from "@/modules/ai/schemas/ai-tool.schema";
-import { recordPaymentReminderOutcomes } from "@/modules/business-state/application/record-reminder-outcomes";
+import {
+  paymentRemindersOutputSchema,
+  type PaymentRemindersOutput,
+} from "@/modules/ai/schemas/ai-tool.schema";
 import { overdueReceivableNaturalKey } from "@/modules/business-state/domain/attention-keys";
 import { ATTENTION_SEVERITY, type AttentionItem } from "@/modules/business-state/domain/types";
 import type { OutboxEventRecord } from "@/modules/events/domain/types";
@@ -29,6 +31,28 @@ function daysBetween(fromDate: string, toDate: string): number {
   const from = new Date(`${fromDate}T00:00:00.000Z`).getTime();
   const to = new Date(`${toDate}T00:00:00.000Z`).getTime();
   return Math.round((to - from) / 86_400_000);
+}
+
+function reminderSendMessage(output: PaymentRemindersOutput | null): string {
+  const sentCount = output?.sentCount ?? 0;
+  if (sentCount > 0) {
+    return "Sent an in-app payment reminder under the tenant L4 policy.";
+  }
+
+  const statuses = output?.reminders.map((row) => row.status) ?? [];
+  if (statuses.includes("failed")) {
+    return "Could not send the payment reminder.";
+  }
+  if (statuses.includes("not_found")) {
+    return "Invoice was not found; reminder was not sent.";
+  }
+  if (statuses.includes("not_overdue")) {
+    return "Invoice is no longer overdue; reminder was not sent.";
+  }
+  if (statuses.includes("already_sent")) {
+    return "Reminder was already sent for this invoice today.";
+  }
+  return "Payment reminder was not sent.";
 }
 
 function asOfFor(event: OutboxEventRecord, context: WorkflowActionContext): string {
@@ -135,15 +159,6 @@ export function createCollectionsRemindWorkflow(): WorkflowDefinition {
       });
       const asOf = asOfFor(event, context);
 
-      await recordPaymentReminderOutcomes({
-        tenantId: context.tenantId,
-        invoiceId: event.aggregateId,
-        asOf,
-        delivered: false,
-        attention: context.attention,
-        outbox: context.toolContext?.repositories.outbox,
-      });
-
       if (!context.l4Allowed) {
         return {
           executed: false,
@@ -193,21 +208,19 @@ export function createCollectionsRemindWorkflow(): WorkflowDefinition {
         automationId: COLLECTIONS_REMIND_WORKFLOW_ID,
       });
 
-      const output = paymentRemindersOutputSchema.safeParse(result.output);
-      const sentCount = output.success ? output.data.sentCount : 0;
-      const failedCount = output.success ? output.data.failedCount : 0;
+      const parsed = paymentRemindersOutputSchema.safeParse(result.output);
+      const output = parsed.success ? parsed.data : null;
+      const sentCount = output?.sentCount ?? 0;
+      const failedCount = output?.failedCount ?? 0;
 
       return {
         executed: sentCount > 0,
-        message:
-          sentCount > 0
-            ? "Sent an in-app payment reminder under the tenant L4 policy."
-            : "Reminder was already sent for this invoice today.",
+        message: reminderSendMessage(output),
         payload: {
           invoiceIds,
           sentCount,
           failedCount,
-          asOf: output.success ? output.data.asOf : asOf,
+          asOf: output?.asOf ?? asOf,
           auditRecordId: result.auditRecordId,
         },
       };

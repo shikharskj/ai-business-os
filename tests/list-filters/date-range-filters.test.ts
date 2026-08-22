@@ -339,6 +339,92 @@ describe("invoice overdue filter and outstanding decoration", () => {
     expect(filtered.items[0]?.dueOn).toBe(businessDate("2026-04-10"));
   });
 
+  it("excludes fully settled past-due invoices from due=OVERDUE", async () => {
+    const payments = createMemoryPaymentRepository();
+    const d = {
+      ...baseDeps(),
+      sales: createMemorySalesRepository([], [], { payments }),
+    };
+    const accounts = createMemoryAccountRepository();
+    const journals = createMemoryJournalRepository();
+    const inventory = createMemoryInventoryRepository();
+    await ensureChartOfAccounts({ tenantId, accountRepository: accounts });
+    const customer = await seedCustomer(d.parties);
+    const product = await seedProduct(d.catalog);
+
+    const invoice = await createInvoice({
+      tenantId,
+      actorUserId,
+      fields: {
+        customerId: customer.id,
+        issuedOn: businessDate("2026-04-01"),
+        dueOn: businessDate("2026-04-10"),
+        placeOfSupplyStateCode: "27",
+        lines: [
+          {
+            productId: product.id,
+            quantity: quantityFromMajor("1"),
+            discount: money(0n),
+          },
+        ],
+      },
+      taxContext: taxContext(),
+      ...d,
+    });
+    const posted = await postInvoice({
+      tenantId,
+      actorUserId,
+      invoiceId: invoice.id,
+      taxContext: taxContext(),
+      closedThroughPeriodKey: null,
+      accounts,
+      journals,
+      inventory,
+      ...d,
+    });
+
+    await payments.createPayment({
+      tenantId,
+      number: "RCPT/26-27/1",
+      customerId: customer.id,
+      customerName: customer.name,
+      receivedOn: businessDate("2026-04-12"),
+      method: "CASH",
+      amount: posted.grandTotal,
+      reference: null,
+      notes: null,
+      journalId: "jr-settle",
+      allocations: [
+        {
+          invoiceId: posted.id,
+          invoiceNumber: posted.number,
+          amount: posted.grandTotal,
+        },
+      ],
+    });
+
+    const asOf = businessDate("2026-04-20");
+    const filtered = await listInvoicesPage({
+      tenantId,
+      due: "OVERDUE",
+      overdueAsOf: asOf,
+      page: 1,
+      pageSize,
+      sales: d.sales,
+    });
+    const [row] = await decorateInvoiceListRows({
+      tenantId,
+      invoices: [posted],
+      payments,
+      asOf,
+    });
+
+    expect(posted.status).toBe("POSTED");
+    expect(row?.isOverdue).toBe(false);
+    expect(filtered.total).toBe(0);
+    expect(filtered.items).toHaveLength(0);
+  });
+
   it("decorates invoice rows with outstanding and overdue flags", async () => {
     const d = baseDeps();
     const payments = createMemoryPaymentRepository();

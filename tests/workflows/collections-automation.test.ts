@@ -150,7 +150,7 @@ describe("collections automation (post-mvp 10)", () => {
       invoiceId: INVOICE_ID,
       attention: context.repositories.attention,
     });
-    expect(outcomes.map((row) => row.kind)).toContain("REMINDER_PROPOSED");
+    expect(outcomes.map((row) => row.kind)).not.toContain("REMINDER_PROPOSED");
     expect(outcomes.map((row) => row.kind)).not.toContain("REMINDER_SENT");
   });
 
@@ -186,6 +186,32 @@ describe("collections automation (post-mvp 10)", () => {
     );
   });
 
+  it("does not claim the reminder was already sent when L4 send finds no invoice", async () => {
+    const missingId = "inv-missing";
+    const { context, deps, runs } = runtime(l4Policy());
+    await seedOverdueAttention(context.repositories.attention, [
+      { invoiceId: missingId, amountMinor: 1180_00n, daysOverdue: 10 },
+    ]);
+    const workflow = createCollectionsRemindWorkflow();
+    registerWorkflow(workflow);
+
+    await enqueueWorkflowRun({
+      workflow,
+      event: overdueEvent({ aggregateId: missingId }),
+      runs: deps.runs,
+    });
+    await processDueWorkflowRuns({ deps });
+
+    expect(runs.runs[0]?.status).toBe("SUCCEEDED");
+    expect(runs.runs[0]?.result).toMatchObject({
+      action: {
+        executed: false,
+        message: "Invoice was not found; reminder was not sent.",
+      },
+    });
+    expect(context.notificationRecords).toHaveLength(0);
+  });
+
   it("does not auto-send when the amount is over the L4 ceiling", async () => {
     const { context, deps, runs } = runtime(l4Policy({ amountThresholds: { payment_reminder: "1000.00" } }));
     await seedOverdueAttention(context.repositories.attention, [
@@ -203,6 +229,13 @@ describe("collections automation (post-mvp 10)", () => {
     expect(context.notificationRecords).toHaveLength(0);
     expect(runs.runs[0]?.status).toBe("SUCCEEDED");
     expect(runs.runs[0]?.result).toMatchObject({ dryRun: true });
+
+    const outcomes = await listCollectionsOutcomes({
+      tenantId: TENANT,
+      invoiceId: INVOICE_ID,
+      attention: context.repositories.attention,
+    });
+    expect(outcomes.map((row) => row.kind)).not.toContain("REMINDER_PROPOSED");
   });
 
   it("does not enqueue a second run for the same invoice on the same day", async () => {

@@ -27,7 +27,7 @@ import type {
   SalesInvoiceStatus,
 } from "@/modules/sales/domain/types";
 import type { SalesRepository } from "@/modules/sales/infrastructure/repositories";
-import { RECEIVABLE_INVOICE_STATUSES } from "@/modules/sales/domain/invoice-status";
+import { isInvoiceOverdue, RECEIVABLE_INVOICE_STATUSES } from "@/modules/sales/domain/invoice-status";
 
 type PrismaSalesClient = Pick<
   PrismaClient,
@@ -416,6 +416,12 @@ function invoiceWhereConditions(filter: InvoiceListFilter): Prisma.Sql[] {
     );
     conditions.push(Prisma.sql`i."dueOn" IS NOT NULL`);
     conditions.push(Prisma.sql`i."dueOn" < ${filter.overdueAsOf}`);
+    conditions.push(Prisma.sql`i."grandTotal" > COALESCE((
+      SELECT SUM(a.amount)
+      FROM customer_payment_allocations a
+      WHERE a."invoiceId" = i.id
+        AND a."tenantId" = i."tenantId"
+    ), 0)`);
   }
   const query = filter.query?.trim();
   if (query) {
@@ -742,10 +748,31 @@ export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRep
 
       const records = await client.salesInvoice.findMany({
         where,
-        include: { lines: true },
+        include: { lines: true, paymentAllocations: true },
         orderBy: [{ issuedOn: "desc" }, { number: "desc" }],
       });
-      return records.map(mapInvoice);
+      return records.flatMap((record) => {
+        const invoice = mapInvoice(record);
+        if (filter.due !== "OVERDUE" || !filter.overdueAsOf) {
+          return [invoice];
+        }
+        let allocatedMinor = 0n;
+        for (const allocation of record.paymentAllocations) {
+          allocatedMinor += moneyFromPrismaDecimal(allocation.amount).amountMinor;
+        }
+        const outstandingMinor =
+          allocatedMinor >= invoice.grandTotal.amountMinor
+            ? 0n
+            : invoice.grandTotal.amountMinor - allocatedMinor;
+        return isInvoiceOverdue({
+          dueOn: invoice.dueOn,
+          status: invoice.status,
+          outstandingMinor,
+          asOf: filter.overdueAsOf,
+        })
+          ? [invoice]
+          : [];
+      });
     },
 
     async listInvoicesPage(filter) {

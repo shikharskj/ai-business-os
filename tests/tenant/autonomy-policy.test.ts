@@ -146,6 +146,37 @@ describe("autonomy policy store", () => {
     });
   });
 
+  it("preserves disabledAutomations when the settings form omits the list", async () => {
+    const policies = createMemoryAutonomyPolicyRepository();
+    const audit = createMemoryAuditRepository();
+
+    await updateAutonomyPolicy({
+      tenantId: TENANT,
+      actorUserId: ACTOR,
+      update: {
+        enablePaymentReminderL4: true,
+        paymentReminderAmountThreshold: "25000",
+        disabledAutomations: ["collections.remind"],
+      },
+      policies,
+      audit,
+    });
+
+    const next = await updateAutonomyPolicy({
+      tenantId: TENANT,
+      actorUserId: ACTOR,
+      update: {
+        enablePaymentReminderL4: false,
+        paymentReminderAmountThreshold: "25000",
+      },
+      policies,
+      audit,
+    });
+
+    expect(next.allowedActionClasses).toEqual([]);
+    expect(next.disabledAutomations).toEqual(["collections.remind"]);
+  });
+
   it("refuses L4 enablement without a threshold", async () => {
     const policies = createMemoryAutonomyPolicyRepository();
     const audit = createMemoryAuditRepository();

@@ -43,7 +43,11 @@ export async function updateAutonomyPolicy(input: {
     policies: input.policies,
   });
 
-  const next = await input.policies.upsert(input.tenantId, parsed);
+  const next = await input.policies.upsert(input.tenantId, {
+    ...parsed,
+    disabledAutomations:
+      parsed.disabledAutomations ?? previous.disabledAutomations,
+  });
 
   await input.audit.append({
     tenantId: input.tenantId,
