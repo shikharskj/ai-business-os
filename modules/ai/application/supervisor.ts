@@ -1,4 +1,5 @@
 import type { DashboardDeps } from "@/modules/reporting/application/dashboard";
+import type { DashboardOverview } from "@/modules/reporting/domain/dashboard-types";
 import { assertViewCitesFacts } from "@/modules/ai/domain/quality-gate";
 import {
   parseDashboardView,
@@ -73,6 +74,7 @@ export async function runDashboardSupervisor(
 
     return {
       view,
+      overview: facts.overview,
       plan,
       usedFallback: false,
       audit: {
@@ -101,7 +103,11 @@ export async function runDashboardSupervisor(
 /** Deterministic AI-down / quality-failure path — still Dashboard-01 via mapper. */
 export async function buildFallbackView(
   input: RunSupervisorInput
-): Promise<{ view: DashboardView; audit: { factCount: number } }> {
+): Promise<{
+  view: DashboardView;
+  overview: DashboardOverview;
+  audit: { factCount: number };
+}> {
   const facts = await runDataFetcher({
     tenantId: input.tenantId,
     deps: input.deps,
@@ -115,5 +121,9 @@ export async function buildFallbackView(
     })
   );
   assertViewCitesFacts(view, facts);
-  return { view, audit: { factCount: facts.facts.length } };
+  return {
+    view,
+    overview: facts.overview,
+    audit: { factCount: facts.facts.length },
+  };
 }

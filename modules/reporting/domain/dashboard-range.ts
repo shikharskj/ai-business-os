@@ -1,4 +1,5 @@
 import {
+  addBusinessDays,
   businessDate,
   todayInTimezone,
   type BusinessDate,
@@ -38,22 +39,12 @@ export const DASHBOARD_CHART_RANGE_PRESETS = [
   },
 ];
 
-function shiftBusinessDate(date: BusinessDate, dayDelta: number): BusinessDate {
-  const [year, month, day] = date.split("-").map(Number) as [number, number, number];
-  const utc = new Date(Date.UTC(year, month - 1, day));
-  utc.setUTCDate(utc.getUTCDate() + dayDelta);
-  const y = utc.getUTCFullYear();
-  const m = String(utc.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(utc.getUTCDate()).padStart(2, "0");
-  return businessDate(`${y}-${m}-${d}`);
-}
-
 function inclusiveDayWindow(
   today: BusinessDate,
   dayCount: number
 ): { fromDate: BusinessDate; toDate: BusinessDate } {
   return {
-    fromDate: shiftBusinessDate(today, -(dayCount - 1)),
+    fromDate: addBusinessDays(today, -(dayCount - 1)),
     toDate: today,
   };
 }

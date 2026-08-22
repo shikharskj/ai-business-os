@@ -11,6 +11,7 @@ import { listCustomers } from "@/modules/party";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 import { listProducts } from "@/modules/catalog";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
+import { businessLogoUrl } from "@/modules/tenant";
 
 export default async function NewInvoicePage() {
   const tenant = await authorize("invoice:create");
@@ -27,7 +28,7 @@ export default async function NewInvoicePage() {
   ]);
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
       <PageHeader
         title="New invoice"
         description="GST is calculated by the tax engine when you save. Post the invoice to reduce stock and update accounts."
@@ -68,26 +69,32 @@ export default async function NewInvoicePage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardContent>
-            <InvoiceForm
-              today={todayInTimezone(tenant.business.timezone)}
-              customers={customers.map((customer) => ({
-                id: customer.id,
-                name: customer.name,
-                gstin: customer.gstin,
-                state: customer.state,
-              }))}
-              products={products.map((product) => ({
-                id: product.id,
-                name: product.name,
-                sku: product.sku,
-                unitOfMeasurement: product.unitOfMeasurement,
-                sellingPriceMajor: toMajorString(product.sellingPrice),
-              }))}
-            />
-          </CardContent>
-        </Card>
+        <InvoiceForm
+          today={todayInTimezone(tenant.business.timezone)}
+          seller={tenant.business}
+          logoUrl={businessLogoUrl(tenant.business.logoDocumentId)}
+          customers={customers.map((customer) => ({
+            id: customer.id,
+            name: customer.name,
+            gstin: customer.gstin,
+            phone: customer.phone,
+            email: customer.email,
+            billingAddressLine1: customer.billingAddressLine1,
+            billingAddressLine2: customer.billingAddressLine2,
+            city: customer.city,
+            state: customer.state,
+            postalCode: customer.postalCode,
+            country: customer.country,
+          }))}
+          products={products.map((product) => ({
+            id: product.id,
+            name: product.name,
+            sku: product.sku,
+            unitOfMeasurement: product.unitOfMeasurement,
+            sellingPriceMajor: toMajorString(product.sellingPrice),
+            hsnSac: product.hsnSac,
+          }))}
+        />
       )}
     </div>
   );

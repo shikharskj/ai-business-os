@@ -38,18 +38,16 @@ export function DashboardActivityPanel({
   return (
     <Card size="sm" className={DASHBOARD_RAIL_CARD_CLASS}>
       <CardHeader className={DASHBOARD_RAIL_HEADER_CLASS}>
-        <CardTitle>{component.title}</CardTitle>
+        <CardTitle className="text-base">{component.title}</CardTitle>
         {component.description ? (
-          <CardDescription className="text-sm">
-            {component.description}
-          </CardDescription>
+          <CardDescription>{component.description}</CardDescription>
         ) : null}
       </CardHeader>
       <CardContent className={cn(DASHBOARD_RAIL_BODY_CLASS, "px-0")}>
         {component.items.length === 0 ? (
           <div className="flex flex-col gap-1 px-(--card-spacing)">
-            <p className="text-sm text-muted-foreground">No recent activity.</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-base text-muted-foreground">No recent activity.</p>
+            <p className="text-sm text-muted-foreground">
               Posted invoices will show up here.
             </p>
           </div>
@@ -59,17 +57,17 @@ export function DashboardActivityPanel({
               <li key={item.id}>
                 <Link
                   href={item.href}
-                  className="flex items-center gap-3 px-(--card-spacing) py-2.5 hover:bg-muted/40"
+                  className="flex items-center gap-3 px-(--card-spacing) py-3 hover:bg-muted/40"
                 >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium">
                     {initials(
                       item.subtitle?.split("·")[0]?.trim() || item.title
                     )}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-mono text-sm">{item.title}</span>
+                    <span className="block font-mono text-base">{item.title}</span>
                     {item.subtitle ? (
-                      <span className="block truncate text-xs text-muted-foreground">
+                      <span className="block truncate text-sm text-muted-foreground">
                         {item.subtitle}
                       </span>
                     ) : null}
@@ -77,7 +75,6 @@ export function DashboardActivityPanel({
                   <span className="flex shrink-0 flex-col items-end gap-1">
                     {item.badge ? (
                       <StatusBadge
-                        size="sm"
                         tone={(item.badgeTone as BadgeTone) ?? "neutral"}
                       >
                         {item.badge.replaceAll("_", " ")}
@@ -90,7 +87,7 @@ export function DashboardActivityPanel({
                           item.amount.currency,
                           item.amount.scale
                         )}
-                        className="text-sm font-medium"
+                        className="text-base font-medium"
                       />
                     ) : null}
                   </span>

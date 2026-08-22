@@ -52,7 +52,10 @@ export {
 } from "@/modules/reporting/application/gst-summary";
 export {
   getDashboardOverview,
+  getPeriodActivity,
   type DashboardDeps,
+  type PeriodActivityDeps,
+  type PeriodActivitySnapshot,
 } from "@/modules/reporting/application/dashboard";
 export {
   getExpenseReport,

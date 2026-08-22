@@ -9,10 +9,11 @@ import {
 } from "@/modules/documents";
 import { prismaDocumentRepository } from "@/modules/documents/infrastructure/prisma-document-repository";
 
-function contentDisposition(filename: string): string {
+function contentDisposition(filename: string, inline: boolean): string {
   const ascii = filename.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "");
   const encoded = encodeURIComponent(filename);
-  return `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`;
+  const disposition = inline ? "inline" : "attachment";
+  return `${disposition}; filename="${ascii}"; filename*=UTF-8''${encoded}`;
 }
 
 export async function GET(
@@ -29,11 +30,12 @@ export async function GET(
       storage: getStorageAdapter(),
     });
 
+    const inline = record.contentType.startsWith("image/");
     return new NextResponse(Buffer.from(body), {
       status: 200,
       headers: {
         "Content-Type": record.contentType,
-        "Content-Disposition": contentDisposition(record.filename),
+        "Content-Disposition": contentDisposition(record.filename, inline),
         "Content-Length": String(body.byteLength),
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, no-store",

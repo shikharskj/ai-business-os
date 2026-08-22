@@ -27,6 +27,14 @@ export type BusinessRepository = {
     tenantId: string,
     periodKey: string | null
   ): Promise<BusinessProfile>;
+  setLogoDocumentId(
+    tenantId: string,
+    logoDocumentId: string | null
+  ): Promise<BusinessProfile>;
+  clearLogoDocumentIdIfMatches(
+    tenantId: string,
+    expectedLogoDocumentId: string
+  ): Promise<boolean>;
   deleteByClerkOrganizationId(clerkOrganizationId: string): Promise<void>;
 };
 
@@ -107,6 +115,7 @@ export function createMemoryBusinessRepository(
         currency: input.currency,
         defaultGstRateBps: input.defaultGstRateBps ?? 1800,
         lowStockThreshold: input.lowStockThreshold ?? "5",
+        logoDocumentId: null,
         closedThroughPeriodKey: null,
       };
 
@@ -158,6 +167,35 @@ export function createMemoryBusinessRepository(
       };
       businesses.set(tenantId, updated);
       return updated;
+    },
+
+    async setLogoDocumentId(tenantId, logoDocumentId) {
+      const existing = businesses.get(tenantId);
+      if (!existing) {
+        throw new Error("Business not found");
+      }
+      const updated: BusinessProfile = {
+        ...existing,
+        logoDocumentId,
+      };
+      businesses.set(tenantId, updated);
+      return updated;
+    },
+
+    async clearLogoDocumentIdIfMatches(tenantId, expectedLogoDocumentId) {
+      const existing = businesses.get(tenantId);
+      if (!existing) {
+        return false;
+      }
+      if (existing.logoDocumentId !== expectedLogoDocumentId) {
+        return false;
+      }
+      const updated: BusinessProfile = {
+        ...existing,
+        logoDocumentId: null,
+      };
+      businesses.set(tenantId, updated);
+      return true;
     },
 
     async deleteByClerkOrganizationId(clerkOrganizationId) {

@@ -147,7 +147,6 @@ export function createPrismaJournalRepository(
           reversalOfJournalId: input.reversalOfJournalId,
           lines: {
             create: input.lines.map((line) => ({
-              tenantId: input.tenantId,
               accountId: line.accountId,
               description: line.description ?? null,
               debit: toDecimalForPrisma(line.debit),

@@ -2,6 +2,7 @@ export const DOCUMENT_OWNER_TYPES = [
   "BUSINESS",
   "EXPENSE",
   "INVOICE",
+  "QUOTATION",
   "PURCHASE",
   "PAYMENT",
   "CUSTOMER",

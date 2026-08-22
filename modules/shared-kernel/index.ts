@@ -21,6 +21,9 @@ export {
   businessDate,
   isCalendarDate,
   todayInTimezone,
+  addBusinessDays,
+  yesterdayInTimezone,
+  hourInTimezone,
   utcNow,
   financialYearForDate,
 } from "@/modules/shared-kernel/dates";
@@ -29,6 +32,8 @@ export {
   formatINR,
   formatIndianNumber,
 } from "@/modules/shared-kernel/format-money";
+
+export { amountInIndianWords } from "@/modules/shared-kernel/amount-in-words";
 
 export {
   moneyInputSchema,
@@ -52,7 +57,9 @@ export {
 
 export {
   type AuditInput,
+  type AuditRecordView,
   type AuditRepository,
+  type ListAuditForResourceInput,
   createPrismaAuditRepository,
   createMemoryAuditRepository,
 } from "@/modules/shared-kernel/audit";

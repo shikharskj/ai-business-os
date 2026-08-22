@@ -23,11 +23,11 @@ export default async function WorkspaceLayout({
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="h-svh max-h-svh overflow-hidden">
       <AppSidebar businessName={tenant.business.name} />
-      <SidebarInset className="min-w-0 overflow-x-hidden">
+      <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
         <AppTopBar />
-        <main className="flex min-w-0 flex-1 flex-col bg-background p-4 md:p-6">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background p-4 md:p-6">
           {children}
         </main>
       </SidebarInset>

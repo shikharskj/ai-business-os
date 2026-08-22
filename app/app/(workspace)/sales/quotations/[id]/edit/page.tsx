@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { QuotationForm } from "@/components/business/quotation-form";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { authorize } from "@/lib/security";
 import { todayInTimezone } from "@/modules/shared-kernel/dates";
 import { toMajorString } from "@/modules/shared-kernel/money";
@@ -14,6 +13,7 @@ import { listProducts } from "@/modules/catalog";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 import { getQuotation, QuotationNotFoundError } from "@/modules/sales";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
+import { businessLogoUrl } from "@/modules/tenant";
 
 export default async function EditQuotationPage({
   params,
@@ -54,7 +54,7 @@ export default async function EditQuotationPage({
   ]);
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
       <PageHeader
         title={`Edit ${quotation.number}`}
         description="Saving recalculates GST through the tax engine."
@@ -68,27 +68,33 @@ export default async function EditQuotationPage({
           </Button>
         }
       />
-      <Card>
-        <CardContent>
-          <QuotationForm
-            quotation={quotation}
-            today={todayInTimezone(tenant.business.timezone)}
-            customers={customers.map((customer) => ({
-              id: customer.id,
-              name: customer.name,
-              gstin: customer.gstin,
-              state: customer.state,
-            }))}
-            products={products.map((product) => ({
-              id: product.id,
-              name: product.name,
-              sku: product.sku,
-              unitOfMeasurement: product.unitOfMeasurement,
-              sellingPriceMajor: toMajorString(product.sellingPrice),
-            }))}
-          />
-        </CardContent>
-      </Card>
+      <QuotationForm
+        quotation={quotation}
+        today={todayInTimezone(tenant.business.timezone)}
+        seller={tenant.business}
+        logoUrl={businessLogoUrl(tenant.business.logoDocumentId)}
+        customers={customers.map((customer) => ({
+          id: customer.id,
+          name: customer.name,
+          gstin: customer.gstin,
+          phone: customer.phone,
+          email: customer.email,
+          billingAddressLine1: customer.billingAddressLine1,
+          billingAddressLine2: customer.billingAddressLine2,
+          city: customer.city,
+          state: customer.state,
+          postalCode: customer.postalCode,
+          country: customer.country,
+        }))}
+        products={products.map((product) => ({
+          id: product.id,
+          name: product.name,
+          sku: product.sku,
+          unitOfMeasurement: product.unitOfMeasurement,
+          sellingPriceMajor: toMajorString(product.sellingPrice),
+          hsnSac: product.hsnSac,
+        }))}
+      />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { prisma } from "@/lib/db";
 
 import type {
   AttentionQueueRepository,
@@ -308,3 +309,7 @@ export function createPrismaAttentionQueueRepository(
     },
   };
 }
+
+/** App-default attention queue repo (Prisma bound in infrastructure). */
+export const prismaAttentionQueueRepository =
+  createPrismaAttentionQueueRepository(prisma);

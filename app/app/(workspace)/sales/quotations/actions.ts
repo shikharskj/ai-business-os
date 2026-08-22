@@ -5,11 +5,13 @@ import { redirect } from "next/navigation";
 import { ZodError } from "zod";
 
 import { prisma } from "@/lib/db";
+import { getStorageAdapter } from "@/lib/storage";
 import { authorize, AuthorizationError } from "@/lib/security";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 import { CatalogError } from "@/modules/catalog";
 import { createPrismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
+import { prismaDocumentRepository } from "@/modules/documents/infrastructure/prisma-document-repository";
 import { PartyError } from "@/modules/party";
 import { createPrismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 import {
@@ -20,15 +22,21 @@ import {
   QuotationAlreadyConvertedError,
   SalesError,
   acceptQuotation,
+  buildQuotationDocumentView,
   cancelQuotation,
   convertQuotationToInvoice,
   createQuotation,
+  exportQuotationPdf,
+  previewQuotation,
   quotationInputSchema,
+  quotationLineInputSchema,
   sendQuotation,
   taxContextFromTenant,
   toQuotationFields,
   updateQuotation,
+  type QuotationDocumentView,
 } from "@/modules/sales";
+import { businessLogoUrl } from "@/modules/tenant";
 import { createPrismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
 import type { SalesRepository } from "@/modules/sales/infrastructure/repositories";
 import type { AuditRepository } from "@/modules/shared-kernel/audit";
@@ -38,6 +46,7 @@ export type QuotationActionState = {
   error?: string;
   fieldErrors?: Record<string, string>;
   invoiceId?: string;
+  documentId?: string;
 };
 
 function formatZodErrors(error: ZodError): Record<string, string> {
@@ -254,4 +263,118 @@ export async function convertQuotationAction(quotationId: string): Promise<Quota
   revalidatePath("/app/sales/invoices");
   revalidatePath(`/app/sales/invoices/${invoiceId}`);
   return { invoiceId };
+}
+
+export async function exportQuotationPdfAction(
+  quotationId: string
+): Promise<QuotationActionState> {
+  try {
+    const tenant = await authorize("quotation:read");
+    await authorize("document:upload");
+
+    const document = await exportQuotationPdf({
+      tenantId: tenant.tenantId,
+      actorUserId: tenant.membership.userId,
+      business: tenant.business,
+      quotationId,
+      sales: createPrismaSalesRepository(prisma),
+      parties: createPrismaPartyRepository(prisma),
+      documents: prismaDocumentRepository,
+      storage: getStorageAdapter(),
+      audit: createPrismaAuditRepository(prisma),
+    });
+
+    return { documentId: document.id };
+  } catch (error) {
+    const mapped = mapError(error);
+    if (mapped) {
+      return mapped;
+    }
+    throw error;
+  }
+}
+
+export type QuotationPreviewState = {
+  view?: QuotationDocumentView;
+  error?: string;
+};
+
+export async function previewQuotationTotalsAction(input: {
+  quotationId?: string;
+  number?: string;
+  customerId: string;
+  issuedOn: string;
+  validUntil?: string;
+  notes?: string;
+  placeOfSupplyStateCode: string;
+  lines: Array<{
+    productId: string;
+    quantity: string;
+    unitPrice: string;
+    discount: string;
+  }>;
+}): Promise<QuotationPreviewState> {
+  try {
+    const tenant = await authorize(
+      input.quotationId ? "quotation:update" : "quotation:create"
+    );
+    const completeLines = input.lines.filter((line) => {
+      try {
+        quotationLineInputSchema.parse(line);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    if (!input.customerId || completeLines.length === 0) {
+      return {};
+    }
+
+    const fields = toQuotationFields(
+      quotationInputSchema.parse({
+        customerId: input.customerId,
+        issuedOn: input.issuedOn,
+        validUntil: input.validUntil || undefined,
+        notes: input.notes || undefined,
+        placeOfSupplyStateCode: input.placeOfSupplyStateCode,
+        lines: completeLines,
+      })
+    );
+
+    const parties = createPrismaPartyRepository(prisma);
+    const catalog = createPrismaCatalogRepository(prisma);
+    const [prepared, customer] = await Promise.all([
+      previewQuotation({
+        tenantId: tenant.tenantId,
+        fields,
+        taxContext: taxContextFromTenant(tenant),
+        parties,
+        catalog,
+        taxRates: prismaTaxRateRepository,
+        hsnSac: prismaHsnSacRepository,
+      }),
+      parties.findCustomerById(tenant.tenantId, input.customerId),
+    ]);
+
+    return {
+      view: buildQuotationDocumentView({
+        number: input.number?.trim() || "Draft",
+        issuedOn: fields.issuedOn,
+        validUntil: fields.validUntil ?? null,
+        notes: fields.notes ?? null,
+        placeOfSupplyStateCode: fields.placeOfSupplyStateCode ?? "",
+        seller: tenant.business,
+        buyer: customer,
+        logoUrl: businessLogoUrl(tenant.business.logoDocumentId),
+        prepared,
+      }),
+    };
+  } catch (error) {
+    const mapped = mapError(error);
+    if (mapped) {
+      return { error: mapped.error ?? "Could not price this draft yet." };
+    }
+    throw error;
+  }
 }

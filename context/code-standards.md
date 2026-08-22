@@ -460,6 +460,8 @@ AI
 Reports
 ```
 
+The invoice PDF and on-screen tax invoice preview share `InvoiceDocumentView`. Totals on that view come from `previewInvoice` / stored invoice amounts (tax engine), never from React or ad-hoc PDF arithmetic. Logo bytes pass through `logoBufferForPdf`: JPEG and PNG embed as-is; WebP converts to PNG so export matches the HTML preview (pdfkit cannot embed WebP).
+
 ---
 
 # GST / Tax Code

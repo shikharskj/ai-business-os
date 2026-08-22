@@ -83,6 +83,8 @@ export type SupervisorPlan = {
 
 export type SupervisorRunResult = {
   view: DashboardView;
+  /** Authoritative overview used for Daily Brief period notes (no second query). */
+  overview: DashboardOverview;
   plan: SupervisorPlan;
   usedFallback: boolean;
   audit: {

@@ -25,6 +25,12 @@ export {
   type CreateBusinessResult,
 } from "@/modules/tenant/application/business-setup";
 export {
+  BUSINESS_LOGO_MAX_BYTES,
+  businessLogoUrl,
+  clearBusinessLogo,
+  setBusinessLogo,
+} from "@/modules/tenant/application/business-logo";
+export {
   applyTenantLifecycleEvent,
   mapInviteRoleToMembershipRole,
 } from "@/modules/tenant/application/org-lifecycle";

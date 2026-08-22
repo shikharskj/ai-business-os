@@ -45,6 +45,11 @@ export { computeAttentionQueue } from "@/modules/business-state/application/comp
 export { getCashPosition } from "@/modules/business-state/application/get-cash-position";
 export { getBusinessStateSummary } from "@/modules/business-state/application/get-business-state";
 export { listOpenAttention } from "@/modules/business-state/application/list-open-attention";
+export {
+  ensureAttentionQueueFresh,
+  ATTENTION_QUEUE_FRESH_TTL_MS,
+  type EnsureAttentionQueueFreshInput,
+} from "@/modules/business-state/application/ensure-attention-fresh";
 export { dismissAttentionItem } from "@/modules/business-state/application/dismiss-attention";
 export { recordAutomationOutcome } from "@/modules/business-state/application/record-outcome";
 export { recordPaymentReminderOutcomes } from "@/modules/business-state/application/record-reminder-outcomes";
@@ -57,7 +62,33 @@ export {
   businessStateSummaryToDto,
   cashPositionToDto,
   attentionItemToDto,
+  type AttentionItemDto,
 } from "@/modules/business-state/application/dto";
+export {
+  buildDailyBriefView,
+  buildDailyBriefPeriodNotes,
+  countOpenAttentionByType,
+  greetingForHour,
+  ATTENTION_TYPE_LABELS,
+  ATTENTION_RECORD_LABELS,
+  type DailyBriefView,
+  type DailyBriefMoneyDto,
+  type DailyBriefCounts,
+  type DailyBriefPeriodNote,
+  type DailyBriefItemDto,
+} from "@/modules/business-state/application/build-daily-brief";
+export {
+  briefActionsForAttentionType,
+  BRIEF_AUTONOMY_CUE_LABELS,
+  type BriefRowAction,
+  type BriefAutonomyCue,
+  type BriefActionOptions,
+} from "@/modules/business-state/application/brief-actions";
+export { proposeBriefPaymentReminder } from "@/modules/business-state/application/propose-brief-reminder";
+export {
+  proposeBriefReminderSchema,
+  type ProposeBriefReminderBody,
+} from "@/modules/business-state/schemas/propose-brief-reminder.schema";
 export { dismissAttentionSchema } from "@/modules/business-state/schemas/attention.schema";
 export {
   createBusinessStateOutboxConsumer,
@@ -66,6 +97,9 @@ export {
 } from "@/modules/business-state/consumers/business-state-consumer";
 export { createPrismaBusinessStateProjectionRepository } from "@/modules/business-state/infrastructure/prisma-projection-repository";
 export { createMemoryBusinessStateProjectionRepository } from "@/modules/business-state/infrastructure/memory-projection-repository";
-export { createPrismaAttentionQueueRepository } from "@/modules/business-state/infrastructure/prisma-attention-repository";
+export {
+  createPrismaAttentionQueueRepository,
+  prismaAttentionQueueRepository,
+} from "@/modules/business-state/infrastructure/prisma-attention-repository";
 export { createMemoryAttentionQueueRepository } from "@/modules/business-state/infrastructure/memory-attention-repository";
 export { createPrismaBusinessStateConsumerDeps } from "@/modules/business-state/infrastructure/prisma-consumer-deps";

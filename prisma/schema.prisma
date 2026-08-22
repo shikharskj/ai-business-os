@@ -67,6 +67,7 @@ model Business {
   currency              String                @default("INR")
   defaultGstRateBps     Int                   @default(1800)
   lowStockThreshold     Decimal               @default(5.0000) @db.Decimal(18, 4)
+  logoDocumentId        String?
   closedThroughPeriodKey String?
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt

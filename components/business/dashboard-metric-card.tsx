@@ -63,7 +63,7 @@ export function DashboardMetricCard({
     <Card
       size="sm"
       className={cn(
-        "h-full min-h-28 border-border bg-gradient-to-b from-muted/50 to-card dark:from-muted/30",
+        "min-h-36 border-border bg-linear-to-b from-muted/50 to-card dark:from-muted/30",
         component.href && "transition-opacity hover:opacity-95"
       )}
     >
@@ -80,7 +80,7 @@ export function DashboardMetricCard({
             component.tone ? toneClass[component.tone] : undefined
           )}
         >
-          <MoneyDisplay value={value} />
+          <MoneyDisplay className="text-2xl" value={value} />
         </CardTitle>
         {component.caption ? (
           <CardDescription>{component.caption}</CardDescription>
@@ -88,8 +88,8 @@ export function DashboardMetricCard({
         {component.trend?.percentLabel ? (
           <CardDescription
             className={cn(
-              component.trend.direction === "up" && "text-[var(--state-success)]",
-              component.trend.direction === "down" && "text-[var(--state-error)]"
+              component.trend.direction === "up" && "text-(--state-success)",
+              component.trend.direction === "down" && "text-(--state-error)"
             )}
           >
             {component.trend.percentLabel}
@@ -101,7 +101,7 @@ export function DashboardMetricCard({
 
   if (component.href) {
     return (
-      <Link href={component.href} className="block h-full min-w-0 outline-none">
+      <Link href={component.href} className="block min-w-0 outline-none">
         {card}
       </Link>
     );

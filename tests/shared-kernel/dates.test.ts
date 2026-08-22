@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  addBusinessDays,
   businessDate,
   financialYearForDate,
+  hourInTimezone,
   todayInTimezone,
 } from "@/modules/shared-kernel/dates";
 
@@ -63,5 +65,19 @@ describe("todayInTimezone", () => {
   it("returns a branded calendar date for Asia/Kolkata", () => {
     const today = todayInTimezone("Asia/Kolkata");
     expect(today).toBe(businessDate(today));
+  });
+});
+
+describe("addBusinessDays", () => {
+  it("steps across month boundaries", () => {
+    expect(addBusinessDays(businessDate("2026-03-01"), -1)).toBe("2026-02-28");
+    expect(addBusinessDays(businessDate("2026-12-31"), 1)).toBe("2027-01-01");
+  });
+});
+
+describe("hourInTimezone", () => {
+  it("returns the clock hour in the tenant timezone", () => {
+    const noonUtc = new Date("2026-08-21T06:30:00.000Z");
+    expect(hourInTimezone("Asia/Kolkata", noonUtc)).toBe(12);
   });
 });

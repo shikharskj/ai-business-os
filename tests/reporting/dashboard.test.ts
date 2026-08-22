@@ -12,6 +12,7 @@ import { createMemoryPurchasesRepository } from "@/modules/purchases";
 import type { Purchase } from "@/modules/purchases/domain/types";
 import {
   getDashboardOverview,
+  getPeriodActivity,
   resolveDashboardDateRange,
 } from "@/modules/reporting";
 import { createMemorySalesRepository } from "@/modules/sales";
@@ -294,5 +295,91 @@ describe("dashboard overview", () => {
     const daySpan =
       Math.round((to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000)) + 1;
     expect(daySpan).toBe(30);
+  });
+});
+
+describe("period activity snapshot", () => {
+  it("includes only the requested day's sales, collections, and expenses", async () => {
+    const sales = createMemorySalesRepository(
+      [],
+      [
+        invoiceFixture({
+          id: "inv-yesterday",
+          tenantId: "tenant-a",
+          number: "INV-Y",
+          status: "UNPAID",
+          issuedOn: businessDate("2026-08-21"),
+          taxableAmount: money(400_00n),
+          grandTotal: money(472_00n),
+        }),
+        invoiceFixture({
+          id: "inv-today",
+          tenantId: "tenant-a",
+          number: "INV-T",
+          status: "UNPAID",
+          issuedOn: businessDate("2026-08-22"),
+          taxableAmount: money(9000_00n),
+          grandTotal: money(10620_00n),
+        }),
+      ]
+    );
+    const expenses = createMemoryExpenseRepository([
+      expenseFixture({
+        id: "exp-yesterday",
+        tenantId: "tenant-a",
+        number: "EXP-Y",
+        incurredOn: businessDate("2026-08-21"),
+        grandTotal: money(50_00n),
+      }),
+      expenseFixture({
+        id: "exp-today",
+        tenantId: "tenant-a",
+        number: "EXP-T",
+        incurredOn: businessDate("2026-08-22"),
+        grandTotal: money(800_00n),
+      }),
+    ]);
+    const payments = createMemoryPaymentRepository();
+    await payments.createPayment({
+      id: "pay-y",
+      tenantId: "tenant-a",
+      number: "RCPT/Y",
+      customerId: "cust-1",
+      customerName: "Acme Traders",
+      receivedOn: businessDate("2026-08-21"),
+      method: "UPI",
+      amount: money(100_00n),
+      reference: null,
+      notes: null,
+      journalId: "jr-pay",
+      allocations: [],
+    });
+    await payments.createPayment({
+      id: "pay-t",
+      tenantId: "tenant-a",
+      number: "RCPT/T",
+      customerId: "cust-1",
+      customerName: "Acme Traders",
+      receivedOn: businessDate("2026-08-22"),
+      method: "UPI",
+      amount: money(500_00n),
+      reference: null,
+      notes: null,
+      journalId: "jr-pay-2",
+      allocations: [],
+    });
+
+    const snapshot = await getPeriodActivity({
+      tenantId: "tenant-a",
+      fromDate: businessDate("2026-08-21"),
+      toDate: businessDate("2026-08-21"),
+      sales,
+      payments,
+      expenses,
+    });
+
+    expect(toMajorString(snapshot.sales)).toBe("400.00");
+    expect(toMajorString(snapshot.collections)).toBe("100.00");
+    expect(toMajorString(snapshot.expenses)).toBe("50.00");
   });
 });

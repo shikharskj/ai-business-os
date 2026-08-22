@@ -4,6 +4,13 @@ import type { AuditRepository } from "@/modules/shared-kernel/audit";
 import type { OutboxRepository } from "@/modules/shared-kernel/outbox";
 import { persistDomainEvent } from "@/modules/events/application/persist-domain-event";
 import type { DomainEventType } from "@/modules/events/catalog";
+import {
+  downloadDocument,
+  uploadDocument,
+} from "@/modules/documents/application/documents";
+import { DocumentNotFoundError } from "@/modules/documents/domain/errors";
+import type { DocumentRepository } from "@/modules/documents/infrastructure/repositories";
+import type { StorageAdapter } from "@/lib/storage/types";
 import { CatalogNotFoundError } from "@/modules/catalog/domain/errors";
 import type { CatalogRepository } from "@/modules/catalog/infrastructure/repositories";
 import { PartyInactiveError, PartyNotFoundError } from "@/modules/party/domain/errors";
@@ -15,6 +22,9 @@ import {
   stateCodeFromName,
 } from "@/modules/tax/domain/gstin";
 import type { HsnSacRepository, TaxRateRepository } from "@/modules/tax/infrastructure/repositories";
+import { buildQuotationDocumentView } from "@/modules/sales/application/quotation-document-view";
+import { renderQuotationPdfBytes } from "@/modules/sales/application/quotation-pdf";
+import type { BusinessProfile } from "@/modules/tenant/domain/types";
 import {
   QuotationNotFoundError,
   QuotationValidationError,
@@ -48,6 +58,18 @@ export type QuotationUseCaseDeps = {
   hsnSac: HsnSacRepository;
   audit: AuditRepository;
   outbox: OutboxRepository;
+};
+
+export type QuotationPdfDeps = {
+  tenantId: string;
+  actorUserId: string;
+  business: BusinessProfile;
+  quotationId: string;
+  sales: SalesRepository;
+  parties: PartyRepository;
+  documents: DocumentRepository;
+  storage: StorageAdapter;
+  audit: AuditRepository;
 };
 
 function moneySnapshot(value: Money) {
@@ -424,6 +446,70 @@ export async function cancelQuotation(
     status: "CANCELLED",
     action: "quotation.cancelled",
     eventType: "QuotationCancelled",
+  });
+}
+
+export async function exportQuotationPdf(input: QuotationPdfDeps) {
+  const quotation = await input.sales.findQuotationById(
+    input.tenantId,
+    input.quotationId
+  );
+  if (!quotation) {
+    throw new QuotationNotFoundError();
+  }
+  if (quotation.status !== "SENT" && quotation.status !== "ACCEPTED") {
+    throw new QuotationValidationError(
+      "Send or accept the quotation before exporting a PDF."
+    );
+  }
+
+  const customer = await input.parties.findCustomerById(
+    input.tenantId,
+    quotation.customerId
+  );
+
+  let logo: { bytes: Uint8Array; contentType: string } | null = null;
+  if (input.business.logoDocumentId) {
+    try {
+      const downloaded = await downloadDocument({
+        tenantId: input.tenantId,
+        documentId: input.business.logoDocumentId,
+        documents: input.documents,
+        storage: input.storage,
+      });
+      logo = {
+        bytes: downloaded.body,
+        contentType: downloaded.record.contentType,
+      };
+    } catch (error) {
+      if (!(error instanceof DocumentNotFoundError)) {
+        throw error;
+      }
+    }
+  }
+
+  const view = buildQuotationDocumentView({
+    number: quotation.number,
+    issuedOn: quotation.issuedOn,
+    validUntil: quotation.validUntil,
+    notes: quotation.notes,
+    placeOfSupplyStateCode: quotation.placeOfSupplyStateCode,
+    seller: input.business,
+    buyer: customer,
+    logoUrl: null,
+    prepared: quotation,
+  });
+  const bytes = await renderQuotationPdfBytes(view, logo);
+  return uploadDocument({
+    tenantId: input.tenantId,
+    actorUserId: input.actorUserId,
+    ownerRecordType: "QUOTATION",
+    ownerRecordId: quotation.id,
+    filename: `${quotation.number.replace(/\//g, "-")}.pdf`,
+    bytes,
+    documents: input.documents,
+    storage: input.storage,
+    audit: input.audit,
   });
 }
 

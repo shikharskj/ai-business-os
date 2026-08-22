@@ -90,6 +90,8 @@ export async function closePeriodAction(
               closedThroughPeriodKey: record.closedThroughPeriodKey,
             };
           },
+          setLogoDocumentId: prismaBusinessRepository.setLogoDocumentId,
+          clearLogoDocumentIdIfMatches: prismaBusinessRepository.clearLogoDocumentIdIfMatches,
         },
         audit: createPrismaAuditRepository(tx),
         outbox: createPrismaOutboxRepository(tx),

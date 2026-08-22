@@ -7,6 +7,7 @@ import {
   acceptQuotationAction,
   cancelQuotationAction,
   convertQuotationAction,
+  exportQuotationPdfAction,
   sendQuotationAction,
 } from "@/app/app/(workspace)/sales/quotations/actions";
 import { Button } from "@/components/ui/button";
@@ -17,11 +18,13 @@ export function QuotationStatusActions({
   status,
   canUpdate,
   canCancel,
+  canRead,
 }: {
   quotationId: string;
   status: QuotationStatus;
   canUpdate: boolean;
   canCancel: boolean;
+  canRead: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +32,11 @@ export function QuotationStatusActions({
 
   function run(
     message: string | null,
-    action: (id: string) => Promise<{ error?: string; invoiceId?: string }>
+    action: (id: string) => Promise<{
+      error?: string;
+      invoiceId?: string;
+      documentId?: string;
+    }>
   ) {
     if (message && !window.confirm(message)) {
       return;
@@ -39,6 +46,14 @@ export function QuotationStatusActions({
       const result = await action(quotationId);
       if (result.error) {
         setError(result.error);
+        return;
+      }
+      if (result.documentId) {
+        const opened = window.open(`/api/documents/${result.documentId}`, "_blank", "noopener,noreferrer");
+        if (!opened) {
+          setError("Popup blocked. Please allow popups to open the PDF.");
+        }
+        router.refresh();
         return;
       }
       if (result.invoiceId) {
@@ -83,6 +98,16 @@ export function QuotationStatusActions({
             }
           >
             Convert to invoice
+          </Button>
+        ) : null}
+        {canRead && (status === "SENT" || status === "ACCEPTED") ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isPending}
+            onClick={() => run(null, exportQuotationPdfAction)}
+          >
+            Export PDF
           </Button>
         ) : null}
         {canCancel && (status === "DRAFT" || status === "SENT" || status === "ACCEPTED") ? (

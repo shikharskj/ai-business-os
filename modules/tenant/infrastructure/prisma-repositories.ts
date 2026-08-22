@@ -37,6 +37,7 @@ function mapBusiness(record: {
   currency: string;
   defaultGstRateBps: number;
   lowStockThreshold: { toString(): string } | string;
+  logoDocumentId: string | null;
   closedThroughPeriodKey: string | null;
 }): BusinessProfile {
   return {
@@ -60,6 +61,7 @@ function mapBusiness(record: {
     currency: record.currency,
     defaultGstRateBps: record.defaultGstRateBps,
     lowStockThreshold: record.lowStockThreshold.toString(),
+    logoDocumentId: record.logoDocumentId,
     closedThroughPeriodKey: record.closedThroughPeriodKey,
   };
 }
@@ -144,6 +146,25 @@ export const prismaBusinessRepository: BusinessRepository = {
       data: { closedThroughPeriodKey: periodKey },
     });
     return mapBusiness(record);
+  },
+
+  async setLogoDocumentId(tenantId, logoDocumentId) {
+    const record = await prisma.business.update({
+      where: { id: tenantId },
+      data: { logoDocumentId },
+    });
+    return mapBusiness(record);
+  },
+
+  async clearLogoDocumentIdIfMatches(tenantId, expectedLogoDocumentId) {
+    const result = await prisma.business.updateMany({
+      where: {
+        id: tenantId,
+        logoDocumentId: expectedLogoDocumentId,
+      },
+      data: { logoDocumentId: null },
+    });
+    return result.count > 0;
   },
 
   async deleteByClerkOrganizationId(clerkOrganizationId) {
