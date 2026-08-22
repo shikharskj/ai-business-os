@@ -450,11 +450,13 @@ export async function cancelQuotation(
 }
 
 export async function exportQuotationPdf(input: QuotationPdfDeps) {
-  const quotation = await getQuotation({
-    tenantId: input.tenantId,
-    quotationId: input.quotationId,
-    sales: input.sales,
-  });
+  const quotation = await input.sales.findQuotationById(
+    input.tenantId,
+    input.quotationId
+  );
+  if (!quotation) {
+    throw new QuotationNotFoundError();
+  }
   if (quotation.status !== "SENT" && quotation.status !== "ACCEPTED") {
     throw new QuotationValidationError(
       "Send or accept the quotation before exporting a PDF."

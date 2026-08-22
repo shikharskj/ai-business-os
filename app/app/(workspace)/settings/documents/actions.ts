@@ -88,15 +88,6 @@ export async function deleteBusinessDocumentAction(
   try {
     const tenant = await authorize("document:delete");
 
-    await deleteDocument({
-      tenantId: tenant.tenantId,
-      actorUserId: tenant.membership.userId,
-      documentId,
-      documents: prismaDocumentRepository,
-      storage: getStorageAdapter(),
-      audit,
-    });
-
     if (tenant.business.logoDocumentId === documentId) {
       const wasCleared = await prismaBusinessRepository.clearLogoDocumentIdIfMatches(
         tenant.tenantId,
@@ -106,6 +97,15 @@ export async function deleteBusinessDocumentAction(
         revalidateLogoSurfaces();
       }
     }
+
+    await deleteDocument({
+      tenantId: tenant.tenantId,
+      actorUserId: tenant.membership.userId,
+      documentId,
+      documents: prismaDocumentRepository,
+      storage: getStorageAdapter(),
+      audit,
+    });
 
     revalidatePath("/app/settings/documents");
     revalidatePath("/app/settings");

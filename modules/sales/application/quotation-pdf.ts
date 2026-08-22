@@ -248,7 +248,6 @@ export async function renderQuotationPdfBytes(
         doc.text(values[index] ?? "—", x, tableTop, {
           width: column.width,
           align: column.align,
-          lineBreak: false,
         });
         x += column.width;
       });

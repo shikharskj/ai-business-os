@@ -49,7 +49,11 @@ export function QuotationStatusActions({
         return;
       }
       if (result.documentId) {
-        window.open(`/api/documents/${result.documentId}`, "_blank", "noopener,noreferrer");
+        const opened = window.open(`/api/documents/${result.documentId}`, "_blank", "noopener,noreferrer");
+        if (!opened) {
+          setError("Popup blocked. Please allow popups to open the PDF.");
+        }
+        router.refresh();
         return;
       }
       if (result.invoiceId) {

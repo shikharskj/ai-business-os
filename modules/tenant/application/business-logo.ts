@@ -61,10 +61,29 @@ export async function setBusinessLogo(input: {
     audit: input.audit,
   });
 
-  const updated = await input.business.setLogoDocumentId(
-    input.tenantId,
-    uploaded.id
-  );
+  let updated: BusinessProfile;
+  try {
+    updated = await input.business.setLogoDocumentId(
+      input.tenantId,
+      uploaded.id
+    );
+  } catch (error) {
+    try {
+      await deleteDocument({
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+        documentId: uploaded.id,
+        documents: input.documents,
+        storage: input.storage,
+        audit: input.audit,
+      });
+    } catch (cleanupError) {
+      if (!(cleanupError instanceof DocumentNotFoundError)) {
+        console.error("Failed to cleanup uploaded document after setLogoDocumentId failure:", cleanupError);
+      }
+    }
+    throw error;
+  }
 
   if (previousId && previousId !== uploaded.id) {
     try {
@@ -78,7 +97,7 @@ export async function setBusinessLogo(input: {
       });
     } catch (error) {
       if (!(error instanceof DocumentNotFoundError)) {
-        throw error;
+        console.error("Failed to cleanup previous logo document (will retry):", error);
       }
     }
   }
@@ -114,7 +133,7 @@ export async function clearBusinessLogo(input: {
       });
     } catch (error) {
       if (!(error instanceof DocumentNotFoundError)) {
-        throw error;
+        console.error("Failed to delete previous logo document (will retry):", error);
       }
     }
   }

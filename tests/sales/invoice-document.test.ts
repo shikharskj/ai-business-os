@@ -108,7 +108,6 @@ describe("invoice document and PDF", () => {
   it("builds a GST tax invoice view from tax-engine totals", async () => {
     const parties = createMemoryPartyRepository();
     const catalog = createMemoryCatalogRepository();
-    const sales = createMemorySalesRepository();
     const customer = await createCustomer({
       tenantId: "tenant-a",
       actorUserId: "user-1",

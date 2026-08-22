@@ -113,10 +113,9 @@ export function buildQuotationDocumentView(input: {
   totalsPendingMessage?: string | null;
 }): QuotationDocumentView {
   const prepared = input.prepared ?? null;
-  const placeOfSupply =
-    GST_STATE_CODES[input.placeOfSupplyStateCode] ??
-    input.placeOfSupplyStateCode ??
-    "—";
+  const placeOfSupply = input.placeOfSupplyStateCode
+    ? (GST_STATE_CODES[input.placeOfSupplyStateCode] ?? input.placeOfSupplyStateCode)
+    : "—";
 
   const lines = prepared
     ? prepared.lines.map(mapPreparedLine)

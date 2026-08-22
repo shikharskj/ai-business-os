@@ -270,19 +270,20 @@ export async function exportQuotationPdfAction(
 ): Promise<QuotationActionState> {
   try {
     const tenant = await authorize("quotation:read");
-    const document = await prisma.$transaction(async (tx) =>
-      exportQuotationPdf({
-        tenantId: tenant.tenantId,
-        actorUserId: tenant.membership.userId,
-        business: tenant.business,
-        quotationId,
-        sales: createPrismaSalesRepository(tx),
-        parties: createPrismaPartyRepository(tx),
-        documents: prismaDocumentRepository,
-        storage: getStorageAdapter(),
-        audit: createPrismaAuditRepository(tx),
-      })
-    );
+    await authorize("document:upload");
+
+    const document = await exportQuotationPdf({
+      tenantId: tenant.tenantId,
+      actorUserId: tenant.membership.userId,
+      business: tenant.business,
+      quotationId,
+      sales: createPrismaSalesRepository(prisma),
+      parties: createPrismaPartyRepository(prisma),
+      documents: prismaDocumentRepository,
+      storage: getStorageAdapter(),
+      audit: createPrismaAuditRepository(prisma),
+    });
+
     return { documentId: document.id };
   } catch (error) {
     const mapped = mapError(error);

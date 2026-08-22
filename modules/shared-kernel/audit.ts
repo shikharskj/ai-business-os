@@ -28,6 +28,7 @@ export type ListAuditForResourceInput = {
 };
 
 const DEFAULT_LIST_LIMIT = 50;
+const MAX_LIST_LIMIT = 1000;
 
 export type AuditRepository = {
   append(input: AuditInput): Promise<{ id: string }>;
@@ -61,7 +62,19 @@ export function createPrismaAuditRepository(
     },
 
     async listForResource(input) {
-      const limit = input.limit ?? DEFAULT_LIST_LIMIT;
+      let limit = input.limit ?? DEFAULT_LIST_LIMIT;
+      if (input.limit !== undefined) {
+        if (
+          !Number.isSafeInteger(input.limit) ||
+          input.limit < 0 ||
+          input.limit > MAX_LIST_LIMIT
+        ) {
+          throw new Error(
+            `Invalid limit: must be a non-negative safe integer <= ${MAX_LIST_LIMIT}`
+          );
+        }
+        limit = input.limit;
+      }
       const rows = await prisma.auditRecord.findMany({
         where: {
           tenantId: input.tenantId,
@@ -102,7 +115,19 @@ export function createMemoryAuditRepository(): AuditRepository & {
     },
 
     async listForResource(input) {
-      const limit = input.limit ?? DEFAULT_LIST_LIMIT;
+      let limit = input.limit ?? DEFAULT_LIST_LIMIT;
+      if (input.limit !== undefined) {
+        if (
+          !Number.isSafeInteger(input.limit) ||
+          input.limit < 0 ||
+          input.limit > MAX_LIST_LIMIT
+        ) {
+          throw new Error(
+            `Invalid limit: must be a non-negative safe integer <= ${MAX_LIST_LIMIT}`
+          );
+        }
+        limit = input.limit;
+      }
       return records
         .map((row, index) => ({ row, index }))
         .filter(

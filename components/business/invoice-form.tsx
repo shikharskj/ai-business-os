@@ -164,6 +164,35 @@ export function InvoiceForm({
     () =>
       lines.map((line) => {
         const product = products.find((row) => row.id === line.productId);
+        const formatDraftMoney = (value: string) => {
+          if (!value || value === "0") {
+            return "INR 0.00";
+          }
+          try {
+            const [intPart = "0", fracPart = ""] = value.split(".");
+            const paddedFrac = (fracPart + "00").slice(0, 2);
+            const digits = intPart.replace(/^0+(?=\d)/, "") || "0";
+            let grouped: string;
+            if (digits.length <= 3) {
+              grouped = digits;
+            } else {
+              const lastThree = digits.slice(-3);
+              let rest = digits.slice(0, -3);
+              const groups: string[] = [];
+              while (rest.length > 2) {
+                groups.unshift(rest.slice(-2));
+                rest = rest.slice(0, -2);
+              }
+              if (rest.length > 0) {
+                groups.unshift(rest);
+              }
+              grouped = `${groups.join(",")},${lastThree}`;
+            }
+            return `INR ${grouped}.${paddedFrac}`;
+          } catch {
+            return `INR ${value}`;
+          }
+        };
         return {
           description: product?.name ?? "Select a product",
           hsnSac: product?.hsnSac ?? null,
@@ -171,8 +200,8 @@ export function InvoiceForm({
             quantity: line.quantity,
             unitOfMeasurement: product?.unitOfMeasurement ?? "",
           }),
-          unitPrice: line.unitPrice ? `₹${line.unitPrice}` : "—",
-          discount: line.discount ? `₹${line.discount}` : "₹0.00",
+          unitPrice: line.unitPrice ? formatDraftMoney(line.unitPrice) : "—",
+          discount: line.discount && line.discount !== "0" ? formatDraftMoney(line.discount) : "INR 0.00",
         };
       }),
     [lines, products]
@@ -224,7 +253,16 @@ export function InvoiceForm({
         if (cancelled) {
           return;
         }
-        setEngineView(result.view ?? null);
+        if (result.error || !result.view) {
+          setEngineView(null);
+        } else {
+          setEngineView(result.view);
+        }
+      }).catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setEngineView(null);
       });
     }, 300);
     return () => {

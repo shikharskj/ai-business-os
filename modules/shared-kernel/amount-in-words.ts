@@ -68,6 +68,9 @@ function rupeeWords(rupees: bigint): string {
 
   const parts: string[] = [];
   if (crore > 0n) {
+    if (crore >= 1000n) {
+      throw new Error("Amount exceeds Indian word range (>= 1000 crore)");
+    }
     parts.push(`${threeDigitWords(Number(crore))} Crore`);
   }
   if (lakh > 0n) {
@@ -91,10 +94,18 @@ export function amountInIndianWords(input: {
   currency: string;
   scale: number;
 }): string {
-  const currency = input.currency === "INR" ? "INR" : input.currency;
-  const scaleFactor = 10n ** BigInt(input.scale);
+  if (input.currency !== "INR") {
+    throw new Error(`amountInIndianWords requires INR currency, got ${input.currency}`);
+  }
+  if (input.scale !== 2) {
+    throw new Error(`amountInIndianWords requires scale 2 (paise), got ${input.scale}`);
+  }
+  const scaleFactor = 100n;
   const abs = input.amountMinor < 0n ? -input.amountMinor : input.amountMinor;
   const major = abs / scaleFactor;
+  if (major >= 1000_00_00_000n) {
+    throw new Error("Amount exceeds Indian word range (>= 1000 crore)");
+  }
   const fraction = abs % scaleFactor;
   const rupeeLabel = major === 1n ? "Rupee" : "Rupees";
   const paiseLabel = fraction === 1n ? "Paisa" : "Paise";
@@ -104,5 +115,5 @@ export function amountInIndianWords(input: {
     body += ` and ${twoDigitWords(Number(fraction))} ${paiseLabel}`;
   }
   const signed = input.amountMinor < 0n ? `Minus ${body}` : body;
-  return `${currency} ${signed} Only`;
+  return `INR ${signed} Only`;
 }

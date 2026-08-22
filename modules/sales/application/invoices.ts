@@ -689,11 +689,13 @@ export async function convertQuotationToInvoice(input: {
 }
 
 export async function exportInvoicePdf(input: InvoicePdfDeps) {
-  const invoice = await getInvoice({
-    tenantId: input.tenantId,
-    invoiceId: input.invoiceId,
-    sales: input.sales,
-  });
+  const invoice = await input.sales.findInvoiceById(
+    input.tenantId,
+    input.invoiceId
+  );
+  if (!invoice) {
+    throw new InvoiceNotFoundError();
+  }
   if (invoice.status === "DRAFT") {
     throw new InvoiceValidationError("Post the invoice before exporting a PDF.");
   }

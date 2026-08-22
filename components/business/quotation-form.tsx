@@ -224,7 +224,16 @@ export function QuotationForm({
         if (cancelled) {
           return;
         }
-        setEngineView(result.view ?? null);
+        if (result.error || !result.view) {
+          setEngineView(null);
+        } else {
+          setEngineView(result.view);
+        }
+      }).catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setEngineView(null);
       });
     }, 300);
     return () => {

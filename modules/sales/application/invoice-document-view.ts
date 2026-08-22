@@ -1,5 +1,4 @@
 import { formatQuantity } from "@/modules/inventory/domain/quantity";
-import type { Quantity } from "@/modules/inventory/domain/quantity";
 import type {
   PreparedInvoice,
   PreparedInvoiceLine,

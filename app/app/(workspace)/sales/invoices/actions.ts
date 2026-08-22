@@ -273,19 +273,19 @@ export async function exportInvoicePdfAction(
 ): Promise<InvoiceActionState> {
   try {
     const tenant = await authorize("invoice:read");
-    const document = await prisma.$transaction(async (tx) =>
-      exportInvoicePdf({
-        tenantId: tenant.tenantId,
-        actorUserId: tenant.membership.userId,
-        business: tenant.business,
-        invoiceId,
-        sales: createPrismaSalesRepository(tx),
-        parties: createPrismaPartyRepository(tx),
-        documents: prismaDocumentRepository,
-        storage: getStorageAdapter(),
-        audit: createPrismaAuditRepository(tx),
-      })
-    );
+
+    const document = await exportInvoicePdf({
+      tenantId: tenant.tenantId,
+      actorUserId: tenant.membership.userId,
+      business: tenant.business,
+      invoiceId,
+      sales: createPrismaSalesRepository(prisma),
+      parties: createPrismaPartyRepository(prisma),
+      documents: prismaDocumentRepository,
+      storage: getStorageAdapter(),
+      audit: createPrismaAuditRepository(prisma),
+    });
+
     return { documentId: document.id };
   } catch (error) {
     const mapped = mapError(error);
@@ -320,14 +320,13 @@ export async function previewInvoiceTotalsAction(input: {
     const tenant = await authorize(
       input.invoiceId ? "invoice:update" : "invoice:create"
     );
-    const completeLines = input.lines.filter((line) => {
-      try {
-        invoiceLineInputSchema.parse(line);
-        return true;
-      } catch {
-        return false;
-      }
-    });
+    const cappedLines = input.lines.slice(0, 1000);
+    const completeLines = cappedLines
+      .map((line) => {
+        const result = invoiceLineInputSchema.safeParse(line);
+        return result.success ? result.data : null;
+      })
+      .filter((line): line is NonNullable<typeof line> => line !== null);
 
     if (!input.customerId || completeLines.length === 0) {
       return {};
@@ -380,4 +379,3 @@ export async function previewInvoiceTotalsAction(input: {
     throw error;
   }
 }
-
