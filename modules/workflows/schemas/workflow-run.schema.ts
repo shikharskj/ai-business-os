@@ -13,6 +13,12 @@ export const workflowRunViewSchema = z.object({
   createdAt: z.string(),
   completedAt: z.string().nullable(),
   lastError: z.string().nullable(),
+  aggregateType: z.string(),
+  aggregateId: z.string(),
+  triggerEventType: z.string(),
+  attemptCount: z.number(),
+  relatedHref: z.string().nullable(),
+  resultMessage: z.string().nullable(),
 });
 
 export type WorkflowRunView = z.infer<typeof workflowRunViewSchema>;

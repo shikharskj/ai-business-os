@@ -111,7 +111,7 @@ export async function createCustomerAction(
   }
 
   revalidatePath("/app/sales/customers");
-  redirect(`/app/sales/customers/${customerId}`);
+  redirect(`/app/sales/customers/${customerId}?created=1`);
 }
 
 export async function updateCustomerAction(

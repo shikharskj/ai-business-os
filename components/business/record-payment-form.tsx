@@ -8,6 +8,7 @@ import {
   type PaymentActionState,
 } from "@/app/app/(workspace)/sales/payments/actions";
 import { DatePicker } from "@/components/date-picker";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MoneyDisplay } from "@/components/business/money-display";
 import { formatINR } from "@/modules/shared-kernel/format-money";
 import { money, moneyFromMajor, toMajorString } from "@/modules/shared-kernel/money";
+import { FORM_PLACEHOLDERS } from "@/lib/forms/placeholders";
 import {
   PAYMENT_METHOD_LABELS,
   PAYMENT_METHODS,
@@ -96,15 +98,8 @@ function RecordPaymentFormFields({
   const selectedInvoice = invoices.find((row) => row.invoiceId === selectedInvoiceId);
   const [method, setMethod] = useState<PaymentMethod>("CASH");
   const [receivedOn, setReceivedOn] = useState(today);
-  const [amount, setAmount] = useState(() =>
-    selectedInvoice ? toMajorString(selectedInvoice.outstanding) : ""
-  );
-  const [allocations, setAllocations] = useState<Record<string, string>>(() => {
-    if (!selectedInvoice) {
-      return {};
-    }
-    return { [selectedInvoice.invoiceId]: toMajorString(selectedInvoice.outstanding) };
-  });
+  const [amount, setAmount] = useState("");
+  const [allocations, setAllocations] = useState<Record<string, string>>({});
 
   const methodItems = useMemo(
     () =>
@@ -118,6 +113,24 @@ function RecordPaymentFormFields({
   }, 0n);
   const paymentMinor = parseAmount(amount);
   const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId);
+
+  function fillOutstanding() {
+    if (selectedInvoice) {
+      const outstanding = toMajorString(selectedInvoice.outstanding);
+      setAmount(outstanding);
+      setAllocations({ [selectedInvoice.invoiceId]: outstanding });
+      return;
+    }
+    const nextAllocations = Object.fromEntries(
+      invoices.map((invoice) => [invoice.invoiceId, toMajorString(invoice.outstanding)])
+    );
+    const totalMinor = invoices.reduce(
+      (sum, invoice) => sum + invoice.outstanding.amountMinor,
+      0n
+    );
+    setAmount(toMajorString(money(totalMinor)));
+    setAllocations(nextAllocations);
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
@@ -189,9 +202,16 @@ function RecordPaymentFormFields({
         </div>
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="amount" className="text-base font-medium">
-            Amount received
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor="amount" className="text-base font-medium">
+              Amount received
+            </label>
+            {invoices.length > 0 ? (
+              <Button type="button" variant="ghost" size="sm" onClick={fillOutstanding}>
+                Fill outstanding
+              </Button>
+            ) : null}
+          </div>
           <Input
             id="amount"
             name="amount"
@@ -199,7 +219,7 @@ function RecordPaymentFormFields({
             required
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
-            placeholder="0.00"
+            placeholder={FORM_PLACEHOLDERS.price}
           />
           <FieldError name="amount" fieldErrors={state.fieldErrors} />
         </div>
@@ -211,7 +231,7 @@ function RecordPaymentFormFields({
           <Input
             id="reference"
             name="reference"
-            placeholder="UPI ref, cheque no., or transfer note"
+            placeholder={FORM_PLACEHOLDERS.reference}
           />
           <FieldError name="reference" fieldErrors={state.fieldErrors} />
         </div>
@@ -221,7 +241,7 @@ function RecordPaymentFormFields({
         <label htmlFor="notes" className="text-base font-medium">
           Notes
         </label>
-        <Textarea id="notes" name="notes" rows={3} />
+        <Textarea id="notes" name="notes" rows={3} placeholder={FORM_PLACEHOLDERS.notes} />
         <FieldError name="notes" fieldErrors={state.fieldErrors} />
       </div>
 
@@ -298,9 +318,13 @@ function RecordPaymentFormFields({
       ) : null}
 
       <div>
-        <Button type="submit" disabled={isPending || invoices.length === 0}>
-          {isPending ? "Recording payment…" : "Record payment"}
-        </Button>
+        <SubmitButton
+          pending={isPending}
+          pendingLabel="Recording payment"
+          disabled={invoices.length === 0}
+        >
+          Record payment
+        </SubmitButton>
       </div>
     </form>
   );

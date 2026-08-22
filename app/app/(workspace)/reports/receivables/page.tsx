@@ -32,18 +32,13 @@ export default async function ReceivablesReportPage() {
         title="Receivables report"
         description="Open customer balances from unpaid and partially paid invoices after payment allocations."
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button nativeButton={false} variant="outline" render={<Link href="/app/reports" />}>
-              Back
-            </Button>
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<a href="/api/reports/receivables/export" />}
-            >
-              Export CSV
-            </Button>
-          </div>
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<a href="/api/reports/receivables/export" />}
+          >
+            Export CSV
+          </Button>
         }
       />
 

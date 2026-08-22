@@ -12,12 +12,16 @@ import {
   type InvoiceActionState,
 } from "@/app/app/(workspace)/sales/invoices/actions";
 import {
-  DOCUMENT_PREVIEW_ASIDE_CLASSNAME,
-  documentPreviewAsideStyle,
   InvoiceDocumentPreview,
 } from "@/components/business/invoice-document";
+import {
+  DocumentFormPreviewAside,
+  DocumentFormPreviewLayout,
+  DocumentFormPreviewMain,
+} from "@/components/shell/document-form-preview-layout";
 import { lineSubtotalBeforeGstMajor } from "@/components/business/line-subtotal-label";
 import { DatePicker } from "@/components/date-picker";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
@@ -29,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { FORM_PLACEHOLDERS } from "@/lib/forms/placeholders";
 import { GST_STATE_CODES } from "@/modules/tax/domain/gstin";
 import { gstinStateCode, stateCodeFromName } from "@/modules/tax/domain/gstin";
 import { toMajorString } from "@/modules/shared-kernel/money";
@@ -139,6 +144,9 @@ export function InvoiceForm({
   const [placeOfSupply, setPlaceOfSupply] = useState(
     invoice?.placeOfSupplyStateCode ??
       customerPlaceOfSupply(customers.find((row) => row.id === customerId))
+  );
+  const [placeOfSupplyTouched, setPlaceOfSupplyTouched] = useState(
+    Boolean(invoice?.placeOfSupplyStateCode)
   );
   const [issuedOn, setIssuedOn] = useState(invoice?.issuedOn ?? today);
   const [dueOn, setDueOn] = useState(invoice?.dueOn ?? "");
@@ -280,8 +288,9 @@ export function InvoiceForm({
   }
 
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,34rem)]">
-      <form action={formAction} className="flex flex-col gap-6">
+    <DocumentFormPreviewLayout>
+      <DocumentFormPreviewMain>
+        <form action={formAction} className="flex w-full min-w-0 flex-col gap-6">
         {invoice ? (
           <input type="hidden" name="invoiceId" value={invoice.id} />
         ) : null}
@@ -307,9 +316,11 @@ export function InvoiceForm({
               value={customerId}
               onValueChange={(value) => {
                 setCustomerId(value);
-                setPlaceOfSupply(
-                  customerPlaceOfSupply(customers.find((row) => row.id === value))
-                );
+                if (!placeOfSupplyTouched) {
+                  setPlaceOfSupply(
+                    customerPlaceOfSupply(customers.find((row) => row.id === value))
+                  );
+                }
               }}
               options={customers.map((customer) => ({
                 value: customer.id,
@@ -328,7 +339,10 @@ export function InvoiceForm({
             </label>
             <Select
               value={placeOfSupply}
-              onValueChange={(value) => setPlaceOfSupply(String(value ?? ""))}
+              onValueChange={(value) => {
+                setPlaceOfSupply(String(value ?? ""));
+                setPlaceOfSupplyTouched(true);
+              }}
               items={stateItems}
             >
               <SelectTrigger id="placeOfSupplyStateCode" className="w-full">
@@ -459,6 +473,7 @@ export function InvoiceForm({
                     onChange={(event) =>
                       updateLine(index, { quantity: event.target.value })
                     }
+                    placeholder={FORM_PLACEHOLDERS.quantity}
                   />
                   <FieldError name={`lines.${index}.quantity`} fieldErrors={state.fieldErrors} />
                 </div>
@@ -475,6 +490,7 @@ export function InvoiceForm({
                     onChange={(event) =>
                       updateLine(index, { unitPrice: event.target.value })
                     }
+                    placeholder={FORM_PLACEHOLDERS.rate}
                   />
                   <FieldError name={`lines.${index}.unitPrice`} fieldErrors={state.fieldErrors} />
                 </div>
@@ -490,6 +506,7 @@ export function InvoiceForm({
                     onChange={(event) =>
                       updateLine(index, { discount: event.target.value })
                     }
+                    placeholder={FORM_PLACEHOLDERS.discount}
                   />
                   <FieldError name={`lines.${index}.discount`} fieldErrors={state.fieldErrors} />
                 </div>
@@ -526,6 +543,7 @@ export function InvoiceForm({
             name="notes"
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
+            placeholder={FORM_PLACEHOLDERS.notes}
           />
         </div>
 
@@ -535,24 +553,22 @@ export function InvoiceForm({
           </p>
         ) : null}
 
-        <Button type="submit" disabled={isPending || customers.length === 0 || products.length === 0}>
-          {isPending
-            ? "Saving…"
-            : invoice
-              ? "Save invoice"
-              : "Create invoice"}
-        </Button>
+        <SubmitButton
+          pending={isPending}
+          pendingLabel="Saving"
+          disabled={customers.length === 0 || products.length === 0}
+        >
+          {invoice ? "Save invoice" : "Create invoice"}
+        </SubmitButton>
       </form>
+      </DocumentFormPreviewMain>
 
-      <aside
-        className={DOCUMENT_PREVIEW_ASIDE_CLASSNAME}
-        style={documentPreviewAsideStyle}
-      >
+      <DocumentFormPreviewAside>
         <p className="mb-2 text-sm font-medium text-muted-foreground">Preview</p>
         <div className="max-h-[min(70vh,36rem)] overflow-auto rounded-xl bg-muted/40 p-2">
           <InvoiceDocumentPreview view={preview} />
         </div>
-      </aside>
-    </div>
+      </DocumentFormPreviewAside>
+    </DocumentFormPreviewLayout>
   );
 }

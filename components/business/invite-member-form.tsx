@@ -3,7 +3,8 @@
 import { useActionState } from "react";
 
 import { inviteMemberAction, type ActionState } from "@/app/app/actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { useActionFeedback } from "@/lib/feedback/use-action-feedback";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -39,6 +40,7 @@ export function InviteMemberForm() {
     inviteMemberAction,
     initialState
   );
+  useActionFeedback(state, { errorTitle: "Could not send invitation" });
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -78,10 +80,8 @@ export function InviteMemberForm() {
           {state.error}
         </p>
       ) : null}
+      <SubmitButton pending={isPending} pendingLabel="Sending invitation">Send invitation</SubmitButton>
 
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Sending invitation…" : "Send invitation"}
-      </Button>
     </form>
   );
 }

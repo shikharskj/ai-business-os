@@ -9,8 +9,10 @@ import {
   updatePurchaseAction,
   type PurchaseActionState,
 } from "@/app/app/(workspace)/purchases/bills/actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FORM_PLACEHOLDERS } from "@/lib/forms/placeholders";
 import {
   Select,
   SelectContent,
@@ -322,6 +324,7 @@ export function BillForm({
                   onChange={(event) =>
                     updateLine(index, { quantity: event.target.value })
                   }
+                  placeholder={FORM_PLACEHOLDERS.quantity}
                 />
                 <FieldError name={`lines.${index}.quantity`} fieldErrors={state.fieldErrors} />
               </div>
@@ -338,6 +341,7 @@ export function BillForm({
                   onChange={(event) =>
                     updateLine(index, { unitPrice: event.target.value })
                   }
+                  placeholder={FORM_PLACEHOLDERS.rate}
                 />
                 <FieldError name={`lines.${index}.unitPrice`} fieldErrors={state.fieldErrors} />
               </div>
@@ -353,6 +357,7 @@ export function BillForm({
                   onChange={(event) =>
                     updateLine(index, { discount: event.target.value })
                   }
+                  placeholder={FORM_PLACEHOLDERS.discount}
                 />
                 <FieldError name={`lines.${index}.discount`} fieldErrors={state.fieldErrors} />
               </div>
@@ -378,7 +383,12 @@ export function BillForm({
         <label htmlFor="notes" className="text-base font-medium">
           Notes
         </label>
-        <Textarea id="notes" name="notes" defaultValue={purchase?.notes ?? ""} />
+        <Textarea
+          id="notes"
+          name="notes"
+          defaultValue={purchase?.notes ?? ""}
+          placeholder={FORM_PLACEHOLDERS.notes}
+        />
       </div>
 
       {state.error ? (
@@ -387,9 +397,13 @@ export function BillForm({
         </p>
       ) : null}
 
-      <Button type="submit" disabled={isPending || suppliers.length === 0 || products.length === 0}>
-        {isPending ? "Saving…" : purchase ? "Save bill" : "Create bill"}
-      </Button>
+      <SubmitButton
+        pending={isPending}
+        pendingLabel="Saving"
+        disabled={suppliers.length === 0 || products.length === 0}
+      >
+        {purchase ? "Save bill" : "Create bill"}
+      </SubmitButton>
     </form>
   );
 }

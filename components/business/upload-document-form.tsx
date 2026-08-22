@@ -6,7 +6,7 @@ import {
   uploadBusinessDocumentAction,
   type DocumentActionState,
 } from "@/app/app/(workspace)/settings/documents/actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
 
 const initialState: DocumentActionState = {};
@@ -48,10 +48,8 @@ export function UploadDocumentForm({
           {state.error}
         </p>
       ) : null}
+      <SubmitButton pending={isPending} pendingLabel="Uploading">Upload document</SubmitButton>
 
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Uploading..." : "Upload document"}
-      </Button>
     </form>
   );
 }

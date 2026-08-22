@@ -6,8 +6,6 @@ import { formatDisplayDate } from "@/components/business/inventory-labels";
 import { GstBreakdown } from "@/components/business/gst-breakdown";
 import { MoneyDisplay } from "@/components/business/money-display";
 import {
-  DOCUMENT_PREVIEW_ASIDE_CLASSNAME,
-  documentPreviewAsideStyle,
   QuotationDocumentPreview,
 } from "@/components/business/quotation-document";
 import { StatusBadge } from "@/components/business/status-badge";
@@ -17,6 +15,12 @@ import {
 } from "@/components/business/status-tone";
 import { QuotationStatusActions } from "@/components/business/quotation-status-actions";
 import { PageHeader } from "@/components/shell/page-header";
+import {
+  DocumentFormPreviewAside,
+  DocumentFormPreviewLayout,
+  DocumentFormPreviewMain,
+  DocumentPreviewPageShell,
+} from "@/components/shell/document-form-preview-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -30,7 +34,6 @@ import {
 import { prisma } from "@/lib/db";
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
-import { cn } from "@/lib/utils";
 import { formatQuantity } from "@/modules/inventory";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
@@ -102,7 +105,7 @@ export default async function QuotationDetailPage({
   });
 
   return (
-    <div className="mx-auto flex w-full flex-1 flex-col gap-6">
+    <DocumentPreviewPageShell>
       <PageHeader
         title={quotation.number}
         description={
@@ -157,14 +160,8 @@ export default async function QuotationDetailPage({
         </p>
       ) : null}
 
-      {query.saved ? (
-        <p className="text-base text-muted-foreground">
-          Quotation saved. GST totals were recalculated by the tax engine.
-        </p>
-      ) : null}
-
-      <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-        <div className="flex min-w-0 flex-1 flex-col gap-6">
+      <DocumentFormPreviewLayout className="gap-8">
+        <DocumentFormPreviewMain className="flex flex-col gap-6">
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
@@ -273,12 +270,9 @@ export default async function QuotationDetailPage({
               </Table>
             </CardContent>
           </Card>
-        </div>
+        </DocumentFormPreviewMain>
 
-        <aside
-          className={cn("flex flex-col gap-6", DOCUMENT_PREVIEW_ASIDE_CLASSNAME)}
-          style={documentPreviewAsideStyle}
-        >
+        <DocumentFormPreviewAside className="flex flex-col gap-6">
           <div>
             <p className="mb-2 text-sm font-medium text-muted-foreground">
               Preview
@@ -292,8 +286,8 @@ export default async function QuotationDetailPage({
             timezone={tenant.business.timezone}
             emptyMessage="Quotation events will appear here after create, update, send, accept, convert, or cancel."
           />
-        </aside>
-      </div>
-    </div>
+        </DocumentFormPreviewAside>
+      </DocumentFormPreviewLayout>
+    </DocumentPreviewPageShell>
   );
 }

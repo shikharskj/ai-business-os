@@ -21,7 +21,8 @@ export const badgeToneClassName: Record<BadgeTone, string> = {
     "border-[var(--state-warning)] bg-[var(--state-warning-subtle)] text-[var(--state-warning)]",
   danger:
     "border-[var(--state-error)] bg-[var(--state-error-subtle)] text-[var(--state-error)]",
-  info: "border-[var(--state-info)]] bg-[var(--state-info-subtle)] text-[var(--state-info)]",
+  info:
+    "border-[var(--state-info)] bg-[var(--state-info-subtle)] text-[var(--state-info)]",
   neutral: "border-border bg-transparent text-foreground",
 };
 

@@ -14,40 +14,28 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
+  COMMAND_MENU_EXTRA_ROUTES,
+  filterWorkspaceNav,
+  flattenWorkspaceNavLeaves,
+} from "@/components/shell/workspace-nav";
+import type { MembershipRole } from "@/modules/tenant/domain/types";
+import {
   SEARCH_ENTITY_LABEL,
   type SearchResponse,
   type SearchResult,
 } from "@/modules/search/domain/types";
 
-const ROUTES = [
-  { label: "Dashboard", href: "/app", keywords: "home overview" },
-  { label: "Search", href: "/app/search", keywords: "find records" },
-  { label: "Invoices", href: "/app/sales/invoices", keywords: "sales bill" },
-  { label: "Quotations", href: "/app/sales/quotations", keywords: "quote pricing" },
-  { label: "Customers", href: "/app/sales/customers", keywords: "party" },
-  { label: "Payments", href: "/app/sales/payments", keywords: "receipt collection" },
-  { label: "Expenses", href: "/app/expenses", keywords: "spend" },
-  {
-    label: "Purchases",
-    href: "/app/purchases/bills",
-    keywords: "supplier bills",
-  },
-  {
-    label: "Inventory",
-    href: "/app/inventory/stock",
-    keywords: "stock products",
-  },
-  { label: "Reports", href: "/app/reports", keywords: "gst summary" },
-  { label: "Accounting", href: "/app/accounting", keywords: "ledger journals" },
-  { label: "Settings", href: "/app/settings", keywords: "business profile" },
-] as const;
-
-export function WorkspaceCommandMenu() {
+export function WorkspaceCommandMenu({ role }: { role: MembershipRole }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [recordResults, setRecordResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const pageRoutes = useMemo(() => {
+    const navRoutes = flattenWorkspaceNavLeaves(filterWorkspaceNav(role));
+    return [...navRoutes, ...COMMAND_MENU_EXTRA_ROUTES];
+  }, [role]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -104,14 +92,14 @@ export function WorkspaceCommandMenu() {
 
   const routeResults = useMemo(() => {
     const q = trimmedQuery.toLowerCase();
-    if (!q) return ROUTES;
-    return ROUTES.filter(
+    if (!q) return pageRoutes;
+    return pageRoutes.filter(
       (route) =>
         route.label.toLowerCase().includes(q) ||
         route.keywords.includes(q) ||
         route.href.includes(q),
     );
-  }, [trimmedQuery]);
+  }, [pageRoutes, trimmedQuery]);
 
   function go(href: string) {
     setOpen(false);

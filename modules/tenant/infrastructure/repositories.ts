@@ -47,6 +47,7 @@ export type MembershipRepository = {
     clerkOrganizationMembershipId: string
   ): Promise<TenantMembership | null>;
   listActiveForUser(userId: string): Promise<TenantMembership[]>;
+  listActiveForTenant(tenantId: string): Promise<TenantMembership[]>;
   upsertActiveMembership(input: {
     userId: string;
     tenantId: string;
@@ -242,6 +243,13 @@ export function createMemoryMembershipRepository(
       return [...memberships.values()].filter(
         (membership) =>
           membership.userId === userId && membership.status === "ACTIVE"
+      );
+    },
+
+    async listActiveForTenant(tenantId) {
+      return [...memberships.values()].filter(
+        (membership) =>
+          membership.tenantId === tenantId && membership.status === "ACTIVE"
       );
     },
 

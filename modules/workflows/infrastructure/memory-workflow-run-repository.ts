@@ -63,6 +63,13 @@ export function createMemoryWorkflowRunRepository(
       return existing ? cloneRun(existing) : null;
     },
 
+    async findById(tenantId, runId) {
+      const existing = runs.find(
+        (row) => row.tenantId === tenantId && row.id === runId
+      );
+      return existing ? cloneRun(existing) : null;
+    },
+
     async claimDue(input) {
       const claimed: WorkflowRun[] = [];
       const runningKeys = new Set(

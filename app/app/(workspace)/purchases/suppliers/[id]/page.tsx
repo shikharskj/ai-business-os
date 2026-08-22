@@ -103,10 +103,6 @@ export default async function SupplierDetailPage({
         }
       />
 
-      {query.saved ? (
-        <p className="text-base text-muted-foreground">Supplier saved.</p>
-      ) : null}
-
       <div className="flex items-center gap-2">
         <StatusBadge tone={PARTY_STATUS_TONES[supplier.status]}>
           {PARTY_STATUS_LABELS[supplier.status]}

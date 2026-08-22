@@ -1,9 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { deactivateCustomerAction } from "@/app/app/(workspace)/sales/customers/actions";
-import { Button } from "@/components/ui/button";
+import { PendingButton } from "@/components/ui/pending-button";
+import { notifyError, notifySuccess } from "@/lib/feedback/toast";
 
 export function DeactivateCustomerButton({
   customerId,
@@ -12,15 +14,17 @@ export function DeactivateCustomerButton({
   customerId: string;
   customerName: string;
 }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   return (
     <div className="flex flex-col items-end gap-2">
-      <Button
+      <PendingButton
         type="button"
         variant="destructive"
-        disabled={isPending}
+        pending={isPending}
+        pendingLabel="Deactivating"
         onClick={() => {
           if (
             !window.confirm(
@@ -35,12 +39,16 @@ export function DeactivateCustomerButton({
             const result = await deactivateCustomerAction(customerId);
             if (result.error) {
               setError(result.error);
+              notifyError("Could not deactivate customer", result.error);
+              return;
             }
+            notifySuccess("Customer deactivated", `${customerName} is no longer active.`);
+            router.refresh();
           });
         }}
       >
-        {isPending ? "Deactivating…" : "Deactivate"}
-      </Button>
+        Deactivate
+      </PendingButton>
       {error ? (
         <p className="text-base text-destructive" role="alert">
           {error}

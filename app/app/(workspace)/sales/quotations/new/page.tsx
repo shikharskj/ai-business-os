@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { QuotationForm } from "@/components/business/quotation-form";
 import { PageHeader } from "@/components/shell/page-header";
+import { DocumentPreviewPageShell } from "@/components/shell/document-form-preview-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { authorize } from "@/lib/security";
@@ -28,7 +29,7 @@ export default async function NewQuotationPage() {
   ]);
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
+    <DocumentPreviewPageShell>
       <PageHeader
         title="New quotation"
         description="GST is calculated by the tax engine when you save. Quotations do not reduce stock or post accounts."
@@ -96,6 +97,6 @@ export default async function NewQuotationPage() {
           }))}
         />
       )}
-    </div>
+    </DocumentPreviewPageShell>
   );
 }

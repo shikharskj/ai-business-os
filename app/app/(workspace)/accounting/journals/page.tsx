@@ -72,24 +72,15 @@ export default async function JournalsPage({
         title="Journals"
         description="Posted journals are immutable. Corrections use reversals or adjustment journals."
         actions={
-          <div className="flex flex-wrap gap-2">
+          canPost ? (
             <Button
               nativeButton={false}
-              variant="outline"
-              render={<Link href="/app/accounting" />}
+              render={<Link href="/app/accounting/journals/new" />}
             >
-              Back
+              <Plus className="size-5" />
+              <span>Post adjustment</span>
             </Button>
-            {canPost ? (
-              <Button
-                nativeButton={false}
-                render={<Link href="/app/accounting/journals/new" />}
-              >
-                <Plus className="size-5" />
-                <span>Post adjustment</span>
-              </Button>
-            ) : null}
-          </div>
+          ) : null
         }
       />
 

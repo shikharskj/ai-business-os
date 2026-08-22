@@ -6,7 +6,7 @@ import {
   recordOpeningStockAction,
   type StockActionState,
 } from "@/app/app/(workspace)/inventory/stock/actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -80,9 +80,8 @@ export function OpeningStockForm({
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Saving…" : "Record opening stock"}
-      </Button>
+      <SubmitButton pending={isPending} pendingLabel="Saving">Record opening stock</SubmitButton>
+
     </form>
   );
 }

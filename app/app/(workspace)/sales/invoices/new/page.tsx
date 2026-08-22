@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { InvoiceForm } from "@/components/business/invoice-form";
 import { PageHeader } from "@/components/shell/page-header";
+import { DocumentPreviewPageShell } from "@/components/shell/document-form-preview-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { authorize } from "@/lib/security";
@@ -28,7 +29,7 @@ export default async function NewInvoicePage() {
   ]);
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
+    <DocumentPreviewPageShell>
       <PageHeader
         title="New invoice"
         description="GST is calculated by the tax engine when you save. Post the invoice to reduce stock and update accounts."
@@ -96,6 +97,6 @@ export default async function NewInvoicePage() {
           }))}
         />
       )}
-    </div>
+    </DocumentPreviewPageShell>
   );
 }

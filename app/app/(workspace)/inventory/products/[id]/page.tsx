@@ -102,10 +102,6 @@ export default async function ProductDetailPage({
         }
       />
 
-      {query.saved ? (
-        <p className="text-base text-muted-foreground">Product saved.</p>
-      ) : null}
-
       <div className="flex items-center gap-2">
         <StatusBadge tone={kindBadge.tone}>{kindBadge.label}</StatusBadge>
         <StatusBadge tone={trackingBadge.tone}>{trackingBadge.label}</StatusBadge>

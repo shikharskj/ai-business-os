@@ -7,7 +7,7 @@ import {
   type CustomerActionState,
 } from "@/app/app/(workspace)/sales/customers/actions";
 import { CustomerFormFields } from "@/components/business/customer-form-fields";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import type { Customer } from "@/modules/party/domain/types";
 
 const initialState: CustomerActionState = {};
@@ -30,9 +30,8 @@ export function EditCustomerForm({ customer }: { customer: Customer }) {
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Saving…" : "Save changes"}
-      </Button>
+      <SubmitButton pending={isPending} pendingLabel="Saving">Save changes</SubmitButton>
+
     </form>
   );
 }

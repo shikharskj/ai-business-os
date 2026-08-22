@@ -165,6 +165,13 @@ export function createPrismaWorkflowRunRepository(
       return row ? mapRun(row) : null;
     },
 
+    async findById(tenantId, runId) {
+      const row = await client.workflowRun.findFirst({
+        where: { id: runId, tenantId },
+      });
+      return row ? mapRun(row) : null;
+    },
+
     async claimDue(input) {
       const take = Math.min(Math.max(input.limit, 1), 100);
       const due = await client.workflowRun.findMany({

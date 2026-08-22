@@ -142,5 +142,5 @@ export async function recordCustomerPaymentAction(
   revalidatePath("/app/sales/payments");
   revalidatePath("/app/sales/invoices");
   revalidatePath("/app/sales/customers");
-  redirect(`/app/sales/payments/${paymentId}`);
+  redirect(`/app/sales/payments/${paymentId}?created=1`);
 }

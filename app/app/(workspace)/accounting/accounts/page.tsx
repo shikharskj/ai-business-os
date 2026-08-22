@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { PageHeader } from "@/components/shell/page-header";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -34,15 +33,6 @@ export default async function ChartOfAccountsPage() {
       <PageHeader
         title="Chart of accounts"
         description="Per-tenant chart used by the posting service. Accounts are not edited from this screen."
-        actions={
-          <Button
-            nativeButton={false}
-            variant="outline"
-            render={<Link href="/app/accounting" />}
-          >
-            Back
-          </Button>
-        }
       />
 
       <div className="overflow-hidden rounded-md border border-border">

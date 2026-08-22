@@ -42,14 +42,9 @@ export default async function ExpensesReportPage({
         title="Expense report"
         description="Expenses for the selected period from recorded expense documents."
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button nativeButton={false} variant="outline" render={<Link href="/app/reports" />}>
-              Back
-            </Button>
-            <Button nativeButton={false} variant="outline" render={<a href={exportHref} />}>
-              Export CSV
-            </Button>
-          </div>
+          <Button nativeButton={false} variant="outline" render={<a href={exportHref} />}>
+            Export CSV
+          </Button>
         }
       />
 

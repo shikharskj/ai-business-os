@@ -9,7 +9,15 @@ import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
-export function AppTopBar({ children }: { children?: React.ReactNode }) {
+import type { MembershipRole } from "@/modules/tenant/domain/types";
+
+export function AppTopBar({
+  children,
+  role,
+}: {
+  children?: React.ReactNode;
+  role: MembershipRole;
+}) {
   return (
     <header className="flex h-14 min-w-0 shrink-0 items-center gap-2 overflow-x-hidden border-b border-border bg-background px-4">
       <SidebarTrigger className="-ml-1 shrink-0" />
@@ -18,7 +26,7 @@ export function AppTopBar({ children }: { children?: React.ReactNode }) {
         {children}
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <WorkspaceCommandMenu />
+        <WorkspaceCommandMenu role={role} />
         <AssistantLauncher />
         <NotificationInbox />
         <OrganizationSwitcher

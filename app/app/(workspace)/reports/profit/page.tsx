@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { MoneyDisplay } from "@/components/business/money-display";
 import { ReportDateRangeForm } from "@/components/business/report-date-range-form";
 import { PageHeader } from "@/components/shell/page-header";
@@ -36,14 +34,9 @@ export default async function ProfitReportPage({
         title="Profit summary"
         description="Sales taxable amount minus expenses for the period. Same basis as the dashboard profit KPI."
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button nativeButton={false} variant="outline" render={<Link href="/app/reports" />}>
-              Back
-            </Button>
-            <Button nativeButton={false} variant="outline" render={<a href={exportHref} />}>
-              Export CSV
-            </Button>
-          </div>
+          <Button nativeButton={false} variant="outline" render={<a href={exportHref} />}>
+            Export CSV
+          </Button>
         }
       />
 

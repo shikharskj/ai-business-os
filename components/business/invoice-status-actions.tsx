@@ -1,6 +1,7 @@
 "use client";
 
 import { MoreHorizontal } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import {
@@ -15,8 +16,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { PendingButton } from "@/components/ui/pending-button";
+import { notifyError, notifySuccess } from "@/lib/feedback/toast";
 import { isPostedInvoiceStatus } from "@/modules/sales/domain/invoice-status";
 import type { SalesInvoiceStatus } from "@/modules/sales/domain/types";
+
+type PendingAction = "post" | "export" | "cancel" | null;
 
 export function InvoiceStatusActions({
   invoiceId,
@@ -31,24 +36,30 @@ export function InvoiceStatusActions({
   canUpdate: boolean;
   canCancel: boolean;
   canRead: boolean;
-  /** When true, Export PDF lives in the overflow menu (e.g. Record payment is primary). */
   exportInMenu?: boolean;
 }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [isPending, startTransition] = useTransition();
 
   function run(
+    actionKey: PendingAction,
     message: string | null,
-    action: (id: string) => Promise<{ error?: string; documentId?: string }>
+    action: (id: string) => Promise<{ error?: string; documentId?: string }>,
+    success?: { title: string; description?: string }
   ) {
     if (message && !window.confirm(message)) {
       return;
     }
     startTransition(async () => {
+      setPendingAction(actionKey);
       setError(null);
       const result = await action(invoiceId);
+      setPendingAction(null);
       if (result.error) {
         setError(result.error);
+        notifyError("Could not update invoice", result.error);
         return;
       }
       if (result.documentId) {
@@ -58,12 +69,19 @@ export function InvoiceStatusActions({
           "noopener,noreferrer"
         );
         if (!opened) {
-          setError("Popup blocked. Please allow popups to open the PDF.");
+          const popupError = "Popup blocked. Please allow popups to open the PDF.";
+          setError(popupError);
+          notifyError("Could not open PDF", popupError);
+          return;
         }
-        window.location.reload();
+        notifySuccess("PDF ready", "Your invoice PDF opened in a new tab.");
+        router.refresh();
         return;
       }
-      window.location.reload();
+      if (success) {
+        notifySuccess(success.title, success.description);
+      }
+      router.refresh();
     });
   }
 
@@ -72,7 +90,11 @@ export function InvoiceStatusActions({
   const showCancel = canCancel && status === "DRAFT";
   const menuItems = [
     showExport && exportInMenu
-      ? { key: "export", label: "Export PDF", action: () => run(null, exportInvoicePdfAction) }
+      ? {
+          key: "export",
+          label: "Export PDF",
+          action: () => run("export", null, exportInvoicePdfAction),
+        }
       : null,
     showCancel
       ? {
@@ -80,8 +102,13 @@ export function InvoiceStatusActions({
           label: "Cancel draft",
           action: () =>
             run(
+              "cancel",
               "Cancel this draft invoice? It will remain in your list as cancelled. Stock and accounts are not affected.",
-              cancelInvoiceAction
+              cancelInvoiceAction,
+              {
+                title: "Draft cancelled",
+                description: "The invoice remains in your list as cancelled.",
+              }
             ),
         }
       : null,
@@ -91,28 +118,33 @@ export function InvoiceStatusActions({
     <div className="flex flex-col items-end gap-2">
       <div className="flex flex-wrap items-center justify-end gap-2">
         {showPost ? (
-          <Button
+          <PendingButton
             type="button"
-            disabled={isPending}
+            pending={isPending && pendingAction === "post"}
             onClick={() =>
               run(
+                "post",
                 "Post this invoice? Inventory-tracked items will be reduced and accounts will be updated. This cannot be undone by editing the invoice.",
-                postInvoiceAction
+                postInvoiceAction,
+                {
+                  title: "Invoice posted",
+                  description: "Inventory and accounts have been updated.",
+                }
               )
             }
           >
             Post invoice
-          </Button>
+          </PendingButton>
         ) : null}
         {showExport && !exportInMenu ? (
-          <Button
+          <PendingButton
             type="button"
             variant="outline"
-            disabled={isPending}
-            onClick={() => run(null, exportInvoicePdfAction)}
+            pending={isPending && pendingAction === "export"}
+            onClick={() => run("export", null, exportInvoicePdfAction)}
           >
             Export PDF
-          </Button>
+          </PendingButton>
         ) : null}
         {menuItems.length > 0 ? (
           <DropdownMenu>

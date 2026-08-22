@@ -49,6 +49,12 @@ describe("createBusinessWithOrganization", () => {
         async listUserOrganizations() {
           return [];
         },
+        async listOrganizationMemberships() {
+          return [];
+        },
+        async listPendingInvitations() {
+          return [];
+        },
       },
     });
 
@@ -99,6 +105,12 @@ describe("createBusinessWithOrganization", () => {
       async listUserOrganizations() {
         clerkCalls.push("list");
         return [...createdOrgs];
+      },
+      async listOrganizationMemberships() {
+        return [];
+      },
+      async listPendingInvitations() {
+        return [];
       },
     };
 

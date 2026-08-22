@@ -435,45 +435,63 @@ Business / Workspace
 ─────────────────────
 Dashboard
 
-Sales
+Sales            (collapsible toggle — not a page)
   Quotations
   Invoices
   Customers
-  Payments
+  Customer payments
 
-Purchases
+Purchases        (collapsible toggle)
   Suppliers
   Bills
-  Payments
+  Supplier payments
 
-Inventory
+Inventory        (collapsible toggle)
   Products
   Stock
-
+─────────────────────
 Expenses
 
-Accounting
+Accounting       (collapsible toggle; default collapsed)
+  Chart of accounts
+  Journals
+  Ledger
+  Trial balance
+  Periods
 
-Reports
-
+Reports          (collapsible toggle; default collapsed)
+  Sales
+  Expenses
+  Profit
+  Receivables
+  Payables
+  Inventory
+  GST summary
 ─────────────────────
-Settings
+Settings         (link + collapsible children; default collapsed)
+  Members
+  Documents
 ```
 
-The exact navigation must follow `Project overview.md`.
+The exact navigation must follow `Project overview.md`. Nav tree and permissions live in `components/shell/workspace-nav.ts`; sidebar and command menu both consume it.
 
 Sidebar rules:
 
 - Use shadcn `Sidebar` primitives (`collapsible="icon"`).
 - Header: compact brand tile (icon on `--primary`) plus business name and “Workspace”.
-- Menu rows use comfortable height (`h-10` default, `h-9` nested items) at `text-base` with `size-5` icons. Sidebar width is `18rem`. Group labels use `text-sm`.
-- Group modules with labels/separators; keep Settings in the footer. The AI assistant opens from the top bar sheet only (not a sidebar nav item).
+- Menu rows use comfortable height (`h-10` default, `h-9` nested items) at `text-base` with `size-5` icons. Sidebar width is `18rem`.
+- **Module parents (Sales, Purchases, Inventory, Accounting, Reports) are expand/collapse toggles only** — they do not navigate. Chevron + quiet hover on the row; active highlight on the **leaf** only.
+- **Default open:** Sales, Purchases, Inventory. **Default collapsed:** Accounting, Reports, Settings. Persist user toggles in `localStorage`; auto-open the group containing the current page on navigation.
+- **Settings** parent row links to `/app/settings`; chevron toggles Members / Documents without navigating.
+- **Search** is not a sidebar item — use the top-bar command menu (`⌘K`) and `/app/search`.
+- Separate sections with `SidebarSeparator` only (no “Overview” / “Operations” / “Account” group labels). Settings stays in the footer.
+- Hide nav leaves the current role cannot access; omit empty groups. Icon-collapsed sidebar: parent icon opens a dropdown of visible children.
+- The AI assistant opens from the top bar sheet only (not a sidebar nav item).
 - Do not add fake Quick Create or unused dashboard shortcuts.
-- Clearly highlight the current section.
 - Avoid more than two levels of nesting.
 - Use icons + labels.
-- Do not hide critical navigation behind ambiguous icons.
 - On mobile, convert to a drawer/sheet.
+- **Ledger and Trial balance** live under Accounting only (not duplicated under Reports). Hub URLs (`/app/sales`, `/app/purchases`, `/app/accounting`, `/app/reports`) redirect to a sensible first child.
 
 ---
 
@@ -628,7 +646,14 @@ Row order within a page can be changed with the drag handle; order is persisted 
 
 **Sales forms:** Customer and product fields use the searchable `Combobox`; business dates use the shared `DatePicker` (ISO `value` / `onValueChange`). Line rows show pre-GST subtotal (qty × rate − discount); tax amounts come from the server preview only. “New customer” / “New product” are text links to full create pages (no inline modals).
 
-**Sales hub (`/app/sales`):** Directory cards for Quotations, Invoices, Customers, and Payments (permission-filtered). When the member has `invoice:read`, show open receivables and an overdue shortcut.
+**Sales submodule pages** (`/app/sales/*`) are the sales destinations. `/app/sales` redirects to Invoices. No directory hub page.
+
+**Settings (`/app/settings`):** Two-column layout on desktop — **Business profile** (primary, left) with logo, autonomy, and recent automations stacked on the right; single column on mobile (profile first). Members and Documents are nested under Settings in the sidebar (and remain reachable from header actions on the settings page).
+
+- **`settings:read`** — view profile, logo preview, autonomy values, automation history, and members list.
+- **`settings:update`** — edit profile, logo upload/remove, autonomy policy, and send invites (OWNER/ADMIN).
+- **`settings:role:assign`** — change member roles on `/app/settings/members` (OWNER only; cannot reassign Owner or self).
+- Recent automation rows link to `/app/settings/automations/:id` with status, trigger, attempts, and a permission-gated link to the related invoice/quotation/product/expense when available.
 
 Wrap list tables in a shell: `overflow-hidden rounded-md border border-border bg-card`. Keep a toolbar row for GET filter forms above the table; omit `page` on filter submit so results reset to page 1. Include a **Clear** link that drops filter query params (same path, no query).
 
@@ -715,6 +740,8 @@ Billing Address
 ```
 
 Do not expose database field names directly to users.
+
+**Indian address fields:** PIN code appears before city/state. City uses a creatable combobox (custom towns allowed); state uses a searchable combobox from GST state codes only. PIN lookup is suggest-only — unique matches show an “Apply suggestion” chip; ambiguous PINs list city options; never auto-overwrite city/state after the user has edited them. Optional India Post API fallback when `NEXT_PUBLIC_PIN_LOOKUP_API_ENABLED=true`.
 
 ---
 
@@ -949,6 +976,16 @@ Use spinners for:
 - Short actions.
 
 Do not block the entire application for a small asynchronous operation.
+
+### Loading skeleton fidelity
+
+Page-level skeletons must reuse the same layout grid, filter form structure, and table chrome as the loaded page — not generic placeholder rectangles.
+
+- **Dashboard:** mirror `DashboardCanvas` (`lg:grid-cols-3`, KPI cards `xl:grid-cols-4` / `min-h-36`, chart card, daily brief + activity rail).
+- **List tables:** labeled filter fields (`ListFilterFormSkeleton`), native `Table` with `h-12` headers and `py-3` cells, pagination footer when the real page paginates (`DataTableSkeleton` / `NativeTableSkeleton`).
+- **Presets:** route `loading.tsx` files pass named presets from `list-table-presets.ts` so column and filter counts match each data table.
+
+Prefer component-faithful skeletons over anonymous blocks. Keep deprecated `FilterRowSkeleton` / `TableRowsSkeleton` only for non-list templates (detail, report) until migrated.
 
 Buttons should communicate submission state:
 
@@ -1354,15 +1391,17 @@ Prefer:
 
 ```text
 Dashboard
-Sales
-Purchases
-Inventory
+Sales (toggle → submodule pages)
+Purchases (toggle)
+Inventory (toggle)
 Expenses
-Accounting
-Reports
-AI Assistant
-Settings
+Accounting (toggle; ledger/trial balance here)
+Reports (toggle; business summaries + GST)
+Settings (link + Members / Documents)
+AI Assistant (top bar only)
 ```
+
+Global search: command menu (`⌘K`) lists permission-filtered workspace pages plus record search — not a duplicate sidebar item.
 
 Avoid creating a separate top-level navigation item for every small feature.
 

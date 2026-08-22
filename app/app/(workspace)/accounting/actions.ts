@@ -171,7 +171,7 @@ export async function postAdjustmentAction(
   revalidatePath("/app/accounting/journals");
   revalidatePath("/app/accounting/ledger");
   revalidatePath("/app/accounting/trial-balance");
-  redirect(`/app/accounting/journals/${journalId}`);
+  redirect(`/app/accounting/journals/${journalId}?created=1`);
 }
 
 export async function reverseJournalAction(
@@ -216,5 +216,5 @@ export async function reverseJournalAction(
   revalidatePath("/app/accounting/journals");
   revalidatePath("/app/accounting/ledger");
   revalidatePath("/app/accounting/trial-balance");
-  redirect(`/app/accounting/journals/${reversalId}`);
+  redirect(`/app/accounting/journals/${reversalId}?created=1`);
 }

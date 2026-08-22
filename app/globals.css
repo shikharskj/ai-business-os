@@ -90,8 +90,8 @@
   --state-warning-subtle: oklch(0.97 0.03 85);
   --state-error: var(--destructive);
   --state-error-subtle: oklch(0.97 0.02 27);
-  --state-info: var(--foreground);
-  --state-info-subtle: var(--muted);
+  --state-info: oklch(0.52 0.16 252);
+  --state-info-subtle: oklch(0.96 0.03 252);
   --text-disabled: oklch(0.708 0 0);
   --border-strong: oklch(0.87 0 0);
 
@@ -147,8 +147,8 @@
   --state-warning-subtle: oklch(0.269 0.04 70);
   --state-error: var(--destructive);
   --state-error-subtle: oklch(0.269 0.05 22);
-  --state-info: var(--foreground);
-  --state-info-subtle: var(--muted);
+  --state-info: oklch(0.72 0.12 252);
+  --state-info-subtle: oklch(0.269 0.05 252);
   --text-disabled: oklch(0.556 0 0);
   --border-strong: oklch(1 0 0 / 18%);
 }

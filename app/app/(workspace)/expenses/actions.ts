@@ -112,7 +112,7 @@ export async function recordExpenseAction(
   }
 
   revalidatePath("/app/expenses");
-  redirect(`/app/expenses/${expenseId}`);
+  redirect(`/app/expenses/${expenseId}?created=1`);
 }
 
 export async function uploadExpenseDocumentAction(

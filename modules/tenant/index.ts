@@ -76,3 +76,9 @@ export {
   assignMemberRole,
   RoleAssignmentError,
 } from "@/modules/tenant/application/assign-role";
+export {
+  listOrganizationMembers,
+  type OrganizationMemberRow,
+  type OrganizationMembersSnapshot,
+  type PendingInvitationRow,
+} from "@/modules/tenant/application/list-organization-members";

@@ -7,7 +7,7 @@ import {
   type SupplierActionState,
 } from "@/app/app/(workspace)/purchases/suppliers/actions";
 import { CustomerFormFields } from "@/components/business/customer-form-fields";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 const initialState: SupplierActionState = {};
 
@@ -29,9 +29,8 @@ export function CreateSupplierForm() {
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Saving…" : "Create supplier"}
-      </Button>
+      <SubmitButton pending={isPending} pendingLabel="Saving">Create supplier</SubmitButton>
+
     </form>
   );
 }

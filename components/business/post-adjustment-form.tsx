@@ -6,6 +6,7 @@ import {
   postAdjustmentAction,
   type AccountingActionState,
 } from "@/app/app/(workspace)/accounting/actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -241,9 +242,13 @@ export function PostAdjustmentForm({
       ) : null}
 
       <div>
-        <Button type="submit" disabled={isPending || accounts.length === 0}>
-          {isPending ? "Posting…" : "Post adjustment"}
-        </Button>
+        <SubmitButton
+          pending={isPending}
+          pendingLabel="Posting"
+          disabled={accounts.length === 0}
+        >
+          Post adjustment
+        </SubmitButton>
       </div>
     </form>
   );

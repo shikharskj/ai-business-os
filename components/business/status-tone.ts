@@ -49,7 +49,7 @@ export function invoicePaymentBadgePresentation(status: SalesInvoiceStatus): {
   if (status === "DRAFT") return { tone: "neutral", label };
   if (status === "CANCELLED") return { tone: "danger", label };
   if (status === "PAID") return { tone: "success", label };
-  if (status === "PARTIALLY_PAID") return { tone: "warning", label };
+  if (status === "PARTIALLY_PAID") return { tone: "info", label };
   if (status === "POSTED" || status === "UNPAID") return { tone: "warning", label };
   return { tone: "neutral", label };
 }

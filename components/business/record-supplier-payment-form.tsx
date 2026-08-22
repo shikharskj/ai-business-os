@@ -7,6 +7,7 @@ import {
   recordSupplierPaymentAction,
   type SupplierPaymentActionState,
 } from "@/app/app/(workspace)/purchases/payments/actions";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MoneyDisplay } from "@/components/business/money-display";
 import { formatINR } from "@/modules/shared-kernel/format-money";
 import { money, moneyFromMajor, toMajorString } from "@/modules/shared-kernel/money";
+import { FORM_PLACEHOLDERS } from "@/lib/forms/placeholders";
 import {
   PAYMENT_METHOD_LABELS,
   PAYMENT_METHODS,
@@ -95,15 +97,8 @@ function RecordSupplierPaymentFormFields({
     (row) => row.purchaseId === selectedPurchaseId
   );
   const [method, setMethod] = useState<PaymentMethod>("CASH");
-  const [amount, setAmount] = useState(() =>
-    selectedPurchase ? toMajorString(selectedPurchase.outstanding) : ""
-  );
-  const [allocations, setAllocations] = useState<Record<string, string>>(() => {
-    if (!selectedPurchase) {
-      return {};
-    }
-    return { [selectedPurchase.purchaseId]: toMajorString(selectedPurchase.outstanding) };
-  });
+  const [amount, setAmount] = useState("");
+  const [allocations, setAllocations] = useState<Record<string, string>>({});
 
   const methodItems = useMemo(
     () =>
@@ -124,6 +119,27 @@ function RecordSupplierPaymentFormFields({
   const selectedSupplier = suppliers.find(
     (supplier) => supplier.id === selectedSupplierId
   );
+
+  function fillOutstanding() {
+    if (selectedPurchase) {
+      const outstanding = toMajorString(selectedPurchase.outstanding);
+      setAmount(outstanding);
+      setAllocations({ [selectedPurchase.purchaseId]: outstanding });
+      return;
+    }
+    const nextAllocations = Object.fromEntries(
+      purchases.map((purchase) => [
+        purchase.purchaseId,
+        toMajorString(purchase.outstanding),
+      ])
+    );
+    const totalMinor = purchases.reduce(
+      (sum, purchase) => sum + purchase.outstanding.amountMinor,
+      0n
+    );
+    setAmount(toMajorString(money(totalMinor)));
+    setAllocations(nextAllocations);
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
@@ -195,9 +211,16 @@ function RecordSupplierPaymentFormFields({
         </div>
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="amount" className="text-base font-medium">
-            Amount paid
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor="amount" className="text-base font-medium">
+              Amount paid
+            </label>
+            {purchases.length > 0 ? (
+              <Button type="button" variant="ghost" size="sm" onClick={fillOutstanding}>
+                Fill outstanding
+              </Button>
+            ) : null}
+          </div>
           <Input
             id="amount"
             name="amount"
@@ -205,7 +228,7 @@ function RecordSupplierPaymentFormFields({
             required
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
-            placeholder="0.00"
+            placeholder={FORM_PLACEHOLDERS.price}
           />
           <FieldError name="amount" fieldErrors={state.fieldErrors} />
         </div>
@@ -217,7 +240,7 @@ function RecordSupplierPaymentFormFields({
           <Input
             id="reference"
             name="reference"
-            placeholder="UPI ref, cheque no., or transfer note"
+            placeholder={FORM_PLACEHOLDERS.reference}
           />
           <FieldError name="reference" fieldErrors={state.fieldErrors} />
         </div>
@@ -227,7 +250,7 @@ function RecordSupplierPaymentFormFields({
         <label htmlFor="notes" className="text-base font-medium">
           Notes
         </label>
-        <Textarea id="notes" name="notes" rows={3} />
+        <Textarea id="notes" name="notes" rows={3} placeholder={FORM_PLACEHOLDERS.notes} />
         <FieldError name="notes" fieldErrors={state.fieldErrors} />
       </div>
 
@@ -310,9 +333,13 @@ function RecordSupplierPaymentFormFields({
       ) : null}
 
       <div>
-        <Button type="submit" disabled={isPending || purchases.length === 0}>
-          {isPending ? "Recording payment…" : "Record payment"}
-        </Button>
+        <SubmitButton
+          pending={isPending}
+          pendingLabel="Recording payment"
+          disabled={purchases.length === 0}
+        >
+          Record payment
+        </SubmitButton>
       </div>
     </form>
   );

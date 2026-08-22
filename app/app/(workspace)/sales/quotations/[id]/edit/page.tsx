@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { QuotationForm } from "@/components/business/quotation-form";
 import { PageHeader } from "@/components/shell/page-header";
+import { DocumentPreviewPageShell } from "@/components/shell/document-form-preview-layout";
 import { Button } from "@/components/ui/button";
 import { authorize } from "@/lib/security";
 import { listCustomers } from "@/modules/party";
@@ -60,7 +61,7 @@ export default async function EditQuotationPage({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
+    <DocumentPreviewPageShell>
       <PageHeader
         title={`Edit ${quotation.number}`}
         description="Saving recalculates GST through the tax engine."
@@ -101,6 +102,6 @@ export default async function EditQuotationPage({
           hsnSac: product.hsnSac,
         }))}
       />
-    </div>
+    </DocumentPreviewPageShell>
   );
 }

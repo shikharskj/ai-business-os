@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { InvoiceForm } from "@/components/business/invoice-form";
 import { PageHeader } from "@/components/shell/page-header";
+import { DocumentPreviewPageShell } from "@/components/shell/document-form-preview-layout";
 import { Button } from "@/components/ui/button";
 import { authorize } from "@/lib/security";
 import { listCustomers, getCustomer } from "@/modules/party";
@@ -77,7 +78,7 @@ export default async function EditInvoicePage({
   const customers = [...customerMap.values()];
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
+    <DocumentPreviewPageShell>
       <PageHeader
         title={`Edit ${invoice.number}`}
         description="Saving recalculates GST through the tax engine. Only draft invoices can be edited."
@@ -106,6 +107,6 @@ export default async function EditInvoicePage({
           hsnSac: product.hsnSac,
         }))}
       />
-    </div>
+    </DocumentPreviewPageShell>
   );
 }

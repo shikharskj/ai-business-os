@@ -6,7 +6,7 @@ import {
   recordExpenseAction,
   type ExpenseActionState,
 } from "@/app/app/(workspace)/expenses/actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { FORM_PLACEHOLDERS } from "@/lib/forms/placeholders";
 import {
   EXPENSE_CATEGORIES,
   EXPENSE_CATEGORY_LABELS,
@@ -207,7 +208,7 @@ export function RecordExpenseForm({ today }: { today: string }) {
           <Input
             id="vendorGstin"
             name="vendorGstin"
-            placeholder="27AAAAA0000A1Z5"
+            placeholder={FORM_PLACEHOLDERS.gstin}
           />
           <FieldError name="vendorGstin" fieldErrors={state.fieldErrors} />
         </div>
@@ -217,7 +218,7 @@ export function RecordExpenseForm({ today }: { today: string }) {
         <label htmlFor="notes" className="text-base font-medium">
           Notes
         </label>
-        <Textarea id="notes" name="notes" rows={3} />
+        <Textarea id="notes" name="notes" rows={3} placeholder={FORM_PLACEHOLDERS.notes} />
         <FieldError name="notes" fieldErrors={state.fieldErrors} />
       </div>
 
@@ -228,9 +229,9 @@ export function RecordExpenseForm({ today }: { today: string }) {
       ) : null}
 
       <div>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Recording expense…" : "Record expense"}
-        </Button>
+        <SubmitButton pending={isPending} pendingLabel="Recording expense">
+          Record expense
+        </SubmitButton>
       </div>
     </form>
   );

@@ -7,7 +7,7 @@ import {
   type ProductActionState,
 } from "@/app/app/(workspace)/inventory/products/actions";
 import { ProductFormFields } from "@/components/business/product-form-fields";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 const initialState: ProductActionState = {};
 
@@ -28,9 +28,8 @@ export function CreateProductForm() {
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Saving…" : "Create product"}
-      </Button>
+      <SubmitButton pending={isPending} pendingLabel="Saving">Create product</SubmitButton>
+
     </form>
   );
 }

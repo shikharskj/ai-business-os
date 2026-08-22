@@ -31,18 +31,13 @@ export default async function InventoryReportPage() {
         title="Inventory report"
         description="Current stock positions for inventory-tracked products. Low-stock uses the business threshold."
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button nativeButton={false} variant="outline" render={<Link href="/app/reports" />}>
-              Back
-            </Button>
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<a href="/api/reports/inventory/export" />}
-            >
-              Export CSV
-            </Button>
-          </div>
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<a href="/api/reports/inventory/export" />}
+          >
+            Export CSV
+          </Button>
         }
       />
 

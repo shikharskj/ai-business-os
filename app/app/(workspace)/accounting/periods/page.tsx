@@ -1,21 +1,13 @@
-import Link from "next/link";
-
 import { ClosePeriodForm } from "@/components/business/close-period-form";
 import { PageHeader } from "@/components/shell/page-header";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
 import { getPeriodStatus } from "@/modules/accounting";
 import { todayInTimezone } from "@/modules/shared-kernel/dates";
 
-export default async function PeriodsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ closed?: string }>;
-}) {
+export default async function PeriodsPage() {
   const tenant = await authorize("report:read");
-  const params = await searchParams;
   const canPost = roleHasPermission(tenant.membership.role, "accounting:post");
   const period = getPeriodStatus({
     today: todayInTimezone(tenant.business.timezone),
@@ -27,20 +19,7 @@ export default async function PeriodsPage({
       <PageHeader
         title="Accounting periods"
         description="View the current period and close periods to block unauthorized posts."
-        actions={
-          <Button
-            nativeButton={false}
-            variant="outline"
-            render={<Link href="/app/accounting" />}
-          >
-            Back
-          </Button>
-        }
       />
-
-      {params.closed ? (
-        <p className="text-base text-muted-foreground">Period closed successfully.</p>
-      ) : null}
 
       <Card>
         <CardHeader>

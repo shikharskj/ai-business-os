@@ -1,9 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { deactivateSupplierAction } from "@/app/app/(workspace)/purchases/suppliers/actions";
-import { Button } from "@/components/ui/button";
+import { PendingButton } from "@/components/ui/pending-button";
+import { notifyError, notifySuccess } from "@/lib/feedback/toast";
 
 export function DeactivateSupplierButton({
   supplierId,
@@ -12,15 +14,17 @@ export function DeactivateSupplierButton({
   supplierId: string;
   supplierName: string;
 }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   return (
     <div className="flex flex-col items-end gap-2">
-      <Button
+      <PendingButton
         type="button"
         variant="destructive"
-        disabled={isPending}
+        pending={isPending}
+        pendingLabel="Deactivating"
         onClick={() => {
           if (
             !window.confirm(
@@ -35,12 +39,16 @@ export function DeactivateSupplierButton({
             const result = await deactivateSupplierAction(supplierId);
             if (result.error) {
               setError(result.error);
+              notifyError("Could not deactivate supplier", result.error);
+              return;
             }
+            notifySuccess("Supplier deactivated", `${supplierName} is no longer active.`);
+            router.refresh();
           });
         }}
       >
-        {isPending ? "Deactivating…" : "Deactivate"}
-      </Button>
+        Deactivate
+      </PendingButton>
       {error ? (
         <p className="text-base text-destructive" role="alert">
           {error}

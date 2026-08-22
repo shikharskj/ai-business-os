@@ -100,6 +100,15 @@ export function createPartyInputSchema(nameRequiredMessage: string) {
           });
         }
       }
+
+      const postalCode = value.postalCode?.trim();
+      if (postalCode && !/^\d{6}$/.test(postalCode)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "PIN code must be exactly 6 digits",
+          path: ["postalCode"],
+        });
+      }
     });
 }
 

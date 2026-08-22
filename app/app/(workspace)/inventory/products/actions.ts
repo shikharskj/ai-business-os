@@ -110,7 +110,7 @@ export async function createProductAction(
   }
 
   revalidatePath("/app/inventory/products");
-  redirect(`/app/inventory/products/${productId}`);
+  redirect(`/app/inventory/products/${productId}?created=1`);
 }
 
 export async function updateProductAction(

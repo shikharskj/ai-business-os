@@ -110,7 +110,7 @@ export async function createSupplierAction(
   }
 
   revalidatePath("/app/purchases/suppliers");
-  redirect(`/app/purchases/suppliers/${supplierId}`);
+  redirect(`/app/purchases/suppliers/${supplierId}?created=1`);
 }
 
 export async function updateSupplierAction(
