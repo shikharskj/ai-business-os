@@ -230,8 +230,14 @@ export function parseInitialLineIndex(value?: string | null): number | undefined
   if (!value) {
     return undefined;
   }
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed < 0) {
+  const trimmed = value.trim();
+  // Reject non-integer inputs (e.g., "3.14", "3e10", "abc", "3abc")
+  if (!/^\d+$/.test(trimmed)) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(trimmed, 10);
+  // Reject negative, non-safe integers, or values exceeding the maximum supported lines (1000)
+  if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 1000) {
     return undefined;
   }
   return parsed;

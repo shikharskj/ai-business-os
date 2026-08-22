@@ -208,17 +208,19 @@ export function BillForm({
             <label htmlFor="supplierId" className="text-base font-medium">
               Supplier
             </label>
-            <Link
-              href={buildEntityCreateHref({
-                entity: "supplier",
-                returnTo: "/app/purchases/bills/new",
-                preserveQuery: supplierId ? { supplierId } : undefined,
-              })}
-              className="flex items-center gap-2 text-sm font-medium text-(--state-info) hover:font-semibold"
-            >
-              <Plus className="size-4" />
-              <span>New supplier</span>
-            </Link>
+            {!purchase ? (
+              <Link
+                href={buildEntityCreateHref({
+                  entity: "supplier",
+                  returnTo: "/app/purchases/bills/new",
+                  preserveQuery: supplierId ? { supplierId } : undefined,
+                })}
+                className="flex items-center gap-2 text-sm font-medium text-(--state-info) hover:font-semibold"
+              >
+                <Plus className="size-4" />
+                <span>New supplier</span>
+              </Link>
+            ) : null}
           </div>
           <Select
             value={supplierId}
@@ -341,20 +343,22 @@ export function BillForm({
                   <label className="text-base font-medium" htmlFor={`line-${index}-product`}>
                     Product / service
                   </label>
-                  <Link
-                    href={buildEntityCreateHref({
-                      entity: "product",
-                      returnTo: "/app/purchases/bills/new",
-                      preserveQuery: {
-                        supplierId: supplierId || undefined,
-                        lineIndex: String(index),
-                      },
-                    })}
-                    className="flex items-center gap-2 text-xs font-medium text-(--state-info) hover:font-semibold"
-                  >
-                    <Plus className="size-4" />
-                    New product
-                  </Link>
+                  {!purchase ? (
+                    <Link
+                      href={buildEntityCreateHref({
+                        entity: "product",
+                        returnTo: "/app/purchases/bills/new",
+                        preserveQuery: {
+                          supplierId: supplierId || undefined,
+                          lineIndex: String(index),
+                        },
+                      })}
+                      className="flex items-center gap-2 text-xs font-medium text-(--state-info) hover:font-semibold"
+                    >
+                      <Plus className="size-4" />
+                      New product
+                    </Link>
+                  ) : null}
                 </div>
                 <Select
                   value={line.productId}
