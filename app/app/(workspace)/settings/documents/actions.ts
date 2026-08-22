@@ -98,8 +98,13 @@ export async function deleteBusinessDocumentAction(
     });
 
     if (tenant.business.logoDocumentId === documentId) {
-      await prismaBusinessRepository.setLogoDocumentId(tenant.tenantId, null);
-      revalidateLogoSurfaces();
+      const wasCleared = await prismaBusinessRepository.clearLogoDocumentIdIfMatches(
+        tenant.tenantId,
+        documentId
+      );
+      if (wasCleared) {
+        revalidateLogoSurfaces();
+      }
     }
 
     revalidatePath("/app/settings/documents");

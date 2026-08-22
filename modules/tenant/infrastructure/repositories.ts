@@ -31,6 +31,10 @@ export type BusinessRepository = {
     tenantId: string,
     logoDocumentId: string | null
   ): Promise<BusinessProfile>;
+  clearLogoDocumentIdIfMatches(
+    tenantId: string,
+    expectedLogoDocumentId: string
+  ): Promise<boolean>;
   deleteByClerkOrganizationId(clerkOrganizationId: string): Promise<void>;
 };
 
@@ -176,6 +180,22 @@ export function createMemoryBusinessRepository(
       };
       businesses.set(tenantId, updated);
       return updated;
+    },
+
+    async clearLogoDocumentIdIfMatches(tenantId, expectedLogoDocumentId) {
+      const existing = businesses.get(tenantId);
+      if (!existing) {
+        return false;
+      }
+      if (existing.logoDocumentId !== expectedLogoDocumentId) {
+        return false;
+      }
+      const updated: BusinessProfile = {
+        ...existing,
+        logoDocumentId: null,
+      };
+      businesses.set(tenantId, updated);
+      return true;
     },
 
     async deleteByClerkOrganizationId(clerkOrganizationId) {

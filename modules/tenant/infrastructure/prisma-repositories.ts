@@ -156,6 +156,17 @@ export const prismaBusinessRepository: BusinessRepository = {
     return mapBusiness(record);
   },
 
+  async clearLogoDocumentIdIfMatches(tenantId, expectedLogoDocumentId) {
+    const result = await prisma.business.updateMany({
+      where: {
+        id: tenantId,
+        logoDocumentId: expectedLogoDocumentId,
+      },
+      data: { logoDocumentId: null },
+    });
+    return result.count > 0;
+  },
+
   async deleteByClerkOrganizationId(clerkOrganizationId) {
     await prisma.business.deleteMany({ where: { clerkOrganizationId } });
   },

@@ -91,6 +91,7 @@ export async function closePeriodAction(
             };
           },
           setLogoDocumentId: prismaBusinessRepository.setLogoDocumentId,
+          clearLogoDocumentIdIfMatches: prismaBusinessRepository.clearLogoDocumentIdIfMatches,
         },
         audit: createPrismaAuditRepository(tx),
         outbox: createPrismaOutboxRepository(tx),
