@@ -99,15 +99,6 @@ export default async function LedgerPage({
       <PageHeader
         title="Ledger"
         description="Account activity from posted journals. Balances are derived from journal lines."
-        actions={
-          <Button
-            nativeButton={false}
-            variant="outline"
-            render={<Link href="/app/accounting" />}
-          >
-            Back
-          </Button>
-        }
       />
 
       {validationErrors.length > 0 ? (

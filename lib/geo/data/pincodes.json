@@ -1,0 +1,57 @@
+{
+  "110001": {
+    "state": "Delhi",
+    "districts": ["New Delhi"],
+    "postOffices": ["New Delhi GPO"]
+  },
+  "110092": {
+    "state": "Delhi",
+    "districts": ["East Delhi", "Shahdara"],
+    "postOffices": ["Mayur Vihar", "Shahdara"]
+  },
+  "400001": {
+    "state": "Maharashtra",
+    "districts": ["Mumbai"],
+    "postOffices": ["Fort", "Mumbai GPO"]
+  },
+  "411001": {
+    "state": "Maharashtra",
+    "districts": ["Pune"],
+    "postOffices": ["Pune City", "Shaniwar Peth"]
+  },
+  "560001": {
+    "state": "Karnataka",
+    "districts": ["Bengaluru"],
+    "postOffices": ["Bangalore GPO", "Basavanagudi"]
+  },
+  "560002": {
+    "state": "Karnataka",
+    "districts": ["Bengaluru"],
+    "postOffices": ["Bangalore City", "Chickpet"]
+  },
+  "600001": {
+    "state": "Tamil Nadu",
+    "districts": ["Chennai"],
+    "postOffices": ["Chennai GPO"]
+  },
+  "700001": {
+    "state": "West Bengal",
+    "districts": ["Kolkata"],
+    "postOffices": ["Kolkata GPO"]
+  },
+  "500001": {
+    "state": "Telangana",
+    "districts": ["Hyderabad"],
+    "postOffices": ["Hyderabad GPO", "Abids"]
+  },
+  "302001": {
+    "state": "Rajasthan",
+    "districts": ["Jaipur"],
+    "postOffices": ["Jaipur GPO"]
+  },
+  "380001": {
+    "state": "Gujarat",
+    "districts": ["Ahmedabad"],
+    "postOffices": ["Ahmedabad GPO"]
+  }
+}

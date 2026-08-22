@@ -1,5 +1,9 @@
 "use client";
 
+import { useState } from "react";
+
+import { IndianAddressFields } from "@/components/business/indian-address-fields";
+import { PartyGstFields } from "@/components/business/party-gst-fields";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -8,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FORM_PLACEHOLDERS } from "@/lib/forms/placeholders";
 import type { BusinessProfile } from "@/modules/tenant/domain/types";
 
 function FieldError({
@@ -51,45 +56,6 @@ function Field({
   );
 }
 
-const INDIAN_STATES = [
-  "Andhra Pradesh",
-  "Arunachal Pradesh",
-  "Assam",
-  "Bihar",
-  "Chhattisgarh",
-  "Goa",
-  "Gujarat",
-  "Haryana",
-  "Himachal Pradesh",
-  "Jharkhand",
-  "Karnataka",
-  "Kerala",
-  "Madhya Pradesh",
-  "Maharashtra",
-  "Manipur",
-  "Meghalaya",
-  "Mizoram",
-  "Nagaland",
-  "Odisha",
-  "Punjab",
-  "Rajasthan",
-  "Sikkim",
-  "Tamil Nadu",
-  "Telangana",
-  "Tripura",
-  "Uttar Pradesh",
-  "Uttarakhand",
-  "West Bengal",
-  "Andaman and Nicobar Islands",
-  "Chandigarh",
-  "Dadra and Nagar Haveli and Daman and Diu",
-  "Delhi",
-  "Jammu and Kashmir",
-  "Ladakh",
-  "Lakshadweep",
-  "Puducherry",
-] as const;
-
 const MONTHS = [
   { value: "1", label: "January" },
   { value: "2", label: "February" },
@@ -127,10 +93,15 @@ const CURRENCIES = [
 export function BusinessProfileFields({
   defaultValues,
   fieldErrors,
+  readOnly = false,
 }: {
   defaultValues?: Partial<BusinessProfile>;
   fieldErrors?: Record<string, string>;
+  readOnly?: boolean;
 }) {
+  const [state, setState] = useState(defaultValues?.state ?? "");
+  const [stateTouched, setStateTouched] = useState(false);
+
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-4">
@@ -140,13 +111,17 @@ export function BusinessProfileFields({
             id="name"
             name="name"
             defaultValue={defaultValues?.name}
-            required
+            placeholder={FORM_PLACEHOLDERS.businessName}
+            required={!readOnly}
+            readOnly={readOnly}
+            disabled={readOnly}
           />
         </Field>
         <Field label="Business type" name="type" fieldErrors={fieldErrors}>
           <Select
             name="type"
             defaultValue={defaultValues?.type ?? "PROPRIETORSHIP"}
+            disabled={readOnly}
             items={{
               PROPRIETORSHIP: "Proprietorship",
               PARTNERSHIP: "Partnership",
@@ -175,8 +150,12 @@ export function BusinessProfileFields({
           <Input
             id="phone"
             name="phone"
+            inputMode="tel"
             defaultValue={defaultValues?.phone}
-            required
+            placeholder={FORM_PLACEHOLDERS.phone}
+            required={!readOnly}
+            readOnly={readOnly}
+            disabled={readOnly}
           />
         </Field>
         <Field label="Email" name="email" fieldErrors={fieldErrors}>
@@ -185,117 +164,54 @@ export function BusinessProfileFields({
             name="email"
             type="email"
             defaultValue={defaultValues?.email}
-            required
+            placeholder={FORM_PLACEHOLDERS.email}
+            required={!readOnly}
+            readOnly={readOnly}
+            disabled={readOnly}
           />
         </Field>
       </section>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-base font-medium">Address</h2>
-        <Field label="Address line 1" name="addressLine1" fieldErrors={fieldErrors}>
-          <Input
-            id="addressLine1"
-            name="addressLine1"
-            defaultValue={defaultValues?.addressLine1}
-            required
-          />
-        </Field>
-        <Field label="Address line 2" name="addressLine2" fieldErrors={fieldErrors}>
-          <Input
-            id="addressLine2"
-            name="addressLine2"
-            defaultValue={defaultValues?.addressLine2 ?? undefined}
-          />
-        </Field>
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="City" name="city" fieldErrors={fieldErrors}>
-            <Input id="city" name="city" defaultValue={defaultValues?.city} required />
-          </Field>
-          <Field label="State" name="state" fieldErrors={fieldErrors}>
-            <Select name="state" defaultValue={defaultValues?.state ?? ""}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select state" />
-              </SelectTrigger>
-              <SelectContent>
-                {INDIAN_STATES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Postal code" name="postalCode" fieldErrors={fieldErrors}>
-            <Input
-              id="postalCode"
-              name="postalCode"
-              defaultValue={defaultValues?.postalCode}
-              required
-            />
-          </Field>
-          <Field label="Country" name="country" fieldErrors={fieldErrors}>
-            <Select
-              name="country"
-              defaultValue={defaultValues?.country ?? "IN"}
-              items={{
-                IN: "India",
-                US: "United States",
-                GB: "United Kingdom",
-                AE: "United Arab Emirates",
-                SG: "Singapore",
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select country" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="IN">India</SelectItem>
-                <SelectItem value="US">United States</SelectItem>
-                <SelectItem value="GB">United Kingdom</SelectItem>
-                <SelectItem value="AE">United Arab Emirates</SelectItem>
-                <SelectItem value="SG">Singapore</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-        </div>
+        <IndianAddressFields
+          names={{
+            line1: "addressLine1",
+            line2: "addressLine2",
+            city: "city",
+            state: "state",
+            postalCode: "postalCode",
+            country: "country",
+          }}
+          defaultValues={{
+            line1: defaultValues?.addressLine1,
+            line2: defaultValues?.addressLine2,
+            city: defaultValues?.city,
+            state: defaultValues?.state,
+            postalCode: defaultValues?.postalCode,
+            country: defaultValues?.country ?? "IN",
+          }}
+          fieldErrors={fieldErrors}
+          readOnly={readOnly}
+          required={!readOnly}
+          countryMode="select"
+          stateBridge={{ state, setState, stateTouched, setStateTouched }}
+        />
       </section>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-base font-medium">Tax and finance</h2>
-        <Field
-          label="GST registration status"
-          name="gstRegistrationStatus"
+        <PartyGstFields
+          defaultValues={{
+            gstRegistrationStatus: defaultValues?.gstRegistrationStatus,
+            gstin: defaultValues?.gstin,
+          }}
           fieldErrors={fieldErrors}
-        >
-          <Select
-            name="gstRegistrationStatus"
-            defaultValue={defaultValues?.gstRegistrationStatus ?? "NOT_REGISTERED"}
-            items={{
-              NOT_REGISTERED: "Not registered",
-              REGISTERED: "Registered",
-              COMPOSITION: "Composition scheme",
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="GST registration status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="NOT_REGISTERED">Not registered</SelectItem>
-              <SelectItem value="REGISTERED">Registered</SelectItem>
-              <SelectItem value="COMPOSITION">Composition scheme</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label="GSTIN" name="gstin" fieldErrors={fieldErrors}>
-          <Input
-            id="gstin"
-            name="gstin"
-            defaultValue={defaultValues?.gstin ?? undefined}
-            placeholder="15-character GSTIN"
-          />
-        </Field>
+          readOnly={readOnly}
+          registrationLabel="GST registration status"
+          compositionLabel="Composition scheme"
+          stateBridge={{ state, setState, stateTouched, setStateTouched }}
+        />
         <Field
           label="Default GST rate"
           name="defaultGstRateBps"
@@ -304,6 +220,7 @@ export function BusinessProfileFields({
           <Select
             name="defaultGstRateBps"
             defaultValue={String(defaultValues?.defaultGstRateBps ?? 1800)}
+            disabled={readOnly}
             items={{
               "0": "0%",
               "500": "5%",
@@ -335,6 +252,8 @@ export function BusinessProfileFields({
             inputMode="decimal"
             defaultValue={defaultValues?.lowStockThreshold ?? "5"}
             placeholder="5"
+            readOnly={readOnly}
+            disabled={readOnly}
           />
           <p className="text-xs text-muted-foreground">
             Inventory-tracked products at or below this quantity are marked
@@ -349,6 +268,7 @@ export function BusinessProfileFields({
           <Select
             name="financialYearStartMonth"
             defaultValue={String(defaultValues?.financialYearStartMonth ?? 4)}
+            disabled={readOnly}
             items={MONTHS.map((m) => ({ value: m.value, label: m.label }))}
           >
             <SelectTrigger className="w-full">
@@ -362,12 +282,17 @@ export function BusinessProfileFields({
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            Changing this affects future reports; existing posted records are
+            unchanged.
+          </p>
         </Field>
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Timezone" name="timezone" fieldErrors={fieldErrors}>
             <Select
               name="timezone"
               defaultValue={defaultValues?.timezone ?? "Asia/Kolkata"}
+              disabled={readOnly}
               items={TIMEZONES.map((tz) => ({ value: tz.value, label: tz.label }))}
             >
               <SelectTrigger className="w-full">
@@ -381,11 +306,16 @@ export function BusinessProfileFields({
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              Changing this affects future reports; existing posted records are
+              unchanged.
+            </p>
           </Field>
           <Field label="Currency" name="currency" fieldErrors={fieldErrors}>
             <Select
               name="currency"
               defaultValue={defaultValues?.currency ?? "INR"}
+              disabled={readOnly}
               items={CURRENCIES.map((c) => ({ value: c.value, label: c.label }))}
             >
               <SelectTrigger className="w-full">
@@ -399,6 +329,10 @@ export function BusinessProfileFields({
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              Changing this affects future reports; existing posted records are
+              unchanged.
+            </p>
           </Field>
         </div>
       </section>

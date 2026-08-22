@@ -6,7 +6,8 @@ import {
   updateAutonomyPolicyAction,
   type ActionState,
 } from "@/app/app/actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
+import { useActionFeedback } from "@/lib/feedback/use-action-feedback";
 import { Input } from "@/components/ui/input";
 import type { TenantAutonomyPolicy } from "@/modules/tenant/domain/autonomy-policy";
 
@@ -31,18 +32,58 @@ function FieldError({
   );
 }
 
+function AutonomyPolicyReadOnly({ policy }: { policy: TenantAutonomyPolicy }) {
+  const reminderEnabled = policy.allowedActionClasses.includes(
+    "payment_reminder"
+  );
+
+  return (
+    <dl className="flex flex-col gap-4 text-base">
+      <div>
+        <dt className="font-medium">Automatic payment reminders</dt>
+        <dd className="text-muted-foreground">
+          {reminderEnabled ? "Enabled under policy limits" : "Disabled — Confirm required"}
+        </dd>
+      </div>
+      <div>
+        <dt className="font-medium">Maximum for automatic reminders</dt>
+        <dd className="text-muted-foreground">
+          {policy.amountThresholds.payment_reminder
+            ? `₹${policy.amountThresholds.payment_reminder}`
+            : "Not set"}
+        </dd>
+      </div>
+      <div>
+        <dt className="font-medium">Always confirm above</dt>
+        <dd className="text-muted-foreground">
+          {policy.requireConfirmationAbove.payment_reminder
+            ? `₹${policy.requireConfirmationAbove.payment_reminder}`
+            : "Same as maximum"}
+        </dd>
+      </div>
+    </dl>
+  );
+}
+
 export function AutonomyPolicyForm({
   policy,
+  readOnly = false,
 }: {
   policy: TenantAutonomyPolicy;
+  readOnly?: boolean;
 }) {
   const [state, formAction, isPending] = useActionState(
     updateAutonomyPolicyAction,
     initialState
   );
+  useActionFeedback(state, { errorTitle: "Could not save autonomy policy" });
   const reminderEnabled = policy.allowedActionClasses.includes(
     "payment_reminder"
   );
+
+  if (readOnly) {
+    return <AutonomyPolicyReadOnly policy={policy} />;
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
@@ -117,10 +158,8 @@ export function AutonomyPolicyForm({
           {state.error}
         </p>
       ) : null}
+      <SubmitButton pending={isPending} pendingLabel="Saving">Save autonomy policy</SubmitButton>
 
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Saving…" : "Save autonomy policy"}
-      </Button>
     </form>
   );
 }

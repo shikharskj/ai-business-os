@@ -7,15 +7,17 @@ import {
   uploadBusinessLogoAction,
   type DocumentActionState,
 } from "@/app/app/(workspace)/settings/documents/actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
 
 const initialState: DocumentActionState = {};
 
 export function BusinessLogoForm({
   logoUrl,
+  readOnly = false,
 }: {
   logoUrl: string | null;
+  readOnly?: boolean;
 }) {
   const [uploadState, uploadAction, isUploading] = useActionState(
     uploadBusinessLogoAction,
@@ -49,41 +51,50 @@ export function BusinessLogoForm({
         </p>
       </div>
 
-      <form action={uploadAction} className="flex flex-col gap-3">
-        <div className="flex flex-col gap-2">
-          <label htmlFor="logo-file" className="text-base font-medium">
-            Logo image
-          </label>
-          <Input
-            id="logo-file"
-            name="file"
-            type="file"
-            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-            required
-          />
-        </div>
-        {error ? (
-          <p className="text-base text-destructive" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={isUploading || isRemoving}>
-            {isUploading ? "Uploading…" : logoUrl ? "Replace logo" : "Upload logo"}
-          </Button>
-        </div>
-      </form>
+      {!readOnly ? (
+        <>
+          <form action={uploadAction} className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="logo-file" className="text-base font-medium">
+                Logo image
+              </label>
+              <Input
+                id="logo-file"
+                name="file"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                required
+              />
+            </div>
+            {error ? (
+              <p className="text-base text-destructive" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <SubmitButton
+                pending={isUploading}
+                pendingLabel="Uploading"
+                disabled={isRemoving}
+              >
+                {logoUrl ? "Replace logo" : "Upload logo"}
+              </SubmitButton>
+            </div>
+          </form>
 
-      {logoUrl ? (
-        <form action={removeAction}>
-          <Button
-            type="submit"
-            variant="outline"
-            disabled={isUploading || isRemoving}
-          >
-            {isRemoving ? "Removing…" : "Remove logo"}
-          </Button>
-        </form>
+          {logoUrl ? (
+            <form action={removeAction}>
+              <SubmitButton
+                pending={isRemoving}
+                pendingLabel="Removing"
+                variant="outline"
+                disabled={isUploading}
+              >
+                Remove logo
+              </SubmitButton>
+            </form>
+          ) : null}
+        </>
       ) : null}
     </div>
   );

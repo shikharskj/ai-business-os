@@ -56,7 +56,12 @@ export {
   type ProcessDueWorkflowRunsResult,
 } from "@/modules/workflows/application/process-runs";
 export { listRecentWorkflowRuns } from "@/modules/workflows/application/list-runs";
-export { workflowLabel, toWorkflowRunView } from "@/modules/workflows/application/run-view";
+export { getWorkflowRun } from "@/modules/workflows/application/get-workflow-run";
+export {
+  workflowLabel,
+  toWorkflowRunView,
+  workflowRunHref,
+} from "@/modules/workflows/application/run-view";
 export {
   createAutomationOutboxConsumer,
   AUTOMATION_CONSUMER_NAME,

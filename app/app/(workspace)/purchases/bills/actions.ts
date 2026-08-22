@@ -135,7 +135,7 @@ export async function createPurchaseAction(
   }
 
   revalidatePath("/app/purchases/bills");
-  redirect(`/app/purchases/bills/${purchaseId}`);
+  redirect(`/app/purchases/bills/${purchaseId}?created=1`);
 }
 
 export async function updatePurchaseAction(

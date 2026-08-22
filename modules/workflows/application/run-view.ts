@@ -21,6 +21,29 @@ export function workflowLabel(workflowId: string): string {
   return getWorkflow(workflowId)?.label ?? FALLBACK_LABELS[workflowId] ?? workflowId;
 }
 
+export function workflowRunHref(
+  aggregateType: string,
+  aggregateId: string
+): string | null {
+  switch (aggregateType) {
+    case "SalesInvoice":
+      return `/app/sales/invoices/${aggregateId}`;
+    case "Quotation":
+      return `/app/sales/quotations/${aggregateId}`;
+    case "Product":
+      return `/app/inventory/products/${aggregateId}`;
+    case "Expense":
+      return `/app/expenses/${aggregateId}`;
+    default:
+      return null;
+  }
+}
+
+function resultMessage(run: WorkflowRun): string | null {
+  const message = run.result.message;
+  return typeof message === "string" && message.length > 0 ? message : null;
+}
+
 export function toWorkflowRunView(run: WorkflowRun): WorkflowRunView {
   return {
     id: run.id,
@@ -31,5 +54,11 @@ export function toWorkflowRunView(run: WorkflowRun): WorkflowRunView {
     createdAt: run.createdAt.toISOString(),
     completedAt: run.completedAt ? run.completedAt.toISOString() : null,
     lastError: run.lastError,
+    aggregateType: run.aggregateType,
+    aggregateId: run.aggregateId,
+    triggerEventType: run.triggerEventType,
+    attemptCount: run.attemptCount,
+    relatedHref: workflowRunHref(run.aggregateType, run.aggregateId),
+    resultMessage: resultMessage(run),
   };
 }

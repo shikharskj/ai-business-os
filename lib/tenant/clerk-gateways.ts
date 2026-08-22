@@ -59,6 +59,56 @@ export const clerkOrganizationGateway: ClerkOrganizationGateway = {
       return null;
     }
   },
+
+  async listOrganizationMemberships(input) {
+    const client = await clerkClient();
+
+    try {
+      const memberships =
+        await client.organizations.getOrganizationMembershipList({
+          organizationId: input.clerkOrganizationId,
+          limit: input.limit ?? 100,
+        });
+
+      return memberships.data.map((membership) => {
+        const firstName = membership.publicUserData?.firstName ?? "";
+        const lastName = membership.publicUserData?.lastName ?? "";
+        const name = [firstName, lastName].filter(Boolean).join(" ").trim();
+
+        return {
+          clerkOrganizationMembershipId: membership.id,
+          clerkUserId: membership.publicUserData?.userId ?? "",
+          name: name.length > 0 ? name : null,
+          email: membership.publicUserData?.identifier ?? null,
+          clerkRole: membership.role,
+        };
+      });
+    } catch {
+      return [];
+    }
+  },
+
+  async listPendingInvitations(input) {
+    const client = await clerkClient();
+
+    try {
+      const invitations =
+        await client.organizations.getOrganizationInvitationList({
+          organizationId: input.clerkOrganizationId,
+          status: ["pending"],
+          limit: 100,
+        });
+
+      return invitations.data.map((invitation) => ({
+        id: invitation.id,
+        emailAddress: invitation.emailAddress,
+        role: invitation.role,
+        status: invitation.status ?? "pending",
+      }));
+    } catch {
+      return [];
+    }
+  },
 };
 
 export const clerkInvitationGateway: ClerkInvitationGateway = {

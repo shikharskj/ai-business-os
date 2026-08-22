@@ -132,7 +132,7 @@ export async function createQuotationAction(
   }
 
   revalidatePath("/app/sales/quotations");
-  redirect(`/app/sales/quotations/${quotationId}`);
+  redirect(`/app/sales/quotations/${quotationId}?created=1`);
 }
 
 export async function updateQuotationAction(

@@ -1,5 +1,5 @@
-import { LoadingState } from "@/components/shell/loading-state";
+import { DashboardPageSkeleton } from "@/components/shell/page-skeletons/dashboard-page-skeleton";
 
-export default function WorkspaceLoading() {
-  return <LoadingState />;
+export default function Loading() {
+  return <DashboardPageSkeleton />;
 }

@@ -111,10 +111,6 @@ export default async function StockDetailPage({
         }
       />
 
-      {query.saved ? (
-        <p className="text-base text-muted-foreground">Stock movement saved.</p>
-      ) : null}
-
       {position.isLowStock ? <LowStockAlert count={1} /> : null}
 
       <Card>

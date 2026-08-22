@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FORM_PLACEHOLDERS } from "@/lib/forms/placeholders";
 import { CATALOG_UNITS } from "@/modules/catalog";
 import { COMMON_GST_RATE_BPS } from "@/modules/tax/domain/types";
 
@@ -101,6 +102,7 @@ export function ProductFormFields({
             name="name"
             required
             defaultValue={defaultValues?.name ?? ""}
+            placeholder={FORM_PLACEHOLDERS.productName}
           />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -110,6 +112,7 @@ export function ProductFormFields({
               name="sku"
               required
               defaultValue={defaultValues?.sku ?? ""}
+              placeholder={FORM_PLACEHOLDERS.sku}
             />
           </Field>
           <Field label="Category" name="category" fieldErrors={fieldErrors}>
@@ -117,6 +120,7 @@ export function ProductFormFields({
               id="category"
               name="category"
               defaultValue={defaultValues?.category ?? ""}
+              placeholder={FORM_PLACEHOLDERS.category}
             />
           </Field>
         </div>
@@ -157,6 +161,7 @@ export function ProductFormFields({
               inputMode="decimal"
               required
               defaultValue={defaultValues?.sellingPrice ?? ""}
+              placeholder={FORM_PLACEHOLDERS.price}
             />
           </Field>
           <Field
@@ -170,6 +175,7 @@ export function ProductFormFields({
               inputMode="decimal"
               required
               defaultValue={defaultValues?.purchasePrice ?? ""}
+              placeholder={FORM_PLACEHOLDERS.price}
             />
           </Field>
         </div>
@@ -183,7 +189,7 @@ export function ProductFormFields({
               id="hsnSac"
               name="hsnSac"
               defaultValue={defaultValues?.hsnSac ?? ""}
-              placeholder="4 to 8 digits"
+              placeholder={FORM_PLACEHOLDERS.hsnSac}
             />
           </Field>
           <Field label="GST rate" name="taxRateBps" fieldErrors={fieldErrors}>

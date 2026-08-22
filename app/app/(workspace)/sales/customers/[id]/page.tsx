@@ -180,10 +180,6 @@ export default async function CustomerDetailPage({
         }
       />
 
-      {query.saved ? (
-        <p className="text-base text-muted-foreground">Customer saved.</p>
-      ) : null}
-
       <Card>
         <CardHeader>
           <CardTitle>Outstanding</CardTitle>

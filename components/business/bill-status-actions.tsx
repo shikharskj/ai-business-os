@@ -1,13 +1,17 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import {
   cancelPurchaseAction,
   postPurchaseAction,
 } from "@/app/app/(workspace)/purchases/bills/actions";
-import { Button } from "@/components/ui/button";
+import { PendingButton } from "@/components/ui/pending-button";
+import { notifyError, notifySuccess } from "@/lib/feedback/toast";
 import type { PurchaseStatus } from "@/modules/purchases/domain/types";
+
+type PendingAction = "post" | "cancel" | null;
 
 export function BillStatusActions({
   purchaseId,
@@ -20,24 +24,32 @@ export function BillStatusActions({
   canUpdate: boolean;
   canCancel: boolean;
 }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [isPending, startTransition] = useTransition();
 
   function run(
+    actionKey: PendingAction,
     message: string | null,
-    action: (id: string) => Promise<{ error?: string }>
+    action: (id: string) => Promise<{ error?: string }>,
+    success: { title: string; description?: string }
   ) {
     if (message && !window.confirm(message)) {
       return;
     }
     startTransition(async () => {
+      setPendingAction(actionKey);
       setError(null);
       const result = await action(purchaseId);
+      setPendingAction(null);
       if (result.error) {
         setError(result.error);
+        notifyError("Could not update bill", result.error);
         return;
       }
-      window.location.reload();
+      notifySuccess(success.title, success.description);
+      router.refresh();
     });
   }
 
@@ -45,33 +57,43 @@ export function BillStatusActions({
     <div className="flex flex-col items-end gap-2">
       <div className="flex flex-wrap justify-end gap-2">
         {canUpdate && status === "DRAFT" ? (
-          <Button
+          <PendingButton
             type="button"
-            disabled={isPending}
+            pending={isPending && pendingAction === "post"}
             onClick={() =>
               run(
+                "post",
                 "Post this bill? Inventory-tracked items will increase and accounts payable will be updated. This cannot be undone by editing the bill.",
-                postPurchaseAction
+                postPurchaseAction,
+                {
+                  title: "Bill posted",
+                  description: "Inventory and accounts payable have been updated.",
+                }
               )
             }
           >
             Post bill
-          </Button>
+          </PendingButton>
         ) : null}
         {canCancel && status === "DRAFT" ? (
-          <Button
+          <PendingButton
             type="button"
             variant="destructive"
-            disabled={isPending}
+            pending={isPending && pendingAction === "cancel"}
             onClick={() =>
               run(
+                "cancel",
                 "Cancel this draft bill? It will remain in your list as cancelled. Stock and accounts are not affected.",
-                cancelPurchaseAction
+                cancelPurchaseAction,
+                {
+                  title: "Draft cancelled",
+                  description: "The bill remains in your list as cancelled.",
+                }
               )
             }
           >
             Cancel draft
-          </Button>
+          </PendingButton>
         ) : null}
       </div>
       {error ? (

@@ -1,7 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { FileText, Trash2 } from "lucide-react";
+import { FileText, Loader2, Trash2 } from "lucide-react";
 
 import { deleteBusinessDocumentAction } from "@/app/app/(workspace)/settings/documents/actions";
 import {
@@ -15,6 +16,7 @@ import {
   AttachmentTitle,
   AttachmentTrigger,
 } from "@/components/ui/attachment";
+import { notifyError, notifySuccess } from "@/lib/feedback/toast";
 import type { DocumentRecord } from "@/modules/documents/domain/types";
 
 function formatSize(bytes: number): string {
@@ -40,7 +42,9 @@ export function DocumentAttachmentList({
   emptyMessage?: string;
   onDelete?: (documentId: string) => Promise<{ error?: string }>;
 }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<Record<string, string>>({});
 
   if (documents.length === 0) {
@@ -55,15 +59,20 @@ export function DocumentAttachmentList({
     }
 
     startTransition(async () => {
+      setPendingDeleteId(documentId);
       const result = await onDelete(documentId);
+      setPendingDeleteId(null);
       if (result.error) {
         setDeleteError((prev) => ({ ...prev, [documentId]: result.error! }));
+        notifyError("Could not delete document", result.error);
       } else {
         setDeleteError((prev) => {
           const rest = { ...prev };
           delete rest[documentId];
           return rest;
         });
+        notifySuccess("Document deleted", `"${filename}" was removed.`);
+        router.refresh();
       }
     });
   };
@@ -99,7 +108,11 @@ export function DocumentAttachmentList({
                   disabled={isPending}
                   onClick={() => handleDelete(document.id, document.filename)}
                 >
-                  <Trash2 />
+                  {pendingDeleteId === document.id ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Trash2 />
+                  )}
                 </AttachmentAction>
               </AttachmentActions>
             ) : null}

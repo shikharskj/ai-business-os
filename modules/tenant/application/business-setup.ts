@@ -26,6 +26,28 @@ export type ClerkOrganizationGateway = {
   listUserOrganizations(clerkUserId: string): Promise<
     { id: string; name: string }[]
   >;
+  listOrganizationMemberships(input: {
+    clerkOrganizationId: string;
+    limit?: number;
+  }): Promise<
+    {
+      clerkOrganizationMembershipId: string;
+      clerkUserId: string;
+      name: string | null;
+      email: string | null;
+      clerkRole: string;
+    }[]
+  >;
+  listPendingInvitations(input: {
+    clerkOrganizationId: string;
+  }): Promise<
+    {
+      id: string;
+      emailAddress: string;
+      role: string;
+      status: string;
+    }[]
+  >;
 };
 
 export type CreateBusinessResult = {

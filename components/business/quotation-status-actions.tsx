@@ -18,7 +18,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { PendingButton } from "@/components/ui/pending-button";
+import { notifyError, notifySuccess } from "@/lib/feedback/toast";
 import type { QuotationStatus } from "@/modules/sales/domain/types";
+
+type PendingAction =
+  | "send"
+  | "accept"
+  | "convert"
+  | "export"
+  | "cancel"
+  | null;
 
 export function QuotationStatusActions({
   quotationId,
@@ -35,24 +45,30 @@ export function QuotationStatusActions({
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [isPending, startTransition] = useTransition();
 
   function run(
+    actionKey: PendingAction,
     message: string | null,
     action: (id: string) => Promise<{
       error?: string;
       invoiceId?: string;
       documentId?: string;
-    }>
+    }>,
+    success?: { title: string; description?: string }
   ) {
     if (message && !window.confirm(message)) {
       return;
     }
     startTransition(async () => {
+      setPendingAction(actionKey);
       setError(null);
       const result = await action(quotationId);
+      setPendingAction(null);
       if (result.error) {
         setError(result.error);
+        notifyError("Could not update quotation", result.error);
         return;
       }
       if (result.documentId) {
@@ -62,14 +78,25 @@ export function QuotationStatusActions({
           "noopener,noreferrer"
         );
         if (!opened) {
-          setError("Popup blocked. Please allow popups to open the PDF.");
+          const popupError = "Popup blocked. Please allow popups to open the PDF.";
+          setError(popupError);
+          notifyError("Could not open PDF", popupError);
+          return;
         }
+        notifySuccess("PDF ready", "Your quotation PDF opened in a new tab.");
         router.refresh();
         return;
       }
       if (result.invoiceId) {
+        notifySuccess(
+          "Invoice created",
+          "The quotation was converted to a draft invoice."
+        );
         router.push(`/app/sales/invoices/${result.invoiceId}`);
         return;
+      }
+      if (success) {
+        notifySuccess(success.title, success.description);
       }
       router.refresh();
     });
@@ -77,7 +104,11 @@ export function QuotationStatusActions({
 
   const menuItems = [
     canRead && (status === "SENT" || status === "ACCEPTED")
-      ? { key: "export", label: "Export PDF", action: () => run(null, exportQuotationPdfAction) }
+      ? {
+          key: "export",
+          label: "Export PDF",
+          action: () => run("export", null, exportQuotationPdfAction),
+        }
       : null,
     canCancel && (status === "DRAFT" || status === "SENT" || status === "ACCEPTED")
       ? {
@@ -85,8 +116,13 @@ export function QuotationStatusActions({
           label: "Cancel quotation",
           action: () =>
             run(
+              "cancel",
               "Cancel this quotation? It will remain in your list as cancelled. Stock and accounts are not affected.",
-              cancelQuotationAction
+              cancelQuotationAction,
+              {
+                title: "Quotation cancelled",
+                description: "The quotation remains in your list as cancelled.",
+              }
             ),
         }
       : null,
@@ -96,32 +132,47 @@ export function QuotationStatusActions({
     <div className="flex flex-col items-end gap-2">
       <div className="flex flex-wrap items-center justify-end gap-2">
         {canUpdate && status === "DRAFT" ? (
-          <Button type="button" disabled={isPending} onClick={() => run(null, sendQuotationAction)}>
+          <PendingButton
+            type="button"
+            pending={isPending && pendingAction === "send"}
+            onClick={() =>
+              run("send", null, sendQuotationAction, {
+                title: "Quotation sent",
+                description: "The quotation is now marked as sent.",
+              })
+            }
+          >
             Mark sent
-          </Button>
+          </PendingButton>
         ) : null}
         {canUpdate && status === "SENT" ? (
-          <Button
+          <PendingButton
             type="button"
-            disabled={isPending}
-            onClick={() => run(null, acceptQuotationAction)}
+            pending={isPending && pendingAction === "accept"}
+            onClick={() =>
+              run("accept", null, acceptQuotationAction, {
+                title: "Quotation accepted",
+                description: "The quotation is now marked as accepted.",
+              })
+            }
           >
             Mark accepted
-          </Button>
+          </PendingButton>
         ) : null}
         {canUpdate && status === "ACCEPTED" ? (
-          <Button
+          <PendingButton
             type="button"
-            disabled={isPending}
+            pending={isPending && pendingAction === "convert"}
             onClick={() =>
               run(
+                "convert",
                 "Convert this quotation to a draft invoice? Line items and GST totals will be copied.",
                 convertQuotationAction
               )
             }
           >
             Convert to invoice
-          </Button>
+          </PendingButton>
         ) : null}
         {menuItems.length > 0 ? (
           <DropdownMenu>

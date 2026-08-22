@@ -7,11 +7,15 @@ import {
   type SupplierActionState,
 } from "@/app/app/(workspace)/purchases/suppliers/actions";
 import { CustomerFormFields } from "@/components/business/customer-form-fields";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 const initialState: SupplierActionState = {};
 
-export function CreateSupplierForm() {
+export function CreateSupplierForm({
+  returnTo = null,
+}: {
+  returnTo?: string | null;
+}) {
   const [state, formAction, isPending] = useActionState(
     createSupplierAction,
     initialState
@@ -19,6 +23,9 @@ export function CreateSupplierForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
+      {returnTo ? (
+        <input type="hidden" name="returnTo" value={returnTo} />
+      ) : null}
       <CustomerFormFields
         heading="Supplier details"
         defaultValues={state.values}
@@ -29,9 +36,8 @@ export function CreateSupplierForm() {
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Saving…" : "Create supplier"}
-      </Button>
+      <SubmitButton pending={isPending} pendingLabel="Saving">Create supplier</SubmitButton>
+
     </form>
   );
 }

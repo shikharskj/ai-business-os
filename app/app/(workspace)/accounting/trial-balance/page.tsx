@@ -51,15 +51,6 @@ export default async function TrialBalancePage({
       <PageHeader
         title="Trial balance"
         description="Period totals from posted journals. Overall debits must equal credits."
-        actions={
-          <Button
-            nativeButton={false}
-            variant="outline"
-            render={<Link href="/app/accounting" />}
-          >
-            Back
-          </Button>
-        }
       />
 
       {validationError ? (

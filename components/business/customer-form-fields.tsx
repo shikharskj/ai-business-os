@@ -1,14 +1,11 @@
 "use client";
 
+import { useState } from "react";
+
+import { IndianAddressFields } from "@/components/business/indian-address-fields";
+import { PartyGstFields } from "@/components/business/party-gst-fields";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { GST_STATE_CODES } from "@/modules/tax/domain/gstin";
+import { FORM_PLACEHOLDERS } from "@/lib/forms/placeholders";
 import type { Party } from "@/modules/party/domain/types";
 
 function FieldError({
@@ -61,7 +58,8 @@ export function CustomerFormFields({
   fieldErrors?: Record<string, string>;
   heading?: string;
 }) {
-  const states = Object.values(GST_STATE_CODES);
+  const [state, setState] = useState(defaultValues?.state ?? "");
+  const [stateTouched, setStateTouched] = useState(false);
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,13 +71,16 @@ export function CustomerFormFields({
             name="name"
             required
             defaultValue={defaultValues?.name ?? ""}
+            placeholder={FORM_PLACEHOLDERS.businessName}
           />
         </Field>
         <Field label="Phone" name="phone" fieldErrors={fieldErrors}>
           <Input
             id="phone"
             name="phone"
+            inputMode="tel"
             defaultValue={defaultValues?.phone ?? ""}
+            placeholder={FORM_PLACEHOLDERS.phone}
           />
         </Field>
         <Field label="Email" name="email" fieldErrors={fieldErrors}>
@@ -88,102 +89,45 @@ export function CustomerFormFields({
             name="email"
             type="email"
             defaultValue={defaultValues?.email ?? ""}
+            placeholder={FORM_PLACEHOLDERS.email}
           />
         </Field>
       </section>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-base font-medium">Billing address</h2>
-        <Field
-          label="Address line 1"
-          name="billingAddressLine1"
+        <IndianAddressFields
+          names={{
+            line1: "billingAddressLine1",
+            line2: "billingAddressLine2",
+            city: "city",
+            state: "state",
+            postalCode: "postalCode",
+            country: "country",
+          }}
+          defaultValues={{
+            line1: defaultValues?.billingAddressLine1,
+            line2: defaultValues?.billingAddressLine2,
+            city: defaultValues?.city,
+            state: defaultValues?.state,
+            postalCode: defaultValues?.postalCode,
+            country: defaultValues?.country ?? "IN",
+          }}
           fieldErrors={fieldErrors}
-        >
-          <Input
-            id="billingAddressLine1"
-            name="billingAddressLine1"
-            defaultValue={defaultValues?.billingAddressLine1 ?? ""}
-          />
-        </Field>
-        <Field
-          label="Address line 2"
-          name="billingAddressLine2"
-          fieldErrors={fieldErrors}
-        >
-          <Input
-            id="billingAddressLine2"
-            name="billingAddressLine2"
-            defaultValue={defaultValues?.billingAddressLine2 ?? ""}
-          />
-        </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="City" name="city" fieldErrors={fieldErrors}>
-            <Input
-              id="city"
-              name="city"
-              defaultValue={defaultValues?.city ?? ""}
-            />
-          </Field>
-          <Field label="State" name="state" fieldErrors={fieldErrors}>
-            <Select name="state" defaultValue={defaultValues?.state ?? ""}>
-              <SelectTrigger id="state" className="w-full">
-                <SelectValue placeholder="Select state" />
-              </SelectTrigger>
-              <SelectContent>
-                {states.map((state) => (
-                  <SelectItem key={state} value={state}>
-                    {state}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="PIN code" name="postalCode" fieldErrors={fieldErrors}>
-            <Input
-              id="postalCode"
-              name="postalCode"
-              defaultValue={defaultValues?.postalCode ?? ""}
-            />
-          </Field>
-          <input type="hidden" name="country" value="IN" />
-        </div>
+          stateBridge={{ state, setState, stateTouched, setStateTouched }}
+        />
       </section>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-base font-medium">GST</h2>
-        <Field
-          label="GST registration"
-          name="gstRegistrationStatus"
+        <PartyGstFields
+          defaultValues={{
+            gstRegistrationStatus: defaultValues?.gstRegistrationStatus,
+            gstin: defaultValues?.gstin,
+          }}
           fieldErrors={fieldErrors}
-        >
-          <Select
-            name="gstRegistrationStatus"
-            defaultValue={defaultValues?.gstRegistrationStatus ?? "NOT_REGISTERED"}
-            items={{
-              NOT_REGISTERED: "Not registered",
-              REGISTERED: "Registered",
-              COMPOSITION: "Composition",
-            }}
-          >
-            <SelectTrigger id="gstRegistrationStatus" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="NOT_REGISTERED">Not registered</SelectItem>
-              <SelectItem value="REGISTERED">Registered</SelectItem>
-              <SelectItem value="COMPOSITION">Composition</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label="GSTIN" name="gstin" fieldErrors={fieldErrors}>
-          <Input
-            id="gstin"
-            name="gstin"
-            defaultValue={defaultValues?.gstin ?? ""}
-          />
-        </Field>
+          stateBridge={{ state, setState, stateTouched, setStateTouched }}
+        />
       </section>
     </div>
   );

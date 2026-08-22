@@ -145,7 +145,7 @@ export async function createInvoiceAction(
 
   scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/invoices");
-  redirect(`/app/sales/invoices/${invoiceId}`);
+  redirect(`/app/sales/invoices/${invoiceId}?created=1`);
 }
 
 export async function updateInvoiceAction(

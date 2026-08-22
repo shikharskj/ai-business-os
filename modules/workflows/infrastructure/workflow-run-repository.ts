@@ -13,6 +13,7 @@ export type WorkflowRunRepository = {
     tenantId: string,
     idempotencyKey: string
   ): Promise<WorkflowRun | null>;
+  findById(tenantId: string, runId: string): Promise<WorkflowRun | null>;
   claimDue(input: ClaimDueWorkflowRunsInput): Promise<WorkflowRun[]>;
   update(id: string, tenantId: string, patch: WorkflowRunUpdate): Promise<WorkflowRun>;
   listRecent(tenantId: string, limit: number): Promise<WorkflowRun[]>;

@@ -104,6 +104,33 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 
 # Completed
 
+* **Entity create + return-to-form:**
+  * `lib/navigation/entity-create-return.ts` — allowlisted `returnTo`, href/redirect builders, initial entity id helpers.
+  * Create customer/product/supplier actions redirect back to originating form when `returnTo` is valid; pre-select via query params; `entityCreated` flash toast on form pages.
+  * Inline **+ New customer/product/supplier** on record payment, supplier payment, bill, invoice, and quotation forms; empty-state page buttons wired with `returnTo`.
+  * Tests: `tests/navigation/entity-create-return.test.ts`, `tests/feedback/flash-toast-map.test.ts`.
+
+* **Skeleton layout fidelity:**
+  * Shared primitives in `components/shell/page-skeletons/shared.tsx`: `PageHeaderSkeleton` (`showDescriptionEnd`, `actionCount`), `ListFilterFormSkeleton`, `DataTableSkeleton`, `NativeTableSkeleton`.
+  * Dashboard skeleton mirrors `DashboardCanvas` (`lg:grid-cols-3`, 4 KPI cards `min-h-36`, chart card, daily brief + activity rail).
+  * `list-table-presets.ts` + preset props on list-table skeleton components; 13 workspace list routes wired to matching presets.
+  * Tests: `tests/shell/skeleton-structure.test.ts`. Docs: Loading skeleton fidelity note in `context/ui-context.md`.
+
+* **Smart Form Fields UX:**
+  * `lib/geo/` — GST-aligned state list, curated cities, bundled PIN index, `lookupPincode` with `none` / `suggest` / `unique` safety rules; optional India Post API fallback (`NEXT_PUBLIC_PIN_LOOKUP_API_ENABLED`).
+  * `FormCombobox` — hidden `name` input for server actions, creatable custom values for city.
+  * `IndianAddressFields` + `PartyGstFields` — PIN-first layout, inter-linked city/state, GSTIN uppercase + state suggest chip; wired into customer and business profile forms.
+  * Full placeholder pass via `lib/forms/placeholders.ts` across product, invoice, quotation, bill, payment, expense, and party forms.
+  * Safe smart defaults: place-of-supply lock on invoice/quotation when manually edited; “Fill outstanding” button on payment forms (no auto-fill on invoice/bill preselect).
+  * Soft 6-digit PIN validation on party schema. Tests: `tests/geo/*.test.ts`.
+
+* **UX feedback system (loading, spinners, toasts):**
+  * Mounted `AppFeedbackProvider` + semantic toast variants (`success` / `warning` / `error` / neutral `info`) in workspace layout. Helpers: `lib/feedback/toast.ts`, `lib/feedback/flash-toast-map.ts`, `FlashToastHandler` for redirect query params (`saved`, `created`, `invited`, `closed`, etc.).
+  * Shared `SubmitButton` / `PendingButton` with inline spinners; migrated all business forms and status-action components. Status actions use `router.refresh()` + success/error toasts instead of full page reload.
+  * ~15 reusable page skeleton templates + 55 route-level `loading.tsx` files mirroring list/detail/form/report/settings layouts.
+  * Removed inline `?saved=` / `?invited=` / `?closed=` banners from detail and settings pages (toasts replace them). Create-flow redirects now append `?created=1`.
+  * Tests: `tests/feedback/flash-toast-map.test.ts`, `tests/feedback/submit-button.test.ts`, `tests/shell/page-skeleton-map.test.ts`. Next: `16-business-guardian.md` (unchanged).
+
 * **R4 follow-up fixes:** Autonomy form save preserves `disabledAutomations`. Invoice `due=OVERDUE` requires outstanding > 0. Collections L4 zero-send messages follow reminder status (`not_found` / `not_overdue` / `failed` / `already_sent`). Unconfirmed cron prepares no longer record `REMINDER_PROPOSED`.
 
 * **Automation expansions (`11-automation-expansions.md`):**
@@ -128,6 +155,21 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
   * Owner/admin Settings → Autonomy enables L4 payment reminders under an amount ceiling. Policy changes are audited (`autonomy.policy.updated`). Invoice posting is not an allowed L4 class. L5 is not representable.
   * Tools declare `autonomyLevel`. `send_payment_reminders` is L3 + `payment_reminder`. `executeAiTool` allows L4 only when a trusted caller sets `autonomyAttempt: "L4"` and `evaluateL4Autonomy` passes. Chat/HMAC confirm path unchanged.
   * Tests: `tests/tenant/autonomy-policy.test.ts`, `tests/ai/autonomy-policy.test.ts`. Production build succeeds. Next: `09-automation-runtime.md`.
+
+* **Settings UX polish:**
+  * Main settings gated on `settings:read`; writes stay on `settings:update`. Staff/Accountant get read-only profile, logo preview, and autonomy display.
+  * Two-column `/app/settings` layout: business profile primary (left), logo + autonomy + recent automations (right).
+  * Members page: current members table, pending Clerk invitations, OWNER role assignment via existing action, invite form for `settings:update`.
+  * Automation run rows link to `/app/settings/automations/:id` with related-record href when permitted.
+  * Tests: `tests/tenant/list-organization-members.test.ts`, `tests/workflows/workflow-run-detail.test.ts`.
+  * Next: `16-business-guardian.md` (unchanged).
+
+* **Sidebar navigation cleanup:**
+  * Shared nav tree in `components/shell/workspace-nav.ts` — permission-filtered leaves, used by sidebar and command menu.
+  * Sales / Purchases / Inventory / Accounting / Reports are collapsible toggles (not routes). Accounting, Reports, Settings default collapsed; Sales / Purchases / Inventory default open; toggles persist in `localStorage`.
+  * Settings links to `/app/settings` with nested Members / Documents. Search removed from sidebar (`⌘K` only). Ledger and Trial balance under Accounting only.
+  * Hub URLs redirect (`/app/sales` → invoices, etc.). Removed Back-to-hub buttons on accounting/report list pages.
+  * Tests: `tests/shell/workspace-nav.test.ts`. Next: `16-business-guardian.md` (unchanged).
 
 * **Sales UX polish (operator pass — invoices, quotations, customers, payments):**
   * Shared primitives: `formatDisplayDate` on sales tables, ISO-controlled `DatePicker`, searchable `Combobox` for customer/product selects, GST breakdown hides zero CGST/SGST/IGST lines, list filter **Clear** link.

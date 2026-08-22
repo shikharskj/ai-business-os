@@ -138,5 +138,5 @@ export async function recordSupplierPaymentAction(
   revalidatePath("/app/purchases/payments");
   revalidatePath("/app/purchases/bills");
   revalidatePath("/app/purchases/suppliers");
-  redirect(`/app/purchases/payments/${paymentId}`);
+  redirect(`/app/purchases/payments/${paymentId}?created=1`);
 }

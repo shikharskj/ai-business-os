@@ -248,7 +248,7 @@ export function QuotationDocumentPreview({
 }) {
   return (
     <div
-      className={cn("mx-auto w-fit max-w-full", className)}
+      className={cn("w-full max-w-full", className)}
       style={{ zoom: scale }}
     >
       <QuotationDocument view={view} />

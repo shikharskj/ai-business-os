@@ -4,6 +4,11 @@ import { BillForm } from "@/components/business/bill-form";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  buildEntityCreateHref,
+  parseInitialLineIndex,
+  resolveInitialEntityId,
+} from "@/lib/navigation/entity-create-return";
 import { authorize } from "@/lib/security";
 import { todayInTimezone } from "@/modules/shared-kernel/dates";
 import { toMajorString } from "@/modules/shared-kernel/money";
@@ -12,8 +17,17 @@ import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-par
 import { listProducts } from "@/modules/catalog";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 
-export default async function NewBillPage() {
+export default async function NewBillPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    supplierId?: string;
+    productId?: string;
+    lineIndex?: string;
+  }>;
+}) {
   const tenant = await authorize("purchase:create");
+  const params = await searchParams;
   const [suppliers, products] = await Promise.all([
     listSuppliers({
       tenantId: tenant.tenantId,
@@ -25,6 +39,12 @@ export default async function NewBillPage() {
       catalog: prismaCatalogRepository,
     }),
   ]);
+  const initialSupplierId = resolveInitialEntityId(suppliers, params.supplierId);
+  const initialProductId =
+    params.productId && products.some((product) => product.id === params.productId)
+      ? params.productId
+      : undefined;
+  const initialLineIndex = parseInitialLineIndex(params.lineIndex);
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6">
@@ -56,8 +76,17 @@ export default async function NewBillPage() {
                   <Link
                     href={
                       suppliers.length === 0
-                        ? "/app/purchases/suppliers/new"
-                        : "/app/inventory/products/new"
+                        ? buildEntityCreateHref({
+                            entity: "supplier",
+                            returnTo: "/app/purchases/bills/new",
+                          })
+                        : buildEntityCreateHref({
+                            entity: "product",
+                            returnTo: "/app/purchases/bills/new",
+                            preserveQuery: initialSupplierId
+                              ? { supplierId: initialSupplierId }
+                              : undefined,
+                          })
                     }
                   />
                 }
@@ -72,6 +101,9 @@ export default async function NewBillPage() {
           <CardContent>
             <BillForm
               today={todayInTimezone(tenant.business.timezone)}
+              initialSupplierId={initialSupplierId}
+              initialProductId={initialProductId}
+              initialLineIndex={initialLineIndex}
               suppliers={suppliers.map((supplier) => ({
                 id: supplier.id,
                 name: supplier.name,

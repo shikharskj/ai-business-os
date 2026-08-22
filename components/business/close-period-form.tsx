@@ -6,7 +6,7 @@ import {
   closePeriodAction,
   type AccountingActionState,
 } from "@/app/app/(workspace)/accounting/actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
 
 export function ClosePeriodForm({ defaultPeriodKey }: { defaultPeriodKey: string }) {
@@ -43,9 +43,8 @@ export function ClosePeriodForm({ defaultPeriodKey }: { defaultPeriodKey: string
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Closing…" : "Close period"}
-      </Button>
+      <SubmitButton pending={isPending} pendingLabel="Closing">Close period</SubmitButton>
+
     </form>
   );
 }

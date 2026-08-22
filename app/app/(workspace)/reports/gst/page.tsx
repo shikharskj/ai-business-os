@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { MoneyDisplay } from "@/components/business/money-display";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -62,22 +60,13 @@ export default async function GstSummaryPage({
         title="GST summary"
         description="Period totals from stored CGST / SGST / IGST on posted sales, purchases, and taxed expenses. Not a filing export."
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<Link href="/app/reports" />}
-            >
-              Back
-            </Button>
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<a href={exportHref} />}
-            >
-              Export CSV
-            </Button>
-          </div>
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<a href={exportHref} />}
+          >
+            Export CSV
+          </Button>
         }
       />
 

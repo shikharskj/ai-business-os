@@ -31,18 +31,13 @@ export default async function PayablesReportPage() {
         title="Payables report"
         description="Open supplier balances from unpaid and partially paid bills after payment allocations."
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button nativeButton={false} variant="outline" render={<Link href="/app/reports" />}>
-              Back
-            </Button>
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<a href="/api/reports/payables/export" />}
-            >
-              Export CSV
-            </Button>
-          </div>
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<a href="/api/reports/payables/export" />}
+          >
+            Export CSV
+          </Button>
         }
       />
 

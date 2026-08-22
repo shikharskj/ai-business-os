@@ -77,7 +77,9 @@ export function NotificationInbox() {
       const response = await fetch("/api/notifications", {
         cache: "no-store",
       });
-      if (!response.ok) {
+      const contentType = response.headers.get("content-type") ?? "";
+      const isJson = contentType.includes("application/json");
+      if (!response.ok || !isJson) {
         if (open) {
           setError("Failed to load notifications");
         }

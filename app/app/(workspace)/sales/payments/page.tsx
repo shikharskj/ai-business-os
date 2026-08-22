@@ -76,7 +76,7 @@ export default async function SalesPaymentsPage({
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
       <PageHeader
-        title="Payments"
+        title="Customer payments"
         description="Customer receipts allocated to unpaid invoices. No payment gateway."
         actions={
           canCreate ? (

@@ -7,7 +7,7 @@ import {
   type ActionState,
 } from "@/app/app/actions";
 import { CreateBusinessSuccess } from "@/components/business/activate-organization";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { BusinessProfileFields } from "./business-profile-fields";
 
 const initialState: ActionState = {};
@@ -31,10 +31,8 @@ export function CreateBusinessForm() {
           {state.error}
         </p>
       ) : null}
+      <SubmitButton pending={isPending} pendingLabel="Creating business">Create business</SubmitButton>
 
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Creating business…" : "Create business"}
-      </Button>
     </form>
   );
 }

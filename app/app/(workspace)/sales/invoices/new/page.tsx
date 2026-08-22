@@ -2,8 +2,14 @@ import Link from "next/link";
 
 import { InvoiceForm } from "@/components/business/invoice-form";
 import { PageHeader } from "@/components/shell/page-header";
+import { DocumentPreviewPageShell } from "@/components/shell/document-form-preview-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  buildEntityCreateHref,
+  parseInitialLineIndex,
+  resolveInitialEntityId,
+} from "@/lib/navigation/entity-create-return";
 import { authorize } from "@/lib/security";
 import { todayInTimezone } from "@/modules/shared-kernel/dates";
 import { toMajorString } from "@/modules/shared-kernel/money";
@@ -12,9 +18,19 @@ import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-par
 import { listProducts } from "@/modules/catalog";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 import { businessLogoUrl } from "@/modules/tenant";
+import { Plus } from "lucide-react";
 
-export default async function NewInvoicePage() {
+export default async function NewInvoicePage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    customerId?: string;
+    productId?: string;
+    lineIndex?: string;
+  }>;
+}) {
   const tenant = await authorize("invoice:create");
+  const params = await searchParams;
   const [customers, products] = await Promise.all([
     listCustomers({
       tenantId: tenant.tenantId,
@@ -26,9 +42,15 @@ export default async function NewInvoicePage() {
       catalog: prismaCatalogRepository,
     }),
   ]);
+  const initialCustomerId = resolveInitialEntityId(customers, params.customerId);
+  const initialProductId =
+    params.productId && products.some((product) => product.id === params.productId)
+      ? params.productId
+      : undefined;
+  const initialLineIndex = parseInitialLineIndex(params.lineIndex);
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
+    <DocumentPreviewPageShell>
       <PageHeader
         title="New invoice"
         description="GST is calculated by the tax engine when you save. Post the invoice to reduce stock and update accounts."
@@ -57,13 +79,30 @@ export default async function NewInvoicePage() {
                   <Link
                     href={
                       customers.length === 0
-                        ? "/app/sales/customers/new"
-                        : "/app/inventory/products/new"
+                        ? buildEntityCreateHref({
+                            entity: "customer",
+                            returnTo: "/app/sales/invoices/new",
+                          })
+                        : buildEntityCreateHref({
+                            entity: "product",
+                            returnTo: "/app/sales/invoices/new",
+                            preserveQuery: initialCustomerId
+                              ? { customerId: initialCustomerId }
+                              : undefined,
+                          })
                     }
                   />
                 }
               >
-                {customers.length === 0 ? "New customer" : "New product"}
+                {customers.length === 0 ? (
+                  <div>
+                    <Plus className="size-4" /> New customer
+                  </div>
+                ) : (
+                  <div>
+                    <Plus className="size-4" /> New product
+                  </div>
+                )}
               </Button>
             </div>
           </CardContent>
@@ -73,6 +112,9 @@ export default async function NewInvoicePage() {
           today={todayInTimezone(tenant.business.timezone)}
           seller={tenant.business}
           logoUrl={businessLogoUrl(tenant.business.logoDocumentId)}
+          initialCustomerId={initialCustomerId}
+          initialProductId={initialProductId}
+          initialLineIndex={initialLineIndex}
           customers={customers.map((customer) => ({
             id: customer.id,
             name: customer.name,
@@ -96,6 +138,6 @@ export default async function NewInvoicePage() {
           }))}
         />
       )}
-    </div>
+    </DocumentPreviewPageShell>
   );
 }

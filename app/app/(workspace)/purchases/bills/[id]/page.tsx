@@ -136,12 +136,6 @@ export default async function BillDetailPage({
         }
       />
 
-      {query.saved ? (
-        <p className="text-base text-muted-foreground">
-          Bill saved. GST totals were recalculated by the tax engine.
-        </p>
-      ) : null}
-
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Card>
           <CardHeader>

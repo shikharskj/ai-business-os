@@ -7,7 +7,7 @@ import {
   type ProductActionState,
 } from "@/app/app/(workspace)/inventory/products/actions";
 import { ProductFormFields } from "@/components/business/product-form-fields";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import type { Product } from "@/modules/catalog/domain/types";
 import { toMajorString } from "@/modules/shared-kernel/money";
 
@@ -44,9 +44,8 @@ export function EditProductForm({ product }: { product: Product }) {
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Saving…" : "Save changes"}
-      </Button>
+      <SubmitButton pending={isPending} pendingLabel="Saving">Save changes</SubmitButton>
+
     </form>
   );
 }

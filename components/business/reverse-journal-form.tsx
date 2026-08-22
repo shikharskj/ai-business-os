@@ -6,7 +6,7 @@ import {
   reverseJournalAction,
   type AccountingActionState,
 } from "@/app/app/(workspace)/accounting/actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
 
 export function ReverseJournalForm({
@@ -44,9 +44,8 @@ export function ReverseJournalForm({
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" variant="outline" disabled={isPending}>
-        {isPending ? "Reversing…" : "Post reversal"}
-      </Button>
+      <SubmitButton pending={isPending} pendingLabel="Reversing" variant="outline">Post reversal</SubmitButton>
+
     </form>
   );
 }

@@ -5,6 +5,10 @@ import { redirect } from "next/navigation";
 import { ZodError } from "zod";
 
 import { prisma } from "@/lib/db";
+import {
+  buildRedirectAfterEntityCreate,
+  parseReturnToValue,
+} from "@/lib/navigation/entity-create-return";
 import { authorize, AuthorizationError } from "@/lib/security";
 import {
   createSupplier,
@@ -110,7 +114,19 @@ export async function createSupplierAction(
   }
 
   revalidatePath("/app/purchases/suppliers");
-  redirect(`/app/purchases/suppliers/${supplierId}`);
+  const returnTo = parseReturnToValue(String(formData.get("returnTo") || ""));
+  if (returnTo) {
+    const redirectUrl = buildRedirectAfterEntityCreate({
+      entity: "supplier",
+      entityId: supplierId,
+      returnTo: returnTo.href,
+    });
+    if (redirectUrl) {
+      revalidatePath(returnTo.pathname);
+      redirect(redirectUrl);
+    }
+  }
+  redirect(`/app/purchases/suppliers/${supplierId}?created=1`);
 }
 
 export async function updateSupplierAction(

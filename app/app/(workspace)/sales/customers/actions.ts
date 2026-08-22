@@ -5,6 +5,10 @@ import { redirect } from "next/navigation";
 import { ZodError } from "zod";
 
 import { prisma } from "@/lib/db";
+import {
+  buildRedirectAfterEntityCreate,
+  parseReturnToValue,
+} from "@/lib/navigation/entity-create-return";
 import { authorize, AuthorizationError } from "@/lib/security";
 import {
   createCustomer,
@@ -111,7 +115,19 @@ export async function createCustomerAction(
   }
 
   revalidatePath("/app/sales/customers");
-  redirect(`/app/sales/customers/${customerId}`);
+  const returnTo = parseReturnToValue(String(formData.get("returnTo") || ""));
+  if (returnTo) {
+    const redirectUrl = buildRedirectAfterEntityCreate({
+      entity: "customer",
+      entityId: customerId,
+      returnTo: returnTo.href,
+    });
+    if (redirectUrl) {
+      revalidatePath(returnTo.pathname);
+      redirect(redirectUrl);
+    }
+  }
+  redirect(`/app/sales/customers/${customerId}?created=1`);
 }
 
 export async function updateCustomerAction(

@@ -4,6 +4,7 @@ import { RecordSupplierPaymentForm } from "@/components/business/record-supplier
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { buildEntityCreateHref } from "@/lib/navigation/entity-create-return";
 import { authorize } from "@/lib/security";
 import { todayInTimezone } from "@/modules/shared-kernel/dates";
 import { listSuppliers } from "@/modules/party";
@@ -66,7 +67,14 @@ export default async function NewSupplierPaymentPage({
             <div>
               <Button
                 nativeButton={false}
-                render={<Link href="/app/purchases/suppliers/new" />}
+                render={
+                  <Link
+                    href={buildEntityCreateHref({
+                      entity: "supplier",
+                      returnTo: "/app/purchases/payments/new",
+                    })}
+                  />
+                }
               >
                 New supplier
               </Button>

@@ -12,12 +12,16 @@ import {
   type QuotationActionState,
 } from "@/app/app/(workspace)/sales/quotations/actions";
 import {
-  DOCUMENT_PREVIEW_ASIDE_CLASSNAME,
-  documentPreviewAsideStyle,
   QuotationDocumentPreview,
 } from "@/components/business/quotation-document";
+import {
+  DocumentFormPreviewAside,
+  DocumentFormPreviewLayout,
+  DocumentFormPreviewMain,
+} from "@/components/shell/document-form-preview-layout";
 import { lineSubtotalBeforeGstMajor } from "@/components/business/line-subtotal-label";
 import { DatePicker } from "@/components/date-picker";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
@@ -29,6 +33,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { FORM_PLACEHOLDERS } from "@/lib/forms/placeholders";
+import { buildEntityCreateHref, resolveInitialEntityId } from "@/lib/navigation/entity-create-return";
 import { GST_STATE_CODES } from "@/modules/tax/domain/gstin";
 import { gstinStateCode, stateCodeFromName } from "@/modules/tax/domain/gstin";
 import { toMajorString } from "@/modules/shared-kernel/money";
@@ -113,6 +119,46 @@ function FieldError({
   );
 }
 
+function buildInitialQuotationLines(
+  products: QuotationProductOption[],
+  initialProductId?: string,
+  initialLineIndex?: number
+): LineDraft[] {
+  const firstProduct = products[0];
+  const lines: LineDraft[] = [
+    {
+      ...emptyLine,
+      productId: firstProduct?.id ?? "",
+      unitPrice: firstProduct?.sellingPriceMajor ?? "",
+    },
+  ];
+
+  if (!initialProductId || !products.some((row) => row.id === initialProductId)) {
+    return lines;
+  }
+
+  const product = products.find((row) => row.id === initialProductId);
+  if (!product) {
+    return lines;
+  }
+
+  const lineIndex = initialLineIndex ?? 0;
+  while (lines.length <= lineIndex) {
+    lines.push({
+      ...emptyLine,
+      productId: firstProduct?.id ?? "",
+      unitPrice: firstProduct?.sellingPriceMajor ?? "",
+    });
+  }
+
+  lines[lineIndex] = {
+    ...lines[lineIndex],
+    productId: product.id,
+    unitPrice: product.sellingPriceMajor,
+  };
+  return lines;
+}
+
 export function QuotationForm({
   customers,
   products,
@@ -120,6 +166,9 @@ export function QuotationForm({
   quotation,
   seller,
   logoUrl,
+  initialCustomerId,
+  initialProductId,
+  initialLineIndex,
 }: {
   customers: QuotationCustomerOption[];
   products: QuotationProductOption[];
@@ -127,6 +176,9 @@ export function QuotationForm({
   quotation?: Quotation;
   seller: BusinessProfile;
   logoUrl: string | null;
+  initialCustomerId?: string;
+  initialProductId?: string;
+  initialLineIndex?: number;
 }) {
   const action = quotation ? updateQuotationAction : createQuotationAction;
   const [state, formAction, isPending] = useActionState(
@@ -134,11 +186,15 @@ export function QuotationForm({
     {} as QuotationActionState
   );
   const [customerId, setCustomerId] = useState(
-    quotation?.customerId ?? customers[0]?.id ?? ""
+    quotation?.customerId ??
+      resolveInitialEntityId(customers, initialCustomerId)
   );
   const [placeOfSupply, setPlaceOfSupply] = useState(
     quotation?.placeOfSupplyStateCode ??
       customerPlaceOfSupply(customers.find((row) => row.id === customerId))
+  );
+  const [placeOfSupplyTouched, setPlaceOfSupplyTouched] = useState(
+    Boolean(quotation?.placeOfSupplyStateCode)
   );
   const [issuedOn, setIssuedOn] = useState(quotation?.issuedOn ?? today);
   const [validUntil, setValidUntil] = useState(quotation?.validUntil ?? "");
@@ -153,7 +209,7 @@ export function QuotationForm({
           unitPrice: toMajorString(line.unitPrice),
           discount: toMajorString(line.discount),
         }))
-      : [{ ...emptyLine, productId: products[0]?.id ?? "", unitPrice: products[0]?.sellingPriceMajor ?? "" }]
+      : buildInitialQuotationLines(products, initialProductId, initialLineIndex)
   );
   const [engineView, setEngineView] = useState<QuotationDocumentView | null>(null);
 
@@ -251,8 +307,9 @@ export function QuotationForm({
   }
 
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,34rem)]">
-      <form action={formAction} className="flex flex-col gap-6">
+    <DocumentFormPreviewLayout>
+      <DocumentFormPreviewMain>
+        <form action={formAction} className="flex w-full min-w-0 flex-col gap-6">
         {quotation ? (
           <input type="hidden" name="quotationId" value={quotation.id} />
         ) : null}
@@ -267,9 +324,14 @@ export function QuotationForm({
                 Customer
               </label>
               <Link
-                href="/app/sales/customers/new"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                href={buildEntityCreateHref({
+                  entity: "customer",
+                  returnTo: "/app/sales/quotations/new",
+                  preserveQuery: customerId ? { customerId } : undefined,
+                })}
+                className="flex items-center gap-2 text-sm font-medium text-(--state-info) hover:font-semibold"
               >
+                <Plus className="size-4" />
                 New customer
               </Link>
             </div>
@@ -278,9 +340,11 @@ export function QuotationForm({
               value={customerId}
               onValueChange={(value) => {
                 setCustomerId(value);
-                setPlaceOfSupply(
-                  customerPlaceOfSupply(customers.find((row) => row.id === value))
-                );
+                if (!placeOfSupplyTouched) {
+                  setPlaceOfSupply(
+                    customerPlaceOfSupply(customers.find((row) => row.id === value))
+                  );
+                }
               }}
               options={customers.map((customer) => ({
                 value: customer.id,
@@ -299,7 +363,10 @@ export function QuotationForm({
             </label>
             <Select
               value={placeOfSupply}
-              onValueChange={(value) => setPlaceOfSupply(String(value ?? ""))}
+              onValueChange={(value) => {
+                setPlaceOfSupply(String(value ?? ""));
+                setPlaceOfSupplyTouched(true);
+              }}
               items={stateItems}
             >
               <SelectTrigger id="placeOfSupplyStateCode" className="w-full">
@@ -391,9 +458,17 @@ export function QuotationForm({
                       Product / service
                     </label>
                     <Link
-                      href="/app/inventory/products/new"
-                      className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                      href={buildEntityCreateHref({
+                        entity: "product",
+                        returnTo: "/app/sales/quotations/new",
+                        preserveQuery: {
+                          customerId: customerId || undefined,
+                          lineIndex: String(index),
+                        },
+                      })}
+                      className="flex items-center gap-2 text-xs font-medium text-(--state-info) hover:font-semibold"
                     >
+                      <Plus className="size-4" />
                       New product
                     </Link>
                   </div>
@@ -430,6 +505,7 @@ export function QuotationForm({
                     onChange={(event) =>
                       updateLine(index, { quantity: event.target.value })
                     }
+                    placeholder={FORM_PLACEHOLDERS.quantity}
                   />
                   <FieldError name={`lines.${index}.quantity`} fieldErrors={state.fieldErrors} />
                 </div>
@@ -446,6 +522,7 @@ export function QuotationForm({
                     onChange={(event) =>
                       updateLine(index, { unitPrice: event.target.value })
                     }
+                    placeholder={FORM_PLACEHOLDERS.rate}
                   />
                   <FieldError name={`lines.${index}.unitPrice`} fieldErrors={state.fieldErrors} />
                 </div>
@@ -461,6 +538,7 @@ export function QuotationForm({
                     onChange={(event) =>
                       updateLine(index, { discount: event.target.value })
                     }
+                    placeholder={FORM_PLACEHOLDERS.discount}
                   />
                   <FieldError name={`lines.${index}.discount`} fieldErrors={state.fieldErrors} />
                 </div>
@@ -497,6 +575,7 @@ export function QuotationForm({
             name="notes"
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
+            placeholder={FORM_PLACEHOLDERS.notes}
           />
         </div>
 
@@ -506,24 +585,22 @@ export function QuotationForm({
           </p>
         ) : null}
 
-        <Button type="submit" disabled={isPending || customers.length === 0 || products.length === 0}>
-          {isPending
-            ? "Saving…"
-            : quotation
-              ? "Save quotation"
-              : "Create quotation"}
-        </Button>
+        <SubmitButton
+          pending={isPending}
+          pendingLabel="Saving"
+          disabled={customers.length === 0 || products.length === 0}
+        >
+          {quotation ? "Save quotation" : "Create quotation"}
+        </SubmitButton>
       </form>
+      </DocumentFormPreviewMain>
 
-      <aside
-        className={DOCUMENT_PREVIEW_ASIDE_CLASSNAME}
-        style={documentPreviewAsideStyle}
-      >
+      <DocumentFormPreviewAside>
         <p className="mb-2 text-sm font-medium text-muted-foreground">Preview</p>
         <div className="max-h-[min(70vh,36rem)] overflow-auto rounded-xl bg-muted/40 p-2">
           <QuotationDocumentPreview view={preview} />
         </div>
-      </aside>
-    </div>
+      </DocumentFormPreviewAside>
+    </DocumentFormPreviewLayout>
   );
 }

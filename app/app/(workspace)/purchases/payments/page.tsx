@@ -68,7 +68,7 @@ export default async function PurchasePaymentsPage({
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
       <PageHeader
-        title="Payments"
+        title="Supplier payments"
         description="Supplier payments allocated to unpaid purchase bills. No payment gateway."
         actions={
           canCreate ? (

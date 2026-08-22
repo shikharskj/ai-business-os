@@ -6,9 +6,9 @@ import type { InvoiceDocumentView } from "@/modules/sales/application/invoice-do
 /** Visual scale for live sidebar / detail previews (full A4 layout, shrunk). */
 export const INVOICE_DOCUMENT_PREVIEW_SCALE = 0.55 * 0.85;
 
-/** Fluid on small screens; A4-scaled width from `lg` (inline width would override `w-full`). */
+/** Sticky preview column helper when not using DocumentFormPreviewAside. */
 export const DOCUMENT_PREVIEW_ASIDE_CLASSNAME =
-  "w-full max-w-full lg:w-(--document-preview-width) lg:sticky lg:top-4 lg:shrink-0";
+  "min-w-0 w-full lg:sticky lg:top-4";
 
 export const documentPreviewAsideStyle = {
   "--document-preview-width": `calc(210mm * ${INVOICE_DOCUMENT_PREVIEW_SCALE})`,
@@ -250,7 +250,7 @@ export function InvoiceDocumentPreview({
 }) {
   return (
     <div
-      className={cn("mx-auto w-fit max-w-full", className)}
+      className={cn("w-full max-w-full", className)}
       style={{ zoom: scale }}
     >
       <InvoiceDocument view={view} />

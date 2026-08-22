@@ -6,7 +6,7 @@ import {
   recordStockAdjustmentAction,
   type StockActionState,
 } from "@/app/app/(workspace)/inventory/stock/actions";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -119,9 +119,8 @@ export function AdjustStockForm({
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Saving…" : "Record adjustment"}
-      </Button>
+      <SubmitButton pending={isPending} pendingLabel="Saving">Record adjustment</SubmitButton>
+
     </form>
   );
 }

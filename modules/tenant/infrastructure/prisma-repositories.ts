@@ -194,6 +194,13 @@ export const prismaMembershipRepository: MembershipRepository = {
     return records.map(mapMembership);
   },
 
+  async listActiveForTenant(tenantId) {
+    const records = await prisma.membership.findMany({
+      where: { tenantId, status: "ACTIVE" },
+    });
+    return records.map(mapMembership);
+  },
+
   async upsertActiveMembership(input) {
     const record = await prisma.membership.upsert({
       where: {
