@@ -11,7 +11,8 @@ import {
   type QuotationActionState,
 } from "@/app/app/(workspace)/sales/quotations/actions";
 import {
-  INVOICE_DOCUMENT_PREVIEW_SCALE,
+  DOCUMENT_PREVIEW_ASIDE_CLASSNAME,
+  documentPreviewAsideStyle,
   QuotationDocumentPreview,
 } from "@/components/business/quotation-document";
 import { Button } from "@/components/ui/button";
@@ -500,8 +501,8 @@ export function QuotationForm({
       </form>
 
       <aside
-        className="lg:sticky lg:top-4 lg:shrink-0"
-        style={{ width: `calc(210mm * ${INVOICE_DOCUMENT_PREVIEW_SCALE})` }}
+        className={DOCUMENT_PREVIEW_ASIDE_CLASSNAME}
+        style={documentPreviewAsideStyle}
       >
         <p className="mb-2 text-sm font-medium text-muted-foreground">Preview</p>
         <div className="max-h-[min(70vh,36rem)] overflow-auto rounded-xl bg-muted/40 p-2">

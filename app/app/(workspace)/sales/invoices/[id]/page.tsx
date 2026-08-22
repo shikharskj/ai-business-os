@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 
 import { EntityActivityPanel } from "@/components/business/entity-activity-panel";
 import {
-  INVOICE_DOCUMENT_PREVIEW_SCALE,
+  DOCUMENT_PREVIEW_ASIDE_CLASSNAME,
+  documentPreviewAsideStyle,
   InvoiceDocumentPreview,
 } from "@/components/business/invoice-document";
 import { formatDisplayDate } from "@/components/business/inventory-labels";
@@ -29,6 +30,7 @@ import {
 import { prisma } from "@/lib/db";
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
+import { cn } from "@/lib/utils";
 import { formatQuantity } from "@/modules/inventory";
 import {
   getInvoiceOutstanding,
@@ -411,9 +413,10 @@ export default async function InvoiceDetailPage({
         </div>
 
         <aside
-          className="flex w-full flex-col gap-6 lg:sticky lg:top-4 lg:shrink-0"
-          style={{ width: `calc(210mm * ${INVOICE_DOCUMENT_PREVIEW_SCALE})` }}
-        >          <div>
+          className={cn("flex flex-col gap-6", DOCUMENT_PREVIEW_ASIDE_CLASSNAME)}
+          style={documentPreviewAsideStyle}
+        >
+          <div>
             <p className="mb-2 text-sm font-medium text-muted-foreground">
               Preview
             </p>

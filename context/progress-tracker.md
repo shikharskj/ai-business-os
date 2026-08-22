@@ -104,6 +104,8 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 
 # Completed
 
+* **Document preview + logo export fixes:** WebP logos convert to PNG for invoice/quotation PDF embed (`logoBufferForPdf`) so export matches the HTML preview. Preview asides are `w-full` below `lg` with A4-scaled width from a CSS variable (no inline `width`). Logo upload/remove revalidates invoice and quotation layouts. Tests: `tests/sales/pdf-logo.test.ts`. Next remains `07-copilot-depth.md`.
+
 * **Needs attention prepare + confirm recovery:** Overdue Prepare reminder is omitted unless the member has `invoice:update` (dashboard is `report:read`; ACCOUNTANT no longer sees a control that 403s). Failed confirm keeps the pending card with Try again / Cancel and leaves View / Dismiss on the row so `router.refresh()` client state cannot trap the item. Tests: `tests/business-state/daily-brief.test.ts`. Next remains `07-copilot-depth.md`.
 
 * **Tax invoice theme alignment:** Live preview uses semantic tokens (`card` / `foreground` / `muted-foreground` / `border` / `primary` lettermark square). PDF export mirrors the same layout via light paper palette in `invoice-document-theme.ts` (always light for print). Stronger totals row; party hairline dividers. Tests: `tests/sales/invoice-document.test.ts`. Next remains `07-copilot-depth.md`.

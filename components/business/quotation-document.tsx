@@ -1,9 +1,15 @@
 import { cn } from "@/lib/utils";
 import type { QuotationDocumentView } from "@/modules/sales/application/quotation-document-view";
 
-import { INVOICE_DOCUMENT_PREVIEW_SCALE } from "@/components/business/invoice-document";
+import {
+  DOCUMENT_PREVIEW_ASIDE_CLASSNAME,
+  documentPreviewAsideStyle,
+  INVOICE_DOCUMENT_PREVIEW_SCALE,
+} from "@/components/business/invoice-document";
 
 export {
+  DOCUMENT_PREVIEW_ASIDE_CLASSNAME,
+  documentPreviewAsideStyle,
   INVOICE_DOCUMENT_PREVIEW_SCALE,
   INVOICE_DOCUMENT_PREVIEW_SCALE as QUOTATION_DOCUMENT_PREVIEW_SCALE,
 };

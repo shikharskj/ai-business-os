@@ -1,8 +1,18 @@
+import type { CSSProperties } from "react";
+
 import { cn } from "@/lib/utils";
 import type { InvoiceDocumentView } from "@/modules/sales/application/invoice-document-view";
 
 /** Visual scale for live sidebar / detail previews (full A4 layout, shrunk). */
 export const INVOICE_DOCUMENT_PREVIEW_SCALE = 0.55 * 0.85;
+
+/** Fluid on small screens; A4-scaled width from `lg` (inline width would override `w-full`). */
+export const DOCUMENT_PREVIEW_ASIDE_CLASSNAME =
+  "w-full max-w-full lg:w-(--document-preview-width) lg:sticky lg:top-4 lg:shrink-0";
+
+export const documentPreviewAsideStyle = {
+  "--document-preview-width": `calc(210mm * ${INVOICE_DOCUMENT_PREVIEW_SCALE})`,
+} as CSSProperties;
 
 function PartyBlock({
   label,

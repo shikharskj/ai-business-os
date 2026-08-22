@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import sharp from "sharp";
 
 import { createMemoryStorageAdapter } from "@/lib/storage/memory-adapter";
 import { createMemoryAuditRepository } from "@/modules/shared-kernel/audit";
@@ -73,6 +74,20 @@ function seller(): BusinessProfile {
     closedThroughPeriodKey: null,
   };
 }
+
+function pdfContainsImage(bytes: Uint8Array): boolean {
+  const raw = new TextDecoder("latin1").decode(bytes);
+  return raw.includes("/Subtype /Image") || raw.includes("/Subtype/Image");
+}
+
+const PNG_BYTES = Uint8Array.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+  0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+  0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+  0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+]);
 
 function pdfDecodedText(bytes: Uint8Array): string {
   const raw = new TextDecoder("latin1").decode(bytes);
@@ -170,6 +185,20 @@ describe("invoice document and PDF", () => {
     expect(text).toContain("851220");
     expect(text).toContain("IGST");
     expect(text).toContain("BILLED TO");
+    expect(pdfContainsImage(bytes)).toBe(false);
+
+    const pngPdf = await renderInvoicePdfBytes(view, {
+      bytes: PNG_BYTES,
+      contentType: "image/png",
+    });
+    expect(pdfContainsImage(pngPdf)).toBe(true);
+
+    const webp = await sharp(PNG_BYTES).webp().toBuffer();
+    const webpPdf = await renderInvoicePdfBytes(view, {
+      bytes: webp,
+      contentType: "image/webp",
+    });
+    expect(pdfContainsImage(webpPdf)).toBe(true);
   });
 
   it("rejects PDF export for draft invoices", async () => {

@@ -7,14 +7,11 @@ import {
   INVOICE_DOCUMENT_LAYOUT,
   INVOICE_DOCUMENT_PAPER,
 } from "@/modules/sales/application/invoice-document-theme";
+import { logoBufferForPdf } from "@/modules/sales/application/pdf-logo";
 
 const { pageMargin: PAGE_MARGIN, logoSize: LOGO_SIZE } = INVOICE_DOCUMENT_LAYOUT;
 const CONTENT_WIDTH = INVOICE_DOCUMENT_CONTENT_WIDTH;
 const paper = INVOICE_DOCUMENT_PAPER;
-
-function canEmbedLogo(contentType: string): boolean {
-  return contentType === "image/jpeg" || contentType === "image/png";
-}
 
 function drawLettermark(
   doc: PDFKit.PDFDocument,
@@ -115,8 +112,7 @@ export async function renderInvoicePdfBytes(
     doc.on("error", reject);
   });
 
-  const logoBuffer =
-    logo && canEmbedLogo(logo.contentType) ? Buffer.from(logo.bytes) : null;
+  const logoBuffer = await logoBufferForPdf(logo);
 
   if (logoBuffer) {
     try {

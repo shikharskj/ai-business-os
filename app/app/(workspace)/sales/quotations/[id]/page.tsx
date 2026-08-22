@@ -6,7 +6,8 @@ import { formatDisplayDate } from "@/components/business/inventory-labels";
 import { GstBreakdown } from "@/components/business/gst-breakdown";
 import { MoneyDisplay } from "@/components/business/money-display";
 import {
-  INVOICE_DOCUMENT_PREVIEW_SCALE,
+  DOCUMENT_PREVIEW_ASIDE_CLASSNAME,
+  documentPreviewAsideStyle,
   QuotationDocumentPreview,
 } from "@/components/business/quotation-document";
 import { StatusBadge } from "@/components/business/status-badge";
@@ -29,6 +30,7 @@ import {
 import { prisma } from "@/lib/db";
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
+import { cn } from "@/lib/utils";
 import { formatQuantity } from "@/modules/inventory";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
@@ -264,8 +266,8 @@ export default async function QuotationDetailPage({
         </div>
 
         <aside
-          className="flex w-full flex-col gap-6 lg:sticky lg:top-4 lg:shrink-0"
-          style={{ width: `calc(210mm * ${INVOICE_DOCUMENT_PREVIEW_SCALE})` }}
+          className={cn("flex flex-col gap-6", DOCUMENT_PREVIEW_ASIDE_CLASSNAME)}
+          style={documentPreviewAsideStyle}
         >
           <div>
             <p className="mb-2 text-sm font-medium text-muted-foreground">

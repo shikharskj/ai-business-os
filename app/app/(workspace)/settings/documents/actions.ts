@@ -28,6 +28,12 @@ export type DocumentActionState = {
 
 const audit = createPrismaAuditRepository(prisma);
 
+function revalidateLogoSurfaces() {
+  revalidatePath("/app/settings");
+  revalidatePath("/app/sales/invoices", "layout");
+  revalidatePath("/app/sales/quotations", "layout");
+}
+
 export async function uploadBusinessDocumentAction(
   _prevState: DocumentActionState,
   formData: FormData
@@ -93,6 +99,7 @@ export async function deleteBusinessDocumentAction(
 
     if (tenant.business.logoDocumentId === documentId) {
       await prismaBusinessRepository.setLogoDocumentId(tenant.tenantId, null);
+      revalidateLogoSurfaces();
     }
 
     revalidatePath("/app/settings/documents");
@@ -141,8 +148,7 @@ export async function uploadBusinessLogoAction(
       audit,
     });
 
-    revalidatePath("/app/settings");
-    revalidatePath("/app/sales/invoices");
+    revalidateLogoSurfaces();
     return {};
   } catch (error) {
     if (error instanceof AuthorizationError) {
@@ -167,8 +173,7 @@ export async function removeBusinessLogoAction(): Promise<DocumentActionState> {
       storage: getStorageAdapter(),
       audit,
     });
-    revalidatePath("/app/settings");
-    revalidatePath("/app/sales/invoices");
+    revalidateLogoSurfaces();
     return {};
   } catch (error) {
     if (error instanceof AuthorizationError) {
