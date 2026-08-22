@@ -303,7 +303,7 @@ export function DailyBriefPanel({ brief }: { brief: DailyBriefView }) {
       </CardHeader>
       <CardContent className={BRIEF_SCROLL_BODY_CLASS}>
         {error ? (
-          <p className="px-(--card-spacing) pb-2 text-sm text-destructive">
+          <p className="px-(--card-spacing) pb-2 text-sm text-destructive" role="alert">
             {error}
           </p>
         ) : null}

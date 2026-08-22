@@ -62,7 +62,7 @@ export function PendingActionCard({
       </ul>
       <p className="mb-3 text-sm text-muted-foreground">{pending.impact}</p>
       {action.status === "failed" ? (
-        <p className="mb-3 flex items-start gap-2 text-sm text-destructive">
+        <p className="mb-3 flex items-start gap-2 text-sm text-destructive" role="alert">
           <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
           {action.message}
         </p>
