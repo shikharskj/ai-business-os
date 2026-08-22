@@ -1,15 +1,29 @@
+import { currentUser } from "@clerk/nextjs/server";
+
 import { DashboardCanvas } from "@/components/business/dashboard-canvas";
 import { PageHeader } from "@/components/shell/page-header";
+import { prisma } from "@/lib/db/client";
 import { authorize } from "@/lib/security";
 import { runDashboardSupervisor } from "@/modules/ai/server";
+import {
+  buildDailyBriefView,
+  createPrismaBusinessStateConsumerDeps,
+  ensureAttentionQueueFresh,
+  listOpenAttention,
+} from "@/modules/business-state";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 import { prismaExpenseRepository } from "@/modules/expenses/infrastructure/prisma-expenses-repository";
 import { prismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";
 import { prismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
 import { prismaSupplierPaymentRepository } from "@/modules/payments/infrastructure/prisma-supplier-payments-repository";
 import { prismaPurchasesRepository } from "@/modules/purchases/infrastructure/prisma-purchases-repository";
-import { resolveDashboardDateRange, ReportingError } from "@/modules/reporting";
+import {
+  getPeriodActivity,
+  resolveDashboardDateRange,
+  ReportingError,
+} from "@/modules/reporting";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
+import { yesterdayInTimezone } from "@/modules/shared-kernel/dates";
 
 export default async function DashboardPage({
   searchParams,
@@ -53,18 +67,90 @@ export default async function DashboardPage({
     inventory: prismaInventoryRepository,
   };
 
-  const result = await runDashboardSupervisor({
-    tenantId: tenant.tenantId,
-    actorUserId: tenant.membership.userId,
-    intent: { kind: "overview", range, tab: "overview" },
-    deps,
+  const yesterday = yesterdayInTimezone(tenant.business.timezone);
+  const businessStateDeps = createPrismaBusinessStateConsumerDeps(prisma);
+
+  const [result, yesterdayActivity, items, clerkUser] = await Promise.all([
+    runDashboardSupervisor({
+      tenantId: tenant.tenantId,
+      actorUserId: tenant.membership.userId,
+      intent: { kind: "overview", range, tab: "overview" },
+      deps,
+    }),
+    getPeriodActivity({
+      tenantId: tenant.tenantId,
+      fromDate: yesterday,
+      toDate: yesterday,
+      sales: prismaSalesRepository,
+      payments: prismaPaymentRepository,
+      expenses: prismaExpenseRepository,
+    }),
+    (async () => {
+      await ensureAttentionQueueFresh({
+        tenantId: tenant.tenantId,
+        timezone: tenant.business.timezone,
+        lowStockThresholdMajor: tenant.business.lowStockThreshold,
+        currency: tenant.business.currency,
+        sales: businessStateDeps.sales,
+        payments: businessStateDeps.payments,
+        catalog: businessStateDeps.catalog,
+        inventory: businessStateDeps.inventory,
+        accounts: businessStateDeps.accounts,
+        journals: businessStateDeps.journals,
+        projections: businessStateDeps.projections,
+        attention: businessStateDeps.attention,
+      });
+      return listOpenAttention({
+        tenantId: tenant.tenantId,
+        attention: businessStateDeps.attention,
+      });
+    })(),
+    currentUser(),
+  ]);
+
+  const recipientName =
+    clerkUser?.firstName?.trim() ||
+    clerkUser?.fullName?.trim() ||
+    null;
+
+  const brief = buildDailyBriefView({
+    timezone: tenant.business.timezone,
+    quiet: result.view.source === "fallback",
+    recipientName,
+    yesterday,
+    sales: yesterdayActivity.sales,
+    collections: yesterdayActivity.collections,
+    expenses: yesterdayActivity.expenses,
+    items,
+    overview: result.overview,
   });
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-1 flex-col gap-6">
+    <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-1 flex-col gap-6">
       <PageHeader
         title="Dashboard"
         description={`Overview of ${tenant.business.name}`}
+        descriptionEnd={
+          <div className="flex flex-col gap-1 text-base text-muted-foreground">
+            <p className="leading-snug">
+              <span className="font-medium text-foreground">
+                {result.view.period.label}
+              </span>
+              <span className="mx-1.5 text-border">·</span>
+              <span className="font-mono text-foreground/80">
+                {result.view.period.from} – {result.view.period.to}
+              </span>
+              <span className="mx-1.5 text-border">·</span>
+              <span>{tenant.business.timezone}</span>
+            </p>
+            {result.view.source === "fallback" ? (
+              <p className="text-sm text-muted-foreground">
+                Showing deterministic overview (AI supervisor unavailable or
+                degraded).
+              </p>
+            ) : null}
+          </div>
+        }
       />
 
       {rangeError ? (
@@ -73,25 +159,11 @@ export default async function DashboardPage({
         </div>
       ) : null}
 
-      <div className="-mt-2 flex flex-col gap-1 border-b border-border/60 pb-4 text-sm text-muted-foreground">
-        <p>
-          <span>{result.view.period.label}</span>
-          <span className="mx-1.5 text-border">·</span>
-          <span className="font-mono text-xs text-foreground/80">
-            {result.view.period.from} – {result.view.period.to}
-          </span>
-          <span className="mx-1.5 text-border">·</span>
-          <span className="text-xs">{tenant.business.timezone}</span>
-        </p>
-        {result.view.source === "fallback" ? (
-          <p className="text-xs text-muted-foreground">
-            Showing deterministic overview (AI supervisor unavailable or
-            degraded).
-          </p>
-        ) : null}
-      </div>
-
-      <DashboardCanvas view={result.view} chartRangePreset={range.preset} />
+      <DashboardCanvas
+        view={result.view}
+        chartRangePreset={range.preset}
+        brief={brief}
+      />
     </div>
   );
 }

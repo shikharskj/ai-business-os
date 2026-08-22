@@ -1,21 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import {
-  AlertTriangle,
-  ArrowUpRight,
-  Check,
-  X,
-} from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
 import {
   AssistantActivity,
   type AssistantActivityStep,
 } from "@/components/assistant/assistant-activity";
 import { AssistantProse } from "@/components/assistant/assistant-prose";
+import { PendingActionCard } from "@/components/assistant/pending-action-card";
 import type { AssistantActionState } from "@/components/assistant/types";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
   TableBody,
@@ -26,7 +21,6 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type {
-  AiAssistantActionOutcome,
   AiAssistantFact,
   AiAssistantPendingAction,
   AiAssistantSuggestion,
@@ -181,94 +175,6 @@ function FactRow({ fact }: { fact: AiAssistantFact }) {
         <p className="text-xs text-muted-foreground">{fact.detail}</p>
       ) : null}
     </li>
-  );
-}
-
-function PendingActionCard({
-  pending,
-  action,
-  onConfirm,
-  onCancel,
-}: {
-  pending: AiAssistantPendingAction & { token: string };
-  action: AssistantActionState;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  if (action.status === "executed") {
-    return <ExecutedOutcome outcome={action.outcome} />;
-  }
-
-  if (action.status === "cancelled") {
-    return <p className="text-sm text-muted-foreground">Cancelled.</p>;
-  }
-
-  if (action.status === "failed") {
-    return (
-      <p className="flex items-start gap-2 text-sm text-destructive">
-        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-        {action.message}
-      </p>
-    );
-  }
-
-  return (
-    <section className="rounded-xl border border-border bg-card p-3 shadow-sm">
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <div>
-          <h3 className="text-base font-medium text-foreground">
-            {pending.title}
-          </h3>
-          <p className="mt-1 text-sm text-muted-foreground">{pending.summary}</p>
-        </div>
-      </div>
-      <ul className="mb-3 flex flex-col gap-1.5">
-        {pending.fields.map((field) => (
-          <li
-            key={field.label}
-            className="flex items-center justify-between gap-3 rounded-lg bg-muted/60 px-2.5 py-2 text-sm"
-          >
-            <span className="text-muted-foreground">{field.label}</span>
-            <span className="font-medium text-foreground">{field.value}</span>
-          </li>
-        ))}
-      </ul>
-      <p className="mb-3 text-xs text-muted-foreground">{pending.impact}</p>
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          size="sm"
-          disabled={action.status === "running"}
-          onClick={onConfirm}
-        >
-          {action.status === "running" ? (
-            <Spinner className="size-3.5" />
-          ) : (
-            <Check className="size-3.5" />
-          )}
-          Confirm
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={action.status === "running"}
-          onClick={onCancel}
-        >
-          <X className="size-3.5" />
-          Cancel
-        </Button>
-      </div>
-    </section>
-  );
-}
-
-function ExecutedOutcome({ outcome }: { outcome: AiAssistantActionOutcome }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="text-sm font-medium text-foreground">{outcome.title}</p>
-      <FactsSurface facts={outcome.facts} />
-    </div>
   );
 }
 

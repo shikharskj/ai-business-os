@@ -8,10 +8,10 @@ This file is the **single source of truth for implementation progress**. The AI 
 
 ## Current Phase
 
-* **Phase:** Post-MVP — Business Intelligence Spine (R1)
-* **Status:** Ready — next `05-daily-brief-ui.md`
+* **Phase:** Post-MVP — Copilot Depth (R3)
+* **Status:** Ready — next `07-copilot-depth.md`
 * **Active roadmap:** [`context/product-roadmap.md`](product-roadmap.md)
-* **Active specs:** [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) — next: `05-daily-brief-ui.md`
+* **Active specs:** [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) — next: `07-copilot-depth.md`
 * **MVP archive:** [`context/feature-specs-mvp/`](feature-specs-mvp/)
 * **Deferred horizon:** [`context/future-scope.md`](future-scope.md) (do not schedule as current Next)
 * **Launch trust:** MVP `29` / `30` deferred until after Post-MVP + future-scope (not parallel)
@@ -38,7 +38,7 @@ Guardian (R6) → AI Ops (R7) — specs 16–17
 
 North star: an AI-native OS for Indian SMEs that records correctly, understands continuously, tells the owner what matters, and automates routine work under autonomy L0–L4.
 
-**Next implementation unit:** `context/feature-specs-post-mvp/05-daily-brief-ui.md`. Do not start R5 (`12`–`15`) before R2–R4 unless a metric pull is recorded here. Do not start MVP `29`/`30` until launch readiness.
+**Next implementation unit:** `context/feature-specs-post-mvp/07-copilot-depth.md`. Do not start R5 (`12`–`15`) before R2–R4 unless a metric pull is recorded here. Do not start MVP `29`/`30` until launch readiness.
 
 The priority is **correctness, attention quality, and automation under guardrails** — not feature parity with billing ERPs.
 
@@ -92,8 +92,8 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 | Testing (`29`)        | Deferred until launch |
 | Security hardening (`30`) | Deferred until launch |
 | Production deployment | Not Started |
-| Intelligence Spine (R1) | In Progress (`04` done; next `05`) |
-| Operator / Daily Brief (R2) | Not Started |
+| Intelligence Spine (R1) | Complete (`04`) |
+| Operator / Daily Brief (R2) | Complete (`05`–`06`) |
 | Copilot Depth (R3)    | Not Started |
 | Automation Engine (R4)| Not Started |
 | Coverage Completers (R5) | Not Started |
@@ -103,6 +103,25 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 ---
 
 # Completed
+
+* **Fixed top bar + canvas spacing:** Workspace shell is `h-svh` with scroll only in `main` so the app top bar stays fixed; page headers scroll with content. Doubled `/app` canvas gaps (`gap-8` / `lg:gap-12`, outer `gap-12`). Next remains `07-copilot-depth.md`.
+
+* **Needs attention + Recent activity typography:** Bumped Daily Brief and activity rail copy off `text-[10px]` / dense `text-xs` / `size="xs"` onto workspace hierarchy (`text-base` titles/amounts, `text-sm`–`text-base` body, `text-xs` cues only, `sm` buttons / default badges). Shared `PendingActionCard` cues/fields matched. Dashboard period meta sits on the PageHeader description row via `descriptionEnd` (right-aligned with “Overview of …”, `text-base`). Brief greeting personalizes with Clerk first name + smile (`Good morning, Name 🙂`). Next remains `07-copilot-depth.md`.
+
+* **Dashboard brief height polish:** Needs attention is content-sized beside KPIs (`lg:self-start`; no `h-full` / `min-h-48` on the brief card). Period notes + queue scroll under a fixed header (`max-h-[min(28rem,50vh)]`). Recent activity still stretches to the chart. Next remains `07-copilot-depth.md`.
+
+* **Operator recommendations (`06-operator-recommendations.md`):**
+  * Deterministic L1/L2 on Needs attention rows: overdue → Remind customer + Prepare reminder; low stock → Review stock; idle quote → Follow up. Quiet autonomy cues (Recommend / Prepare / Confirm).
+  * `POST /api/assistant/actions/propose` (`invoice:update`) builds HMAC-signed `send_payment_reminders` pending action from an overdue AttentionQueue row; confirm still uses existing `/api/assistant/actions/confirm`. Shared `PendingActionCard`.
+  * Dashboard polish: show-more after 5 rows; header counts from visible (non-dismissed) rows; yesterday vs KPI range cue; `ensureAttentionQueueFresh` rebuilds when `rebuiltAt` older than 6h; supervisor `insights` region left empty (brief owns notes/queue).
+  * Tests: `tests/business-state/daily-brief.test.ts`, `propose-brief-reminder.test.ts`, attention ensure-fresh TTL, dashboard-supervisor empty insights. Next: `07-copilot-depth.md`.
+
+* **Daily Brief UI (`05-daily-brief-ui.md`):**
+  * `/app` Needs attention rail (mobile-first) from AttentionQueue + yesterday sales / cash-in / expenses via `getPeriodActivity` (same taxable/receipts/expense basis as dashboard KPIs — no client money math).
+  * Each row: type badge, title, body, verified amount fact when present, link to the domain record, Dismiss → `POST /api/business-state/attention/dismiss`.
+  * When the dashboard supervisor is `fallback` (AI down), the brief still renders the same rows with quieter copy (no greeting). Not a second chatbot.
+  * Follow-up coverage: first `/app` visit runs `ensureAttentionQueueFresh` when `meta.rebuiltAt` is null so existing low stock / overdue / idle quotes backfill; low-stock threshold changes rebuild `attentionQueue` + `inventoryRisk` from `updateBusinessProfileAction`. Brief chrome shows queue type counts plus L0 period notes (negative profit / high expense ratio / payables-heavy) from supervisor overview — Alerts rail not restored.
+  * Tests: `tests/business-state/daily-brief.test.ts`, `tests/business-state/attention-queue.test.ts` (ensure-fresh), `tests/reporting/dashboard.test.ts` (period activity day isolation).
 
 * **Attention queue (`04-attention-queue.md`):**
   * Tenant-scoped `AttentionItem` projection (overdue receivable, low stock, idle SENT/ACCEPTED quotation) with ranked severity, href, optional money fact, OPEN/DISMISSED. Migration `20260822060000_add_attention_queue`.
@@ -405,8 +424,8 @@ Nothing in progress. See **Next Up**.
 
 **Active product work** follows [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) one numbered file at a time.
 
-1. **Next implementable spec:** [`05-daily-brief-ui.md`](feature-specs-post-mvp/05-daily-brief-ui.md)
-2. Then `06`–`07` (operator, copilot) → `08`–`11` (automation)
+1. **Next implementable spec:** [`07-copilot-depth.md`](feature-specs-post-mvp/07-copilot-depth.md)
+2. Then `08`–`11` (automation)
 3. Specs `12`–`15` (R5) only after R2–R4 unless a metric pull is recorded here
 4. Then `16` Guardian → `17` AI Operations
 5. **Not now:** [`future-scope.md`](future-scope.md); MVP `29`/`30` until launch after Post-MVP + future-scope

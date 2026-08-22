@@ -52,6 +52,76 @@ function zeroMoney(): Money {
   return money(0n);
 }
 
+export type PeriodActivitySnapshot = {
+  fromDate: BusinessDate;
+  toDate: BusinessDate;
+  sales: Money;
+  collections: Money;
+  expenses: Money;
+};
+
+export type PeriodActivityDeps = {
+  tenantId: string;
+  fromDate: BusinessDate;
+  toDate: BusinessDate;
+  sales: SalesRepository;
+  payments: PaymentRepository;
+  expenses: ExpenseRepository;
+};
+
+/**
+ * Sales (posted taxable), collections (receipts), and expenses for a date
+ * window. Same basis as dashboard KPIs — no client-side money math.
+ */
+export async function getPeriodActivity(
+  input: PeriodActivityDeps
+): Promise<PeriodActivitySnapshot> {
+  const [periodInvoices, periodExpenses, receipts] = await Promise.all([
+    input.sales.listInvoices({
+      tenantId: input.tenantId,
+      statuses: GST_SALES_STATUSES,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+    }),
+    input.expenses.listExpenses({
+      tenantId: input.tenantId,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+    }),
+    input.payments.listPayments({
+      tenantId: input.tenantId,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+    }),
+  ]);
+
+  let sales = zeroMoney();
+  for (const invoice of periodInvoices) {
+    if (invoice.tenantId !== input.tenantId) continue;
+    sales = addMoney(sales, invoice.taxableAmount);
+  }
+
+  let expenses = zeroMoney();
+  for (const expense of periodExpenses) {
+    if (expense.tenantId !== input.tenantId) continue;
+    expenses = addMoney(expenses, expense.grandTotal);
+  }
+
+  let collections = zeroMoney();
+  for (const payment of receipts) {
+    if (payment.tenantId !== input.tenantId) continue;
+    collections = addMoney(collections, payment.amount);
+  }
+
+  return {
+    fromDate: input.fromDate,
+    toDate: input.toDate,
+    sales,
+    collections,
+    expenses,
+  };
+}
+
 function eachDateInclusive(from: BusinessDate, to: BusinessDate): BusinessDate[] {
   const dates: BusinessDate[] = [];
   const cursor = new Date(`${from}T00:00:00.000Z`);

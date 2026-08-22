@@ -10,6 +10,7 @@ import {
   createMemoryBusinessStateProjectionRepository,
   createBusinessStateOutboxConsumer,
   dismissAttentionItem,
+  ensureAttentionQueueFresh,
   IDLE_QUOTATION_DAYS,
   listOpenAttention,
   recordPaidAfterReminderOutcomes,
@@ -520,5 +521,164 @@ describe("attention queue (post-mvp 04)", () => {
       attention,
     });
     expect(duplicate).toBe(0);
+  });
+
+  it("ensureAttentionQueueFresh rebuilds once when meta.rebuiltAt is null", async () => {
+    const catalog = createMemoryCatalogRepository();
+    const inventory = createMemoryInventoryRepository();
+    const audit = createMemoryAuditRepository();
+    const stockOutbox = createMemoryOutboxRepository();
+    const product = await createProduct({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      fields: {
+        kind: "PRODUCT",
+        name: "Basmati Rice",
+        sku: "RICE-1",
+        unitOfMeasurement: "KG",
+        sellingPrice: money(250_00n),
+        purchasePrice: money(200_00n),
+        taxRateBps: 500,
+        tracksInventory: true,
+      },
+      catalog,
+      audit,
+      outbox: stockOutbox,
+    });
+    await recordOpeningStock({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      productId: product.id,
+      quantity: quantityFromMajor("1"),
+      occurredOn: businessDate("2026-08-01"),
+      catalog,
+      inventory,
+      audit,
+      outbox: stockOutbox,
+    });
+
+    const sales = createMemorySalesRepository(
+      [],
+      [
+        invoiceFixture({
+          id: "inv-overdue",
+          tenantId: "tenant-a",
+          number: "INV/1",
+          status: "POSTED",
+        }),
+      ]
+    );
+    const attention = createMemoryAttentionQueueRepository();
+    const projections = createMemoryBusinessStateProjectionRepository();
+    const accounting = await seededAccounting();
+
+    const first = await ensureAttentionQueueFresh({
+      tenantId: "tenant-a",
+      timezone: "Asia/Kolkata",
+      lowStockThresholdMajor: "5.0000",
+      sales,
+      payments: createMemoryPaymentRepository(),
+      catalog,
+      inventory,
+      ...accounting,
+      projections,
+      attention,
+    });
+    expect(first.rebuilt).toBe(true);
+
+    const open = await listOpenAttention({ tenantId: "tenant-a", attention });
+    expect(open.map((row) => row.type).sort()).toEqual([
+      "LOW_STOCK",
+      "OVERDUE_RECEIVABLE",
+    ]);
+
+    const meta = await projections.getMeta("tenant-a");
+    expect(meta?.rebuiltAt).not.toBeNull();
+
+    const second = await ensureAttentionQueueFresh({
+      tenantId: "tenant-a",
+      timezone: "Asia/Kolkata",
+      lowStockThresholdMajor: "5.0000",
+      sales,
+      payments: createMemoryPaymentRepository(),
+      catalog,
+      inventory,
+      ...accounting,
+      projections,
+      attention,
+    });
+    expect(second.rebuilt).toBe(false);
+  });
+
+  it("ensureAttentionQueueFresh skips when rebuiltAt is already stamped", async () => {
+    const projections = createMemoryBusinessStateProjectionRepository();
+    const attention = createMemoryAttentionQueueRepository();
+    const accounting = await seededAccounting();
+
+    await rebuildBusinessStateProjections({
+      tenantId: "tenant-a",
+      timezone: "Asia/Kolkata",
+      lowStockThresholdMajor: "5.0000",
+      sales: createMemorySalesRepository(),
+      payments: createMemoryPaymentRepository(),
+      catalog: createMemoryCatalogRepository(),
+      inventory: createMemoryInventoryRepository(),
+      ...accounting,
+      projections,
+      attention,
+      families: ["attentionQueue"],
+      markRebuilt: true,
+    });
+
+    const result = await ensureAttentionQueueFresh({
+      tenantId: "tenant-a",
+      timezone: "Asia/Kolkata",
+      lowStockThresholdMajor: "5.0000",
+      sales: createMemorySalesRepository(),
+      payments: createMemoryPaymentRepository(),
+      catalog: createMemoryCatalogRepository(),
+      inventory: createMemoryInventoryRepository(),
+      ...accounting,
+      projections,
+      attention,
+    });
+    expect(result.rebuilt).toBe(false);
+  });
+
+  it("ensureAttentionQueueFresh rebuilds when rebuiltAt is older than TTL", async () => {
+    const projections = createMemoryBusinessStateProjectionRepository();
+    const attention = createMemoryAttentionQueueRepository();
+    const accounting = await seededAccounting();
+
+    await rebuildBusinessStateProjections({
+      tenantId: "tenant-a",
+      timezone: "Asia/Kolkata",
+      lowStockThresholdMajor: "5.0000",
+      sales: createMemorySalesRepository(),
+      payments: createMemoryPaymentRepository(),
+      catalog: createMemoryCatalogRepository(),
+      inventory: createMemoryInventoryRepository(),
+      ...accounting,
+      projections,
+      attention,
+      families: ["attentionQueue"],
+      markRebuilt: true,
+    });
+
+    const staleNow = new Date(FROZEN_NOW.getTime() + 7 * 60 * 60 * 1000);
+    const result = await ensureAttentionQueueFresh({
+      tenantId: "tenant-a",
+      timezone: "Asia/Kolkata",
+      lowStockThresholdMajor: "5.0000",
+      sales: createMemorySalesRepository(),
+      payments: createMemoryPaymentRepository(),
+      catalog: createMemoryCatalogRepository(),
+      inventory: createMemoryInventoryRepository(),
+      ...accounting,
+      projections,
+      attention,
+      now: staleNow,
+    });
+    expect(result.rebuilt).toBe(true);
   });
 });

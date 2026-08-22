@@ -6,12 +6,17 @@ import { redirect } from "next/navigation";
 import { ZodError } from "zod";
 
 import { requireCurrentUser } from "@/lib/auth/current-user";
+import { prisma } from "@/lib/db/client";
 import {
   clerkInvitationGateway,
   clerkOrganizationGateway,
   requireTenantForTrustedResource,
 } from "@/lib/tenant";
 import { authorize } from "@/lib/security";
+import {
+  createPrismaBusinessStateConsumerDeps,
+  rebuildBusinessStateProjections,
+} from "@/modules/business-state";
 import {
   createBusinessWithOrganization,
   inviteOrganizationMember,
@@ -151,6 +156,9 @@ export async function updateBusinessProfileAction(
     throw error;
   }
 
+  const lowStockThresholdChanged =
+    profile.lowStockThreshold !== tenant.business.lowStockThreshold;
+
   try {
     await updateBusinessProfile({
       tenantId: tenant.tenantId,
@@ -164,6 +172,29 @@ export async function updateBusinessProfileAction(
           ? error.message
           : "Unable to update business profile",
     };
+  }
+
+  if (lowStockThresholdChanged) {
+    const deps = createPrismaBusinessStateConsumerDeps(prisma);
+    const context = await deps.resolveTenantContext(tenant.tenantId);
+    if (context) {
+      await rebuildBusinessStateProjections({
+        tenantId: tenant.tenantId,
+        timezone: context.timezone,
+        lowStockThresholdMajor: context.lowStockThresholdMajor,
+        currency: context.currency,
+        sales: deps.sales,
+        payments: deps.payments,
+        catalog: deps.catalog,
+        inventory: deps.inventory,
+        accounts: deps.accounts,
+        journals: deps.journals,
+        projections: deps.projections,
+        attention: deps.attention,
+        families: ["attentionQueue", "inventoryRisk"],
+        markRebuilt: true,
+      });
+    }
   }
 
   revalidatePath("/app/settings");

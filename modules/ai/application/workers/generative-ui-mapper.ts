@@ -83,33 +83,21 @@ export function runGenerativeUiMapper(input: {
     overview.recentExpenses.length === 0 &&
     overview.alerts.length === 0;
 
-  const insightComponents = input.anomalies.anomalies.slice(0, 4).map((a) => ({
-    type: "InsightBanner" as const,
-    id: a.id,
-    title: a.title,
-    detail: a.detail,
-    href: a.href,
-    severity: a.severity,
-    kind: a.kind,
-    dismissible: true,
-  }));
+  // Insights region kept for schema compatibility; Daily Brief owns period notes
+  // and AttentionQueue rows — do not duplicate Alerts here.
+  const insightComponents: Array<{
+    type: "InsightBanner";
+    id: string;
+    title: string;
+    detail: string;
+    href?: string;
+    severity: "info" | "warning" | "danger";
+    kind: "fact" | "recommendation";
+    dismissible: boolean;
+  }> = [];
 
-  // Surface one analyst recommendation as insight if no anomalies
-  if (insightComponents.length === 0) {
-    const rec = input.insights.insights.find((i) => i.kind === "recommendation");
-    if (rec) {
-      insightComponents.push({
-        type: "InsightBanner",
-        id: rec.id,
-        title: rec.title,
-        detail: rec.detail,
-        href: undefined,
-        severity: "info",
-        kind: rec.kind,
-        dismissible: true,
-      });
-    }
-  }
+  void input.anomalies;
+  void input.insights;
 
   const activityItems = [
     ...overview.recentInvoices.map((invoice) => ({
@@ -267,8 +255,7 @@ export function runGenerativeUiMapper(input: {
             type: "AreaChart",
             id: "chart.sales-expenses",
             title: "Sales vs expenses",
-            description:
-              "Daily totals for the selected period (display only — not source of truth).",
+            description: "(display only — not source of truth)",
             summary: `Sales ${toMajorString(overview.revenue)} and expenses ${toMajorString(overview.expenses)} for ${input.facts.periodLabel}.`,
             series: [
               {

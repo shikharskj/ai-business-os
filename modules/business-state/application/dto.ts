@@ -108,3 +108,5 @@ export function attentionItemToDto(item: AttentionItem) {
     dismissedAt: item.dismissedAt?.toISOString() ?? null,
   };
 }
+
+export type AttentionItemDto = ReturnType<typeof attentionItemToDto>;

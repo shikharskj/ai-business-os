@@ -43,6 +43,40 @@ export function todayInTimezone(timezone: string): BusinessDate {
   return businessDate(`${year}-${month}-${day}`);
 }
 
+export function addBusinessDays(
+  date: BusinessDate,
+  dayDelta: number
+): BusinessDate {
+  const [year, month, day] = date.split("-").map(Number) as [
+    number,
+    number,
+    number,
+  ];
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  utc.setUTCDate(utc.getUTCDate() + dayDelta);
+  const y = utc.getUTCFullYear();
+  const m = String(utc.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(utc.getUTCDate()).padStart(2, "0");
+  return businessDate(`${y}-${m}-${d}`);
+}
+
+export function yesterdayInTimezone(timezone: string): BusinessDate {
+  return addBusinessDays(todayInTimezone(timezone), -1);
+}
+
+export function hourInTimezone(timezone: string, at: Date = new Date()): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone,
+    hour: "numeric",
+    hourCycle: "h23",
+  }).formatToParts(at);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value);
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+    throw new Error(`Could not resolve hour for timezone "${timezone}".`);
+  }
+  return hour;
+}
+
 export function utcNow(): Date {
   return new Date();
 }

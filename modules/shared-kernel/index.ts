@@ -21,6 +21,9 @@ export {
   businessDate,
   isCalendarDate,
   todayInTimezone,
+  addBusinessDays,
+  yesterdayInTimezone,
+  hourInTimezone,
   utcNow,
   financialYearForDate,
 } from "@/modules/shared-kernel/dates";

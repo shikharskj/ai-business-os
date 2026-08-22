@@ -134,6 +134,7 @@ describe("supervisor-led dashboard", () => {
     expect(result.usedFallback).toBe(false);
     expect(result.view.version).toBe(1);
     expect(result.view.source).toBe("supervisor");
+    expect(result.overview.overdueInvoiceCount).toBeGreaterThanOrEqual(1);
     const kpi = result.view.regions.find((r) => r.id === "kpi");
     expect(kpi?.components).toHaveLength(8);
     expect(kpi?.components.every((c) => c.type === "MetricCard")).toBe(true);
@@ -151,7 +152,9 @@ describe("supervisor-led dashboard", () => {
       ])
     );
     expect(result.audit.factCount).toBeGreaterThan(0);
-    expect(result.view.regions.some((r) => r.id === "insights")).toBe(true);
+    const insights = result.view.regions.find((r) => r.id === "insights");
+    expect(insights).toBeDefined();
+    expect(insights?.components).toEqual([]);
 
     const activity = result.view.regions
       .flatMap((r) => r.components)

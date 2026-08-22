@@ -789,6 +789,10 @@ GET  /api/business-state                    report:read   includes attention.ope
 
 Populate path: mutation + outbox → `business-state` consumer (family `attentionQueue`) and the scheduled overdue scan already used for notifications. Outcome stubs: `ATTENTION_DISMISSED`, `REMINDER_PROPOSED`, `REMINDER_SENT`, `PAID_AFTER_REMINDER` (`AutomationOutcomeRecorded`).
 
+First `/app` visit backfills the queue when BusinessState `meta.rebuiltAt` is null or older than 6 hours (`ensureAttentionQueueFresh` → family `attentionQueue`, stamps `rebuiltAt`). Changing the business low-stock threshold rebuilds `attentionQueue` + `inventoryRisk` from the settings action (composition root — not inside `modules/tenant`). After that, day-to-day freshness stays on outbox + overdue scan.
+
+Daily Brief (home `/app`, specs `05`–`06`): ranked Needs attention list from this queue plus yesterday sales / cash-in / expenses from `getPeriodActivity` (same basis as dashboard KPIs). Header shows open-type counts from visible rows; period notes (expense ratio / negative profit / payables-heavy) are L0 inform from supervisor overview facts — not a second Alerts rail. Each row carries deterministic L1 recommend labels; overdue rows can L2 Prepare reminder via `POST /api/assistant/actions/propose` then confirm with `POST /api/assistant/actions/confirm` (same HMAC token gate as chat). Dismiss calls `POST /api/business-state/attention/dismiss`. The surface is deterministic when the AI supervisor is down (quieter header, same rows + notes). It is not a second chatbot. Supervisor mapper still emits an `insights` region id for schema compatibility but leaves it empty — Needs attention owns notes and queue (do not restore Alerts).
+
 ---
 
 # Automation Runtime

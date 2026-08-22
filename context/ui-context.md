@@ -407,6 +407,8 @@ Do not create extremely generic components that understand every business domain
 
 The application uses a **business workspace layout**: shadcn `Sidebar` + `SidebarInset`, inset main `bg-background` with comfortable padding (`p-4 md:p-6`).
 
+The workspace shell is viewport-height (`h-svh`): only the **top bar** stays fixed; **main** is the vertical scroll region (`overflow-y-auto`). Page titles and body scroll together.
+
 Typical structure:
 
 ```text
@@ -1097,7 +1099,9 @@ Primary **Operator** surface on `/app` (home dashboard), above or beside KPIs as
 
 ```text
 ┌─ Needs attention ─────────────────────────────┐
-│ Good morning · Yesterday: Sales · Cash in …   │
+│ Good morning, Ada 🙂 · Yesterday: Sales · Cash in …   │
+│ 3 overdue · 2 low stock · 1 idle quote        │
+│ Expenses are 91% of taxable sales this period │
 │                                               │
 │ 🔴 ABC Traders — ₹1.2L overdue                │
 │    [Prepare reminder] [View invoice]          │
@@ -1112,9 +1116,17 @@ Rules:
 
 * Ranked by severity; each row links to a domain record.
 * Verified amounts come from facts / BusinessState — never invent figures in marketing copy.
-* When AI is down, render a **deterministic** brief from BusinessState (same rows, quieter copy).
-* Actions from the brief use the same confirmation pattern as assistant pending actions.
+* Queue type counts (overdue / low stock / idle quote) summarize open AttentionQueue rows on the same card — not a second Alerts list.
+* Period notes (expense ratio, negative profit, payables vs receivables) are L0 inform from dashboard overview money; they are not AttentionQueue rows and have no queue dismiss.
+* When AI is down, render a **deterministic** brief from BusinessState (same rows, quieter copy; period notes still from overview facts).
+* Actions from the brief use the same confirmation pattern as assistant pending actions. Overdue rows: L1 Recommend “Remind customer”; L2 Prepare reminder → `POST /api/assistant/actions/propose` then Confirm on the shared pending-action card → `POST /api/assistant/actions/confirm`. Low stock / idle quote: Recommend + View link only (no prepare).
+* Show the first five open queue rows; “Show more” reveals the rest. Header counts use visible (non-dismissed) rows so optimistic dismiss stays honest.
+* Cue that yesterday’s sales/cash-in/expenses are yesterday; KPIs and chart follow the range filter above the canvas.
+* Beside KPIs the brief is **content-sized** — do not stretch KPI cards to match a tall brief. On desktop, KPIs and the sales/expenses chart stack in the left column so the chart fills the space under the KPI cards (`gap-6` between KPIs and chart); Needs attention and Recent activity stack in the right column with the same `gap-6` (do not place activity on a second grid row under the left column — that leaves a large blank under the brief). When notes + queue grow (Show more, Prepare confirm), the brief body scrolls under a fixed header (`max-h`).
 * Do not duplicate the full chat transcript on the dashboard.
+* Do not restore a separate Alerts rail beside Needs attention.
+* Typography follows the workspace hierarchy: card title and row titles at `text-base`; body/secondary at `text-sm` or `text-base`; autonomy cues at `text-xs` (never `text-[10px]`); row actions use `size="sm"` buttons. Recent activity uses the same scale (title/amount `text-base`, subtitle `text-sm`, default badge size).
+* Greeting copy may include the signed-in first name and a smile (`Good morning, Ada 🙂`) — greeting text only, not an icon affordance.
 
 ---
 
