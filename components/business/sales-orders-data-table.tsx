@@ -98,7 +98,7 @@ export function SalesOrdersDataTable({
       pageSize={pageSize}
       total={total}
       buildHref={buildHref}
-      listKey="quotations"
+      listKey="sales-orders"
       enableReorder={false}
     />
   );

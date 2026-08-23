@@ -246,7 +246,7 @@ async function seedVolumeDataset(): Promise<void> {
       },
     });
 
-    let business = tenantArg
+    const business = tenantArg
       ? businesses.find((b) => b.id === tenantArg)
       : businesses.length === 1
         ? businesses[0]

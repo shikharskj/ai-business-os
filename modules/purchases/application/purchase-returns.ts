@@ -491,9 +491,12 @@ export async function postPurchaseReturn(input: {
     journalId: journal.id,
     postedAt: journal.postedAt,
     status: "POSTED",
+    expectedStatus: "DRAFT",
   });
   if (!purchaseReturn) {
-    throw new PurchaseReturnNotFoundError();
+    throw new PurchaseReturnStatusError(
+      "The purchase return was modified by another user. Please refresh and try again."
+    );
   }
 
   const allocated =

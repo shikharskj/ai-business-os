@@ -243,8 +243,8 @@ export async function getDashboardOverview(
   let receivables = zeroMoney();
   for (const invoice of receivableInvoices) {
     if (invoice.tenantId !== input.tenantId) continue;
-    const allocated = invoiceAllocated.get(invoice.id) ?? zeroMoney();
-    const credited = invoiceCredited.get(invoice.id) ?? zeroMoney();
+    const allocated = invoiceAllocated.get(invoice.id) ?? money(0n, invoice.grandTotal.currency, invoice.grandTotal.scale);
+    const credited = invoiceCredited.get(invoice.id) ?? money(0n, invoice.grandTotal.currency, invoice.grandTotal.scale);
     receivables = addMoney(
       receivables,
       remainingDocumentBalance(invoice.grandTotal, allocated, credited)
@@ -254,8 +254,8 @@ export async function getDashboardOverview(
   let payables = zeroMoney();
   for (const purchase of payablePurchases) {
     if (purchase.tenantId !== input.tenantId) continue;
-    const allocated = purchaseAllocated.get(purchase.id) ?? zeroMoney();
-    const returned = purchaseReturned.get(purchase.id) ?? zeroMoney();
+    const allocated = purchaseAllocated.get(purchase.id) ?? money(0n, purchase.grandTotal.currency, purchase.grandTotal.scale);
+    const returned = purchaseReturned.get(purchase.id) ?? money(0n, purchase.grandTotal.currency, purchase.grandTotal.scale);
     payables = addMoney(
       payables,
       remainingDocumentBalance(purchase.grandTotal, allocated, returned)
@@ -281,8 +281,8 @@ export async function getDashboardOverview(
   for (const invoice of receivableInvoices) {
     if (invoice.tenantId !== input.tenantId) continue;
     if (!invoice.dueOn || invoice.dueOn >= today) continue;
-    const allocated = invoiceAllocated.get(invoice.id) ?? zeroMoney();
-    const credited = invoiceCredited.get(invoice.id) ?? zeroMoney();
+    const allocated = invoiceAllocated.get(invoice.id) ?? money(0n, invoice.grandTotal.currency, invoice.grandTotal.scale);
+    const credited = invoiceCredited.get(invoice.id) ?? money(0n, invoice.grandTotal.currency, invoice.grandTotal.scale);
     const outstanding = remainingDocumentBalance(
       invoice.grandTotal,
       allocated,

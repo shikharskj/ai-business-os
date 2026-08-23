@@ -102,7 +102,7 @@ export function CreditNotesDataTable({
       pageSize={pageSize}
       total={total}
       buildHref={buildHref}
-      listKey="invoices"
+      listKey="credit-notes"
       enableReorder={false}
     />
   );

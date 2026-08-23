@@ -100,19 +100,20 @@ export function PurchaseReturnForm({
     [bills, purchaseId]
   );
 
-  useEffect(() => {
+  const previewLines = useMemo(() => {
     if (!purchaseId || !selectedBill) {
-      setPreview({});
-      return;
+      return [];
     }
-    const lines = selectedBill.lines
+    return selectedBill.lines
       .map((line) => ({
         purchaseLineId: line.id,
         quantity: quantities[line.id] ?? "",
       }))
       .filter((line) => line.quantity.trim().length > 0);
-    if (lines.length === 0) {
-      setPreview({});
+  }, [purchaseId, selectedBill, quantities]);
+
+  useEffect(() => {
+    if (previewLines.length === 0) {
       return;
     }
     let cancelled = false;
@@ -122,7 +123,7 @@ export function PurchaseReturnForm({
         purchaseId,
         issuedOn,
         notes: notes || undefined,
-        lines,
+        lines: previewLines,
       }).then((result) => {
         if (!cancelled) {
           setPreview(result);
@@ -133,7 +134,7 @@ export function PurchaseReturnForm({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [purchaseReturn?.id, purchaseId, issuedOn, notes, quantities, selectedBill]);
+  }, [purchaseReturn?.id, purchaseId, issuedOn, notes, previewLines]);
 
   const completeLines =
     selectedBill?.lines.filter((line) => {
@@ -277,7 +278,7 @@ export function PurchaseReturnForm({
 
         <DocumentFormPreviewAside>
           <p className="mb-2 text-sm font-medium text-muted-foreground">GST preview</p>
-          {preview.taxableAmountMajor && preview.supplyType ? (
+          {previewLines.length > 0 && preview.taxableAmountMajor && preview.supplyType ? (
             <GstBreakdown
               taxableAmount={moneyFromMajor(preview.taxableAmountMajor)}
               cgst={moneyFromMajor(preview.cgstMajor ?? "0")}

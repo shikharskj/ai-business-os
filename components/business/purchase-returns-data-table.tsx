@@ -102,7 +102,7 @@ export function PurchaseReturnsDataTable({
       pageSize={pageSize}
       total={total}
       buildHref={buildHref}
-      listKey="bills"
+      listKey="purchase-returns"
       enableReorder={false}
     />
   );

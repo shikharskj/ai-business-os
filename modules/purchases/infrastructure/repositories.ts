@@ -72,6 +72,7 @@ export type PurchasesRepository = {
     journalId: string;
     postedAt: Date;
     status: PurchaseReturnStatus;
+    expectedStatus: PurchaseReturnStatus;
   }): Promise<PurchaseReturn | null>;
   updatePurchaseReturnStatus(input: {
     tenantId: string;
@@ -401,7 +402,9 @@ export function createMemoryPurchasesRepository(
     async markPurchaseReturnPosted(input) {
       const index = purchaseReturns.findIndex(
         (record) =>
-          record.tenantId === input.tenantId && record.id === input.purchaseReturnId
+          record.tenantId === input.tenantId &&
+          record.id === input.purchaseReturnId &&
+          record.status === input.expectedStatus
       );
       if (index === -1) {
         return null;

@@ -708,7 +708,11 @@ export function createPrismaPurchasesRepository(
 
     async markPurchaseReturnPosted(input) {
       const existing = await client.purchaseReturn.findFirst({
-        where: { id: input.purchaseReturnId, tenantId: input.tenantId },
+        where: {
+          id: input.purchaseReturnId,
+          tenantId: input.tenantId,
+          status: input.expectedStatus,
+        },
       });
       if (!existing) {
         return null;

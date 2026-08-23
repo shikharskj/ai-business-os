@@ -1,6 +1,8 @@
 export const LIST_KEYS = [
   "invoices",
   "quotations",
+  "sales-orders",
+  "credit-notes",
   "customers",
   "payments",
   "supplier-payments",
@@ -9,6 +11,7 @@ export const LIST_KEYS = [
   "stock",
   "expenses",
   "bills",
+  "purchase-returns",
 ] as const;
 
 export type ListKey = (typeof LIST_KEYS)[number];

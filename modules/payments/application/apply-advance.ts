@@ -276,9 +276,11 @@ export async function applyCustomerCredit(input: {
     );
   }
 
-  const remainingByInvoice = new Map(
-    input.fields.allocations.map((allocation) => [allocation.invoiceId, allocation.amount])
-  );
+  const remainingByInvoice = new Map<string, Money>();
+  for (const allocation of input.fields.allocations) {
+    const current = remainingByInvoice.get(allocation.invoiceId) ?? money(0n, allocation.amount.currency);
+    remainingByInvoice.set(allocation.invoiceId, addMoney(current, allocation.amount));
+  }
   const updated: CustomerPayment[] = [];
 
   for (const row of receipts) {

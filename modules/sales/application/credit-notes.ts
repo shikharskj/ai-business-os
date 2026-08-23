@@ -428,6 +428,28 @@ export async function postCreditNote(input: {
     );
   }
 
+  const creditedByLine = await input.sales.creditedQuantityByInvoiceLine({
+    tenantId: input.tenantId,
+    invoiceId: invoice.id,
+    excludeCreditNoteId: existing.id,
+  });
+
+  for (const line of existing.lines) {
+    const invoiceLine = invoice.lines.find((il) => il.id === line.sourceInvoiceLineId);
+    if (!invoiceLine) {
+      throw new CreditNoteValidationError(
+        "A credit note line must belong to the selected invoice."
+      );
+    }
+    const alreadyCredited = creditedByLine.get(invoiceLine.id) ?? quantity(0n);
+    const remaining = subtractQuantity(invoiceLine.quantity, alreadyCredited);
+    if (compareQuantity(line.quantity, remaining) > 0) {
+      throw new CreditNoteValidationError(
+        `Cannot credit more than the remaining quantity on ${invoiceLine.productName}.`
+      );
+    }
+  }
+
   await ensureChartOfAccounts({
     tenantId: input.tenantId,
     accountRepository: input.accounts,

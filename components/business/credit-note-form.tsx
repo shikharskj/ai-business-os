@@ -100,19 +100,20 @@ export function CreditNoteForm({
     [invoices, invoiceId]
   );
 
-  useEffect(() => {
+  const previewLines = useMemo(() => {
     if (!invoiceId || !selectedInvoice) {
-      setPreview({});
-      return;
+      return [];
     }
-    const lines = selectedInvoice.lines
+    return selectedInvoice.lines
       .map((line) => ({
         invoiceLineId: line.id,
         quantity: quantities[line.id] ?? "",
       }))
       .filter((line) => line.quantity.trim().length > 0);
-    if (lines.length === 0) {
-      setPreview({});
+  }, [invoiceId, selectedInvoice, quantities]);
+
+  useEffect(() => {
+    if (previewLines.length === 0) {
       return;
     }
     let cancelled = false;
@@ -122,7 +123,7 @@ export function CreditNoteForm({
         invoiceId,
         issuedOn,
         notes: notes || undefined,
-        lines,
+        lines: previewLines,
       }).then((result) => {
         if (!cancelled) {
           setPreview(result);
@@ -133,7 +134,7 @@ export function CreditNoteForm({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [creditNote?.id, invoiceId, issuedOn, notes, quantities, selectedInvoice]);
+  }, [creditNote?.id, invoiceId, issuedOn, notes, previewLines]);
 
   const completeLines = selectedInvoice?.lines.filter((line) => {
     const qty = quantities[line.id]?.trim();
@@ -279,7 +280,7 @@ export function CreditNoteForm({
 
         <DocumentFormPreviewAside>
           <p className="mb-2 text-sm font-medium text-muted-foreground">GST preview</p>
-          {preview.taxableAmountMajor && preview.supplyType ? (
+          {previewLines.length > 0 && preview.taxableAmountMajor && preview.supplyType ? (
             <GstBreakdown
               taxableAmount={moneyFromMajor(preview.taxableAmountMajor)}
               cgst={moneyFromMajor(preview.cgstMajor ?? "0")}
