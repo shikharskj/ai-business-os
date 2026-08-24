@@ -416,6 +416,7 @@ describe("invoice overdue filter and outstanding decoration", () => {
       tenantId,
       invoices: [posted],
       payments,
+      sales: d.sales,
       asOf,
     });
 
@@ -488,6 +489,7 @@ describe("invoice overdue filter and outstanding decoration", () => {
       tenantId,
       invoices: [posted],
       payments,
+      sales: d.sales,
       asOf: businessDate("2026-04-20"),
     });
 

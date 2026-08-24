@@ -14,9 +14,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ApplyAdvanceForm } from "@/components/business/apply-advance-form";
 import { authorize } from "@/lib/security";
-import { getPayment, PaymentNotFoundError, PAYMENT_METHOD_LABELS } from "@/modules/payments";
+import { roleHasPermission } from "@/lib/security/permissions";
+import {
+  getPayment,
+  listOpenReceivableInvoices,
+  PaymentNotFoundError,
+  PAYMENT_METHOD_LABELS,
+  unallocatedAmount,
+} from "@/modules/payments";
 import { prismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
+import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
 
 export default async function PaymentDetailPage({
   params,
@@ -25,6 +34,7 @@ export default async function PaymentDetailPage({
 }) {
   const tenant = await authorize("payment:read");
   const { id } = await params;
+  const canApply = roleHasPermission(tenant.membership.role, "payment:create");
 
   let payment;
   try {
@@ -39,6 +49,17 @@ export default async function PaymentDetailPage({
     }
     throw error;
   }
+
+  const unallocated = unallocatedAmount(payment);
+  const openInvoices =
+    canApply && unallocated.amountMinor > 0n
+      ? await listOpenReceivableInvoices({
+          tenantId: tenant.tenantId,
+          customerId: payment.customerId,
+          sales: prismaSalesRepository,
+          payments: prismaPaymentRepository,
+        })
+      : [];
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
@@ -82,6 +103,13 @@ export default async function PaymentDetailPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {payment.allocations.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-muted-foreground">
+                      Held as customer credit. Apply it to invoices when they are posted.
+                    </TableCell>
+                  </TableRow>
+                ) : null}
                 {payment.allocations.map((allocation) => (
                   <TableRow key={allocation.id}>
                     <TableCell>
@@ -111,6 +139,12 @@ export default async function PaymentDetailPage({
               <span className="text-muted-foreground">Amount</span>
               <MoneyDisplay value={payment.amount} className="font-medium" />
             </p>
+            {unallocated.amountMinor > 0n ? (
+              <p className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Unallocated credit</span>
+                <MoneyDisplay value={unallocated} className="font-medium" />
+              </p>
+            ) : null}
             <p className="flex items-center justify-between gap-4">
               <span className="text-muted-foreground">Method</span>
               {PAYMENT_METHOD_LABELS[payment.method]}
@@ -131,6 +165,21 @@ export default async function PaymentDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {canApply && unallocated.amountMinor > 0n ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Apply credit</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ApplyAdvanceForm
+              paymentId={payment.id}
+              invoices={openInvoices}
+              available={unallocated}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

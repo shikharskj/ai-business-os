@@ -18,3 +18,19 @@ export function formatPurchaseNumber(
 ): string {
   return `${PURCHASE_SERIES_PREFIX}/${financialYearKey}/${String(sequence).padStart(4, "0")}`;
 }
+
+export const PURCHASE_RETURN_SERIES_PREFIX = "PR";
+
+export function purchaseReturnFinancialYearKey(
+  date: BusinessDate,
+  financialYearStartMonth: number
+): string {
+  return purchaseFinancialYearKey(date, financialYearStartMonth);
+}
+
+export function formatPurchaseReturnNumber(
+  financialYearKey: string,
+  sequence: number
+): string {
+  return `${PURCHASE_RETURN_SERIES_PREFIX}/${financialYearKey}/${String(sequence).padStart(4, "0")}`;
+}

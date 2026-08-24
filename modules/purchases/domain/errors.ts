@@ -32,3 +32,31 @@ export class PurchaseAlreadyPostedError extends PurchaseError {
     this.name = "PurchaseAlreadyPostedError";
   }
 }
+
+export class PurchaseReturnNotFoundError extends PurchaseError {
+  constructor() {
+    super("Purchase return was not found.");
+    this.name = "PurchaseReturnNotFoundError";
+  }
+}
+
+export class PurchaseReturnValidationError extends PurchaseError {
+  constructor(message: string) {
+    super(message);
+    this.name = "PurchaseReturnValidationError";
+  }
+}
+
+export class PurchaseReturnStatusError extends PurchaseError {
+  constructor(message: string) {
+    super(message);
+    this.name = "PurchaseReturnStatusError";
+  }
+}
+
+export class PurchaseReturnAlreadyPostedError extends PurchaseError {
+  constructor() {
+    super("This purchase return has already been posted.");
+    this.name = "PurchaseReturnAlreadyPostedError";
+  }
+}

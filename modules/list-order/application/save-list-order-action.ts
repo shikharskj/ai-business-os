@@ -18,6 +18,8 @@ export type SaveListOrderState = {
 const LIST_KEY_PATHS: Record<ListKey, string> = {
   invoices: "/app/sales/invoices",
   quotations: "/app/sales/quotations",
+  "sales-orders": "/app/sales/orders",
+  "credit-notes": "/app/sales/credit-notes",
   customers: "/app/sales/customers",
   payments: "/app/sales/payments",
   "supplier-payments": "/app/purchases/payments",
@@ -26,6 +28,7 @@ const LIST_KEY_PATHS: Record<ListKey, string> = {
   stock: "/app/inventory/stock",
   expenses: "/app/expenses",
   bills: "/app/purchases/bills",
+  "purchase-returns": "/app/purchases/returns",
 };
 
 const saveListOrderInputSchema = z.object({

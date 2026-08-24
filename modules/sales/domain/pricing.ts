@@ -32,3 +32,18 @@ export function lineTaxableAmount(lineSubtotal: Money, discount: Money): Money {
     lineSubtotal.scale
   );
 }
+
+export function proportionMoney(
+  amount: Money,
+  numerator: Quantity,
+  denominator: Quantity
+): Money {
+  if (denominator.amountMinor === 0n) {
+    return money(0n, amount.currency, amount.scale);
+  }
+  const minor = roundHalfAwayFromZero(
+    amount.amountMinor * numerator.amountMinor,
+    denominator.amountMinor
+  );
+  return money(minor, amount.currency, amount.scale);
+}

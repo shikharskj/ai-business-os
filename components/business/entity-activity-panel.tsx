@@ -12,7 +12,22 @@ const ACTION_LABELS: Record<string, string> = {
   "quotation.sent": "Quotation sent",
   "quotation.accepted": "Quotation accepted",
   "quotation.cancelled": "Quotation cancelled",
-  "quotation.converted": "Quotation converted to invoice",
+  "quotation.converted": "Quotation converted",
+  "sales_order.created": "Sales order created",
+  "sales_order.updated": "Sales order updated",
+  "sales_order.confirmed": "Sales order confirmed",
+  "sales_order.cancelled": "Sales order cancelled",
+  "sales_order.converted": "Sales order converted to invoice",
+  "credit_note.created": "Credit note created",
+  "credit_note.updated": "Credit note updated",
+  "credit_note.posted": "Credit note posted",
+  "credit_note.cancelled": "Credit note cancelled",
+  "purchase_return.created": "Purchase return created",
+  "purchase_return.updated": "Purchase return updated",
+  "purchase_return.posted": "Purchase return posted",
+  "purchase_return.cancelled": "Purchase return cancelled",
+  "payment.received": "Payment recorded",
+  "payment.advance_applied": "Customer credit applied",
 };
 
 export function auditActionLabel(action: string): string {

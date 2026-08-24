@@ -131,3 +131,109 @@ export type SupplierOutstanding = {
   openBillCount: number;
   hasPostedPurchases: boolean;
 };
+
+export const PURCHASE_RETURN_STATUSES = ["DRAFT", "POSTED", "CANCELLED"] as const;
+
+export type PurchaseReturnStatus = (typeof PURCHASE_RETURN_STATUSES)[number];
+
+export type PurchaseReturnLine = {
+  id: string;
+  tenantId: string;
+  purchaseReturnId: string;
+  sourcePurchaseLineId: string;
+  sortOrder: number;
+  productId: string;
+  productName: string;
+  sku: string;
+  unitOfMeasurement: string;
+  hsnSac: string | null;
+  taxRateBps: number;
+  quantity: Quantity;
+  unitPrice: Money;
+  discount: Money;
+  lineSubtotal: Money;
+  taxableAmount: Money;
+  cgst: Money;
+  sgst: Money;
+  igst: Money;
+  totalTax: Money;
+  lineTotal: Money;
+  supplyType: GstSupplyType;
+  treatment: GstTreatment;
+};
+
+export type PurchaseReturn = {
+  id: string;
+  tenantId: string;
+  number: string;
+  supplierId: string;
+  supplierName: string;
+  purchaseId: string;
+  purchaseNumber: string;
+  status: PurchaseReturnStatus;
+  journalId: string | null;
+  issuedOn: BusinessDate;
+  notes: string | null;
+  placeOfSupplyStateCode: string;
+  subtotal: Money;
+  discountTotal: Money;
+  taxableAmount: Money;
+  cgst: Money;
+  sgst: Money;
+  igst: Money;
+  totalTax: Money;
+  grandTotal: Money;
+  supplyType: GstSupplyType | "MIXED";
+  postedAt: Date | null;
+  lines: PurchaseReturnLine[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type PurchaseReturnLineInput = {
+  purchaseLineId: string;
+  quantity: Quantity;
+};
+
+export type PurchaseReturnInput = {
+  purchaseId: string;
+  issuedOn: BusinessDate;
+  notes?: string | null;
+  lines: PurchaseReturnLineInput[];
+};
+
+export type PurchaseReturnListFilter = {
+  tenantId: string;
+  query?: string;
+  status?: PurchaseReturnStatus | "ALL";
+  supplierId?: string;
+  purchaseId?: string;
+  statuses?: readonly PurchaseReturnStatus[];
+  fromDate?: BusinessDate;
+  toDate?: BusinessDate;
+};
+
+export type PreparedPurchaseReturnLine = Omit<
+  PurchaseReturnLine,
+  "id" | "tenantId" | "purchaseReturnId"
+>;
+
+export type PreparedPurchaseReturn = {
+  supplierId: string;
+  supplierName: string;
+  purchaseId: string;
+  purchaseNumber: string;
+  issuedOn: BusinessDate;
+  notes: string | null;
+  placeOfSupplyStateCode: string;
+  subtotal: Money;
+  discountTotal: Money;
+  taxableAmount: Money;
+  cgst: Money;
+  sgst: Money;
+  igst: Money;
+  totalTax: Money;
+  grandTotal: Money;
+  supplyType: GstSupplyType | "MIXED";
+  lines: PreparedPurchaseReturnLine[];
+};

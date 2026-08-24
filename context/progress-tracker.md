@@ -8,10 +8,10 @@ This file is the **single source of truth for implementation progress**. The AI 
 
 ## Current Phase
 
-* **Phase:** Post-MVP — R4 complete; next Business Guardian (R6)
-* **Status:** Next — `16-business-guardian.md`
+* **Phase:** Post-MVP — R5 Coverage Completers
+* **Status:** Next — `15-share-delivery.md`
 * **Active roadmap:** [`context/product-roadmap.md`](product-roadmap.md)
-* **Active specs:** [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) — current: `16-business-guardian.md`
+* **Active specs:** [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) — next: `15-share-delivery.md`
 * **MVP archive:** [`context/feature-specs-mvp/`](feature-specs-mvp/)
 * **Deferred horizon:** [`context/future-scope.md`](future-scope.md) (do not schedule as current Next)
 * **Launch trust:** MVP `29` / `30` deferred until after Post-MVP + future-scope (not parallel)
@@ -38,7 +38,9 @@ Guardian (R6) → AI Ops (R7) — specs 16–17
 
 North star: an AI-native OS for Indian SMEs that records correctly, understands continuously, tells the owner what matters, and automates routine work under autonomy L0–L4.
 
-**Current implementation unit:** `context/feature-specs-post-mvp/16-business-guardian.md`. Do not start R5 (`12`–`15`) unless a metric pull is recorded here. Do not start MVP `29`/`30` until launch readiness.
+**Current implementation unit:** `context/feature-specs-post-mvp/15-share-delivery.md`.
+
+**R5:** Specs `12`–`14` are complete. Specs `05`–`11` (R2–R4) are complete. Do not start MVP `29`/`30` until launch readiness.
 
 The priority is **correctness, attention quality, and automation under guardrails** — not feature parity with billing ERPs.
 
@@ -96,13 +98,39 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 | Operator / Daily Brief (R2) | Complete (`05`–`06`) |
 | Copilot Depth (R3)    | Complete (`07`) |
 | Automation Engine (R4)| Complete (`08`–`11`) |
-| Coverage Completers (R5) | Not Started |
+| Coverage Completers (R5) | In Progress (`15`) |
 | Business Guardian (R6)| Not Started |
 | AI Operations (R7)    | Not Started |
 
 ---
 
 # Completed
+
+* **Local volume seed script (dev tooling):**
+  * `npm run db:seed:volume` — seeds one business with `SEED-` customers/products/quotations/invoices plus sales orders, credit notes, customer payments, suppliers, bills, purchase returns, and supplier payments via domain use cases. Fill-gaps mode skips entity types that already have SEED-* rows. Abort if production. Optional `SEED_TENANT_ID`. Reset with `npx tsx scripts/cleanup-seed-volume.ts`. Not a roadmap feature.
+
+* **Sales orders (`14-sales-orders.md`):**
+  * Optional sales order between quotation and invoice: DRAFT → CONFIRMED | CANCELLED; CONFIRMED → FULFILLED | CANCELLED. Numbering `SO/FY…`. Create directly or convert ACCEPTED quotation → CONFIRMED order (quotation → CONVERTED). Convert CONFIRMED order → draft invoice (order → FULFILLED). Double-convert rejected.
+  * Confirming an order does **not** move stock or post accounts; invoice post remains the stock/accounting boundary. Permissions reuse `quotation:*` and `invoice:create`. No PDF, no new permission names, no MRP/ATP.
+  * Outbox: `SalesOrderCreated` / `Updated` / `Confirmed` / `Cancelled` / `Fulfilled` (attention hook; not cash). Search type `sales_order`. Nav: Sales → Orders.
+  * UI: list/new/detail/edit; Create order from accepted quotation; Convert to invoice on confirmed order; customer hub recent orders; invoice/quotation cross-links.
+  * Migration `20260823010000_add_sales_orders`. Tests: `tests/sales/sales-orders.test.ts`. Typecheck and production build succeed. Next: `15-share-delivery.md`.
+
+* **Advances / retainers (`13-advances-retainers.md`):**
+  * Customer receipts may leave an unallocated remainder (or be recorded with no invoices). Same cash/bank journal as a normal receipt (`PaymentReceived`). Remainder is customer credit.
+  * Apply credit to one or more invoices from the receipt or FIFO across the customer’s unallocated receipts. No second cash journal. Over-application against credit or invoice outstanding is rejected. Outbox `AdvanceApplied` refreshes receivables/attention, not cash.
+  * Permissions reuse `payment:*`. UI: Record advance (`/app/sales/payments/new?advance=1`); leftover on Record payment; Apply credit on payment and invoice detail; customer hub shows credit. Supplier advances not in this spec (optional).
+  * Tests: `tests/payments/advances.test.ts`. Typecheck and production build succeed. Next: `14-sales-orders.md`.
+
+* **Dashboard Sales vs expenses default range:**
+  * Omitted/`?range=` default is `last_7_days` (was `last_3_months`); invalid filter fallback matches. Chart segmented control still offers 7 / 30 / 3 months.
+
+* **Credit notes / returns (`12-credit-notes-returns.md`):**
+  * Sales credit notes against a posted invoice: DRAFT → POSTED/CANCELLED, `CN/FY…` numbering, tax engine (`SALE`), qty capped at remaining invoice-line quantity, journal reverse of sales (Dr Sales/Output GST, Cr AR) plus Dr Inventory / Cr COGS on returned stock (`RETURN` / `CreditNote`). Outstanding = `grandTotal − payments − posted credits`, clamped at 0.
+  * Purchase returns against a posted bill: `PR/FY…` numbering, tax engine (`PURCHASE`), same qty cap, journal reverse of purchase (Dr AP, Cr Inventory/Expense, Cr Input GST), stock OUT `RETURN` / `PurchaseReturn`.
+  * Permissions reuse `invoice:*` and `purchase:*`. GST summary nets `SALES_CREDIT_NOTE` (negated output) and `PURCHASE_RETURN` (negated input). Sales report, dashboard, receivables/payables, and search include both. Outbox `CreditNotePosted` / `Cancelled` and `PurchaseReturnPosted` / `Cancelled`.
+  * UI: Sales → Credit notes and Purchases → Returns (list/new/detail/edit); Issue credit note / Issue return from posted invoice/bill. No PDF, no new permission names, no e-invoice/GSTR.
+  * Migration `20260822200000_add_credit_notes_and_purchase_returns`. Tests: `tests/sales/credit-notes.test.ts`, `tests/purchases/purchase-returns.test.ts`. Typecheck and production build succeed. Next: `13-advances-retainers.md`.
 
 * **Entity create + return-to-form:**
   * `lib/navigation/entity-create-return.ts` — allowlisted `returnTo`, href/redirect builders, initial entity id helpers.
@@ -304,7 +332,7 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
   * Period/timezone meta strip under `PageHeader` (fallback notice in same strip).
 
 * Dashboard chart / KPI polish:
-  * Monochrome gradient area chart (`--chart-1` / `--chart-3`); URL `?range=` presets `last_7_days` | `last_30_days` | `last_3_months` (default 3 months).
+  * Monochrome gradient area chart (`--chart-1` / `--chart-3`); URL `?range=` presets `last_7_days` | `last_30_days` | `last_3_months` (default last 7 days).
   * `DashboardMetricCard` vertical gradient only; `SidebarInset` / `AppTopBar` `min-w-0` overflow fixes.
 
 * Dashboard (`23-dashboard.md`):
@@ -509,7 +537,7 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 
 # In Progress
 
-None. R4 (`08`–`11`) is complete. Next product spec is [`16-business-guardian.md`](feature-specs-post-mvp/16-business-guardian.md). Do not start R5 (`12`–`15`) unless a metric pull is recorded here.
+*None — ready for `15-share-delivery.md`.*
 
 ---
 
@@ -517,10 +545,9 @@ None. R4 (`08`–`11`) is complete. Next product spec is [`16-business-guardian.
 
 **Active product work** follows [`context/feature-specs-post-mvp/`](feature-specs-post-mvp/) one numbered file at a time.
 
-1. **Current spec:** [`16-business-guardian.md`](feature-specs-post-mvp/16-business-guardian.md)
-2. Specs `12`–`15` (R5) only if a metric pull is recorded here
-3. Then `17` AI Operations
-4. **Not now:** [`future-scope.md`](future-scope.md); MVP `29`/`30` until launch after Post-MVP + future-scope
+1. **Current spec:** [`15-share-delivery.md`](feature-specs-post-mvp/15-share-delivery.md)
+2. Then `16` Business Guardian
+3. **Not now:** [`future-scope.md`](future-scope.md); MVP `29`/`30` until launch after Post-MVP + future-scope
 
 Product sequencing: [`product-roadmap.md`](product-roadmap.md). MVP archive: [`feature-specs-mvp/`](feature-specs-mvp/).
 
@@ -1372,6 +1399,30 @@ The first objective is to deliver a complete, reliable business workflow for sma
 ---
 
 # Implementation Unit Log
+
+## 2026-08-23 — Dashboard chart default Last 7 days
+
+Status: Complete
+
+Implemented:
+- Sales vs expenses chart / dashboard range now defaults to `last_7_days` when `?range=` is omitted.
+- Invalid range fallback on `/app` shows last 7 days.
+
+Files / Areas:
+- `modules/reporting/domain/dashboard-range.ts`, `schemas/dashboard.schema.ts`
+- `app/app/(workspace)/page.tsx`
+- `tests/reporting/dashboard.test.ts`
+
+Tests:
+- `tests/reporting/dashboard.test.ts` — omitted preset resolves to last 7 days.
+
+Verification:
+- Default preset and invalid-filter fallback are last 7 days.
+
+Notes:
+- `this_month` / `custom` / AI tool period defaults unchanged.
+
+---
 
 ## 2026-08-20 — DataTable dnd-kit hydration mismatch
 

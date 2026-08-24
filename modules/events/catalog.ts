@@ -12,20 +12,34 @@ export const DOMAIN_EVENT_TYPES = [
   "SalesInvoiceUpdated",
   "SalesInvoicePosted",
   "SalesInvoiceCancelled",
+  "CreditNoteCreated",
+  "CreditNoteUpdated",
+  "CreditNotePosted",
+  "CreditNoteCancelled",
   "QuotationConverted",
   "QuotationCreated",
   "QuotationUpdated",
   "QuotationSent",
   "QuotationAccepted",
   "QuotationCancelled",
+  "SalesOrderCreated",
+  "SalesOrderUpdated",
+  "SalesOrderConfirmed",
+  "SalesOrderCancelled",
+  "SalesOrderFulfilled",
   // Payments
   "PaymentReceived",
+  "AdvanceApplied",
   "PaymentMade",
   // Purchases / expenses
   "PurchaseCreated",
   "PurchaseUpdated",
   "PurchasePosted",
   "PurchaseCancelled",
+  "PurchaseReturnCreated",
+  "PurchaseReturnUpdated",
+  "PurchaseReturnPosted",
+  "PurchaseReturnCancelled",
   "ExpenseRecorded",
   // Inventory
   "InventoryOpened",
@@ -68,10 +82,13 @@ export function isDomainEventType(value: string): value is DomainEventType {
 /** Canonical aggregate type labels for new emitters (existing rows may use legacy casing). */
 export const AGGREGATE_TYPES = [
   "SalesInvoice",
+  "CreditNote",
   "Quotation",
+  "SalesOrder",
   "CustomerPayment",
   "SupplierPayment",
   "Purchase",
+  "PurchaseReturn",
   "Expense",
   "Product",
   "Inventory",
@@ -104,6 +121,15 @@ export const salesInvoicePostedPayloadSchema = z
   })
   .passthrough();
 
+export const creditNotePostedPayloadSchema = z
+  .object({
+    number: z.string().optional(),
+    status: z.string().optional(),
+    invoiceId: z.string().optional(),
+    journalId: z.string().optional(),
+  })
+  .passthrough();
+
 export const paymentReceivedPayloadSchema = z
   .object({
     number: z.string().optional(),
@@ -115,10 +141,28 @@ export const paymentReceivedPayloadSchema = z
   })
   .passthrough();
 
+export const advanceAppliedPayloadSchema = z
+  .object({
+    number: z.string().optional(),
+    customerId: z.string().optional(),
+    invoiceIds: z.array(z.string()).optional(),
+    remaining: moneySnapshotSchema.optional(),
+  })
+  .passthrough();
+
 export const purchasePostedPayloadSchema = z
   .object({
     number: z.string().optional(),
     status: z.string().optional(),
+    journalId: z.string().optional(),
+  })
+  .passthrough();
+
+export const purchaseReturnPostedPayloadSchema = z
+  .object({
+    number: z.string().optional(),
+    status: z.string().optional(),
+    purchaseId: z.string().optional(),
     journalId: z.string().optional(),
   })
   .passthrough();
@@ -146,6 +190,15 @@ export const quotationAcceptedPayloadSchema = z
   .object({
     number: z.string().optional(),
     status: z.string().optional(),
+  })
+  .passthrough();
+
+export const salesOrderPayloadSchema = z
+  .object({
+    number: z.string().optional(),
+    status: z.string().optional(),
+    quotationId: z.string().optional(),
+    invoiceId: z.string().optional(),
   })
   .passthrough();
 
@@ -204,13 +257,21 @@ export const DOMAIN_EVENT_PAYLOAD_SCHEMAS: Partial<
   Record<DomainEventType, z.ZodType<Record<string, unknown>>>
 > = {
   SalesInvoicePosted: salesInvoicePostedPayloadSchema,
+  CreditNotePosted: creditNotePostedPayloadSchema,
   PaymentReceived: paymentReceivedPayloadSchema,
+  AdvanceApplied: advanceAppliedPayloadSchema,
   PurchasePosted: purchasePostedPayloadSchema,
+  PurchaseReturnPosted: purchaseReturnPostedPayloadSchema,
   ExpenseRecorded: expenseRecordedPayloadSchema,
   InventoryOpened: inventoryMovementPayloadSchema,
   InventoryAdjusted: inventoryMovementPayloadSchema,
   InventoryMoved: inventoryMovementPayloadSchema,
   QuotationAccepted: quotationAcceptedPayloadSchema,
+  SalesOrderCreated: salesOrderPayloadSchema,
+  SalesOrderUpdated: salesOrderPayloadSchema,
+  SalesOrderConfirmed: salesOrderPayloadSchema,
+  SalesOrderCancelled: salesOrderPayloadSchema,
+  SalesOrderFulfilled: salesOrderPayloadSchema,
   InvoiceOverdue: invoiceOverduePayloadSchema,
   QuotationIdle: quotationIdlePayloadSchema,
   StockLow: stockLowPayloadSchema,

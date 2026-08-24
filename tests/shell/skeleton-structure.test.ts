@@ -82,7 +82,10 @@ describe("LIST_TABLE_PRESETS", () => {
     expect(LIST_TABLE_PRESETS.customers.columns).toBe(5);
     expect(LIST_TABLE_PRESETS.expenses.columns).toBe(5);
     expect(LIST_TABLE_PRESETS.quotations.columns).toBe(6);
+    expect(LIST_TABLE_PRESETS.salesOrders.columns).toBe(6);
     expect(LIST_TABLE_PRESETS.bills.columns).toBe(6);
+    expect(LIST_TABLE_PRESETS.creditNotes.columns).toBe(6);
+    expect(LIST_TABLE_PRESETS.purchaseReturns.columns).toBe(6);
     expect(LIST_TABLE_PRESETS.products.columns).toBe(5);
     expect(LIST_TABLE_PRESETS.stock.columns).toBe(4);
     expect(LIST_TABLE_PRESETS.payments.columns).toBe(6);

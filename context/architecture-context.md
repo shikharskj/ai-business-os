@@ -87,7 +87,7 @@ Mobile experience prioritizes brief, approve, and collect paths — not a full d
 * `modules/` — Core business domains. Each module owns its domain rules, application use cases, persistence access, validation, events, and business-facing services.
 * `modules/party/` — Customers, suppliers, contacts, addresses, GSTINs, and party relationships.
 * `modules/catalog/` — Products, services, SKUs, units, categories, pricing references, HSN/SAC, and product configuration.
-* `modules/sales/` — Quotations, sales invoices, invoice lines, discounts, taxes, sales lifecycle, and customer receivables.
+* `modules/sales/` — Quotations, optional sales orders, sales invoices, credit notes, invoice lines, discounts, taxes, sales lifecycle, and customer receivables.
 * `modules/purchases/` — Purchase transactions, supplier invoices, purchase lines, supplier payables, and purchase lifecycle.
 * `modules/inventory/` — Stock balances, stock movements, adjustments, low-stock detection, and inventory invariants.
 * `modules/expenses/` — Business expenses, categories, taxes, attachments, and expense reporting.
@@ -213,6 +213,7 @@ Tenant
    │
    ├── Sales
    │      ├── Quotations
+   │      ├── Sales Orders (optional; confirm intent; stock still posts on invoice)
    │      └── Sales Invoices
    │
    ├── Purchases
@@ -682,10 +683,17 @@ Example catalog (extend as Post-MVP progresses):
 ```text
 SalesInvoiceCreated
 SalesInvoicePosted
+CreditNoteCreated
+CreditNotePosted
+CreditNoteCancelled
 InvoiceOverdue
 PaymentReceived
+AdvanceApplied
 PurchaseCreated
 PurchasePosted
+PurchaseReturnCreated
+PurchaseReturnPosted
+PurchaseReturnCancelled
 InventoryAdjusted
 StockLow
 ExpenseRecorded
@@ -763,7 +771,7 @@ CASH                         → 1000 Cash
 UPI, BANK_TRANSFER, CARD, CHEQUE → 1010 Bank
 ```
 
-Customer receipts debit cash/bank; supplier payments and expenses credit cash/bank. Sales invoices and purchase bills do **not** move cash.
+Customer receipts debit cash/bank; supplier payments and expenses credit cash/bank. Sales invoices and purchase bills do **not** move cash. An unallocated receipt (advance / retainer) uses the same cash journal; applying that credit to invoices later does **not** post cash again (`AdvanceApplied` refreshes receivables, not cash).
 
 **Read path (the only cash path for AI/tools):**
 
@@ -854,7 +862,7 @@ Default worker pass (`runOutboxProcessing` / `/api/internal/outbox/process`) fan
 * Money and quantity primitives
 * Tenant isolation and permission model
 
-**Extend via:** outbox events, projections, tools, confirmation/automation policies, new read models.
+**Extend via:** outbox events, projections, tools, confirmation/automation policies, new read models. Credit notes and purchase returns reuse those posting pipelines (journal + stock + GST storage); they do not rewrite them.
 
 ---
 
@@ -905,8 +913,11 @@ CreateCustomer
 CreateProduct
 CreateQuotation
 CreateInvoice
+CreateCreditNote
 RecordPayment
+ApplyCustomerAdvance
 CreatePurchase
+CreatePurchaseReturn
 RecordExpense
 AdjustInventory
 PostJournal
@@ -1029,6 +1040,8 @@ IGST
 ```
 
 GST calculations should be deterministic and testable.
+
+Posted invoices and bills stay immutable. Sales corrections use credit notes against a posted invoice (tax engine, `transactionType: "SALE"`; GST summary rows `SALES_CREDIT_NOTE` as negated output). Purchase corrections use purchase returns against a posted bill (`transactionType: "PURCHASE"`; rows `PURCHASE_RETURN` as negated input). Quantity on a credit note or return cannot exceed remaining original-line quantity. Outstanding AR/AP is `grandTotal − payments − posted credits/returns`, clamped at zero. Optional sales orders confirm commercial intent between quotation and invoice; inventory and accounting still post only when the sales invoice is posted.
 
 The AI layer may explain GST information but must not invent tax calculations.
 

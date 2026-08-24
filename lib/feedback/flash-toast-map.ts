@@ -30,9 +30,24 @@ const ENTITY_SAVED_MESSAGES: Array<{
     description: "GST totals were recalculated from the latest business profile.",
   },
   {
+    prefix: "/app/sales/orders/",
+    title: "Sales order updated",
+    description: "GST totals were recalculated from the latest business profile.",
+  },
+  {
+    prefix: "/app/sales/credit-notes/",
+    title: "Credit note updated",
+    description: "GST totals were recalculated from the latest invoice lines.",
+  },
+  {
     prefix: "/app/purchases/bills/",
     title: "Bill updated",
     description: "GST totals were recalculated from the latest business profile.",
+  },
+  {
+    prefix: "/app/purchases/returns/",
+    title: "Return updated",
+    description: "GST totals were recalculated from the latest bill lines.",
   },
   {
     prefix: "/app/purchases/suppliers/",
@@ -67,6 +82,16 @@ const ENTITY_CREATED_MESSAGES: Array<{
     description: "Your new quotation is ready to review.",
   },
   {
+    prefix: "/app/sales/orders/",
+    title: "Sales order created",
+    description: "Your new sales order is ready to review. Confirming it does not move stock.",
+  },
+  {
+    prefix: "/app/sales/credit-notes/",
+    title: "Credit note created",
+    description: "Your new credit note is ready to review.",
+  },
+  {
     prefix: "/app/sales/customers/",
     title: "Customer created",
     description: "You can now use this customer on invoices.",
@@ -80,6 +105,11 @@ const ENTITY_CREATED_MESSAGES: Array<{
     prefix: "/app/purchases/bills/",
     title: "Bill created",
     description: "Your new bill is ready to review.",
+  },
+  {
+    prefix: "/app/purchases/returns/",
+    title: "Return created",
+    description: "Your new return is ready to review.",
   },
   {
     prefix: "/app/purchases/suppliers/",
@@ -122,6 +152,16 @@ const ENTITY_POSTED_MESSAGES: Array<{
     prefix: "/app/purchases/bills/",
     title: "Bill posted",
     description: "Inventory and accounts have been updated.",
+  },
+  {
+    prefix: "/app/sales/credit-notes/",
+    title: "Credit note posted",
+    description: "Accounts, GST, and stock have been updated.",
+  },
+  {
+    prefix: "/app/purchases/returns/",
+    title: "Return posted",
+    description: "Accounts, GST, and stock have been updated.",
   },
   {
     prefix: "/app/sales/quotations/",
@@ -246,6 +286,17 @@ export function resolveFlashToast(
         type: "success",
       },
       paramKeys: ["cancelled"],
+    };
+  }
+
+  if (params.get("applied") === "1") {
+    return {
+      message: {
+        title: "Credit applied",
+        description: "Invoice outstanding was reduced. Cash was not posted again.",
+        type: "success",
+      },
+      paramKeys: ["applied"],
     };
   }
 

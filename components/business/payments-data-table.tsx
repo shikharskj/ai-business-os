@@ -10,6 +10,7 @@ import { DataTable } from "@/components/data-table";
 import type { DataTableFeatures } from "@/components/data-table/data-table-features";
 import type { CustomerPayment } from "@/modules/payments/domain/types";
 import { PAYMENT_METHOD_LABELS } from "@/modules/payments/domain/types";
+import { unallocatedAmount } from "@/modules/payments/domain/allocation";
 import type { PageSize } from "@/modules/shared-kernel/list-page";
 
 type PaymentsDataTableProps = {
@@ -21,13 +22,15 @@ type PaymentsDataTableProps = {
 };
 
 function allocationSummary(payment: CustomerPayment): string {
+  const leftover = unallocatedAmount(payment);
   if (payment.allocations.length === 0) {
-    return "—";
+    return leftover.amountMinor > 0n ? "Advance" : "—";
   }
-  if (payment.allocations.length === 1) {
-    return payment.allocations[0]!.invoiceNumber;
-  }
-  return `${payment.allocations.length} invoices`;
+  const invoices =
+    payment.allocations.length === 1
+      ? payment.allocations[0]!.invoiceNumber
+      : `${payment.allocations.length} invoices`;
+  return leftover.amountMinor > 0n ? `${invoices} + credit` : invoices;
 }
 
 const columns: ColumnDef<DataTableFeatures, CustomerPayment>[] = [

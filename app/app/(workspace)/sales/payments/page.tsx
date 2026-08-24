@@ -77,16 +77,25 @@ export default async function SalesPaymentsPage({
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
       <PageHeader
         title="Customer payments"
-        description="Customer receipts allocated to unpaid invoices. No payment gateway."
+        description="Customer receipts allocated to invoices, or held as advances. No payment gateway."
         actions={
           canCreate ? (
-            <Button
-              nativeButton={false}
-              render={<Link href="/app/sales/payments/new" />}
-            >
-              <Plus className="size-5" />
-              <span>Record payment</span>
-            </Button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button
+                nativeButton={false}
+                variant="outline"
+                render={<Link href="/app/sales/payments/new?advance=1" />}
+              >
+                Record advance
+              </Button>
+              <Button
+                nativeButton={false}
+                render={<Link href="/app/sales/payments/new" />}
+              >
+                <Plus className="size-5" />
+                <span>Record payment</span>
+              </Button>
+            </div>
           ) : null
         }
       />
@@ -168,7 +177,7 @@ export default async function SalesPaymentsPage({
           description={
             hasFilters
               ? "Try a different receipt number, customer, method, or date range."
-              : "Record a customer payment against unpaid invoices. Partial payments are supported."
+              : "Record a customer payment against unpaid invoices, or an advance to hold as credit."
           }
           action={
             canCreate && !hasFilters ? (

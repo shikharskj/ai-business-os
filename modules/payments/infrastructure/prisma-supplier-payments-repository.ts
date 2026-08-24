@@ -165,7 +165,6 @@ export function createPrismaSupplierPaymentRepository(
           journalId: input.journalId,
           allocations: {
             create: input.allocations.map((allocation) => ({
-              tenantId: input.tenantId,
               purchaseId: allocation.purchaseId,
               amount: toDecimalForPrisma(allocation.amount),
             })),

@@ -195,8 +195,8 @@ describe("payment allocation rules", () => {
     );
   });
 
-  it("rejects payment amount greater than total allocation", () => {
-    expect(() =>
+  it("allows an unallocated remainder as customer credit", () => {
+    expect(
       validateAllocations({
         customerId: "cust-1",
         paymentAmount: money(500_00n),
@@ -205,7 +205,18 @@ describe("payment allocation rules", () => {
           { invoiceId: "inv-1", customerId: "cust-1", outstanding: money(500_00n) },
         ],
       })
-    ).toThrow(PaymentValidationError);
+    ).toEqual(money(200_00n));
+  });
+
+  it("allows a receipt with no invoice allocations", () => {
+    expect(
+      validateAllocations({
+        customerId: "cust-1",
+        paymentAmount: money(500_00n),
+        allocations: [],
+        invoices: [],
+      })
+    ).toEqual(money(0n));
   });
 });
 

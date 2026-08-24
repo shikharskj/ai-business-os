@@ -9,6 +9,14 @@ export type Permission =
   | "quotation:read"
   | "quotation:update"
   | "quotation:cancel"
+  | "sales-order:create"
+  | "sales-order:read"
+  | "sales-order:update"
+  | "sales-order:cancel"
+  | "credit-note:create"
+  | "credit-note:read"
+  | "credit-note:update"
+  | "credit-note:cancel"
   | "payment:create"
   | "payment:read"
   | "expense:create"
@@ -17,6 +25,10 @@ export type Permission =
   | "purchase:read"
   | "purchase:update"
   | "purchase:cancel"
+  | "purchase-return:create"
+  | "purchase-return:read"
+  | "purchase-return:update"
+  | "purchase-return:cancel"
   | "inventory:adjust"
   | "report:read"
   | "accounting:post"
@@ -45,6 +57,14 @@ const OWNER_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "quotation:read",
   "quotation:update",
   "quotation:cancel",
+  "sales-order:create",
+  "sales-order:read",
+  "sales-order:update",
+  "sales-order:cancel",
+  "credit-note:create",
+  "credit-note:read",
+  "credit-note:update",
+  "credit-note:cancel",
   "payment:create",
   "payment:read",
   "expense:create",
@@ -53,6 +73,10 @@ const OWNER_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "purchase:read",
   "purchase:update",
   "purchase:cancel",
+  "purchase-return:create",
+  "purchase-return:read",
+  "purchase-return:update",
+  "purchase-return:cancel",
   "inventory:adjust",
   "report:read",
   "accounting:post",
@@ -82,6 +106,14 @@ const ADMIN_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "quotation:read",
   "quotation:update",
   "quotation:cancel",
+  "sales-order:create",
+  "sales-order:read",
+  "sales-order:update",
+  "sales-order:cancel",
+  "credit-note:create",
+  "credit-note:read",
+  "credit-note:update",
+  "credit-note:cancel",
   "payment:create",
   "payment:read",
   "expense:create",
@@ -90,6 +122,10 @@ const ADMIN_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "purchase:read",
   "purchase:update",
   "purchase:cancel",
+  "purchase-return:create",
+  "purchase-return:read",
+  "purchase-return:update",
+  "purchase-return:cancel",
   "inventory:adjust",
   "report:read",
   "accounting:post",
@@ -116,6 +152,12 @@ const STAFF_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "quotation:create",
   "quotation:read",
   "quotation:update",
+  "sales-order:create",
+  "sales-order:read",
+  "sales-order:update",
+  "credit-note:create",
+  "credit-note:read",
+  "credit-note:update",
   "payment:create",
   "payment:read",
   "expense:create",
@@ -123,6 +165,9 @@ const STAFF_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "purchase:create",
   "purchase:read",
   "purchase:update",
+  "purchase-return:create",
+  "purchase-return:read",
+  "purchase-return:update",
   "customer:create",
   "customer:read",
   "customer:update",
@@ -136,9 +181,12 @@ const STAFF_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
 const ACCOUNTANT_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "invoice:read",
   "quotation:read",
+  "sales-order:read",
+  "credit-note:read",
   "payment:read",
   "expense:read",
   "purchase:read",
+  "purchase-return:read",
   "report:read",
   "accounting:post",
   "customer:read",

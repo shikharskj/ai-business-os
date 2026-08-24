@@ -75,12 +75,13 @@ type RecordPaymentFormProps = {
   today: string;
   selectedCustomerId: string;
   selectedInvoiceId?: string;
+  mode?: "receipt" | "advance";
 };
 
 export function RecordPaymentForm(props: RecordPaymentFormProps) {
   return (
     <RecordPaymentFormFields
-      key={`${props.selectedCustomerId}:${props.selectedInvoiceId ?? ""}`}
+      key={`${props.mode ?? "receipt"}:${props.selectedCustomerId}:${props.selectedInvoiceId ?? ""}`}
       {...props}
     />
   );
@@ -92,6 +93,7 @@ function RecordPaymentFormFields({
   today,
   selectedCustomerId,
   selectedInvoiceId,
+  mode = "receipt",
 }: RecordPaymentFormProps) {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(
@@ -138,7 +140,11 @@ function RecordPaymentFormFields({
   return (
     <form action={formAction} className="flex flex-col gap-6">
       <input type="hidden" name="customerId" value={selectedCustomerId} />
-      <input type="hidden" name="allocationCount" value={String(invoices.length)} />
+      <input
+        type="hidden"
+        name="allocationCount"
+        value={String(mode === "advance" ? 0 : invoices.length)}
+      />
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-2">
@@ -151,8 +157,13 @@ function RecordPaymentFormFields({
                 entity: "customer",
                 returnTo: "/app/sales/payments/new",
                 preserveQuery: selectedCustomerId
-                  ? { customerId: selectedCustomerId }
-                  : undefined,
+                  ? {
+                      customerId: selectedCustomerId,
+                      ...(mode === "advance" ? { advance: "1" } : {}),
+                    }
+                  : mode === "advance"
+                    ? { advance: "1" }
+                    : undefined,
               })}
               className="flex items-center gap-2 text-sm font-medium text-(--state-info) hover:font-semibold"
             >
@@ -164,7 +175,11 @@ function RecordPaymentFormFields({
             id="customerId"
             value={selectedCustomerId}
             onValueChange={(value) => {
-              router.push(`/app/sales/payments/new?customerId=${value}`);
+              const params = new URLSearchParams({ customerId: value });
+              if (mode === "advance") {
+                params.set("advance", "1");
+              }
+              router.push(`/app/sales/payments/new?${params.toString()}`);
             }}
             options={customers.map((customer) => ({
               value: customer.id,
@@ -263,17 +278,19 @@ function RecordPaymentFormFields({
         <FieldError name="notes" fieldErrors={state.fieldErrors} />
       </div>
 
+      {mode === "receipt" ? (
       <section className="flex flex-col gap-3">
         <h2 className="text-base font-medium">Allocate to invoices</h2>
         <p className="text-xs text-muted-foreground">
-          Allocation cannot exceed an invoice’s outstanding or the payment amount. Allocate
-          the full amount received.
+          Allocation cannot exceed an invoice’s outstanding or the payment amount. Any
+          leftover is held as customer credit and can be applied later.
         </p>
         <FieldError name="allocations" fieldErrors={state.fieldErrors} />
 
         {invoices.length === 0 ? (
           <p className="text-base text-muted-foreground">
-            This customer has no unpaid invoices.
+            This customer has no unpaid invoices. The full amount will be held as customer
+            credit.
           </p>
         ) : (
           <div className="overflow-hidden rounded-md border border-border">
@@ -318,14 +335,28 @@ function RecordPaymentFormFields({
           </div>
         )}
       </section>
+      ) : null}
 
       <section className="rounded-md border border-border bg-muted/30 p-4 text-base">
         <p className="font-medium">What will happen</p>
         <p className="mt-2 text-muted-foreground">
-          Record {formatINR(money(paymentMinor))} from{" "}
-          {selectedCustomer?.name ?? "this customer"}. {formatINR(money(allocatedMinor))}{" "}
-          will be allocated to invoices, invoice payment status will update, and a balanced
-          receipt journal will be posted.
+          {mode === "advance" ? (
+            <>
+              Record {formatINR(money(paymentMinor))} from{" "}
+              {selectedCustomer?.name ?? "this customer"} as customer credit. Cash or bank
+              increases now; apply the credit to invoices later without posting cash again.
+            </>
+          ) : (
+            <>
+              Record {formatINR(money(paymentMinor))} from{" "}
+              {selectedCustomer?.name ?? "this customer"}. {formatINR(money(allocatedMinor))}{" "}
+              will be allocated to invoices
+              {paymentMinor > allocatedMinor
+                ? ` and ${formatINR(money(paymentMinor - allocatedMinor))} will be held as customer credit`
+                : ""}
+              . A balanced receipt journal will be posted.
+            </>
+          )}
         </p>
       </section>
 
@@ -336,12 +367,8 @@ function RecordPaymentFormFields({
       ) : null}
 
       <div>
-        <SubmitButton
-          pending={isPending}
-          pendingLabel="Recording payment"
-          disabled={invoices.length === 0}
-        >
-          Record payment
+        <SubmitButton pending={isPending} pendingLabel="Recording payment">
+          {mode === "advance" ? "Record advance" : "Record payment"}
         </SubmitButton>
       </div>
     </form>

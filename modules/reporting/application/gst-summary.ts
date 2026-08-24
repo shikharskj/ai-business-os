@@ -1,4 +1,4 @@
-import { subtractMoney, isZero } from "@/modules/shared-kernel/money";
+import { addMoney, negateMoney, subtractMoney, isZero } from "@/modules/shared-kernel/money";
 import type { BusinessDate } from "@/modules/shared-kernel/dates";
 import {
   sumStoredGst,
@@ -9,6 +9,8 @@ import type { PurchasesRepository } from "@/modules/purchases/infrastructure/rep
 import type { ExpenseRepository } from "@/modules/expenses/infrastructure/repositories";
 import { gstRowsToCsv } from "@/modules/reporting/domain/csv";
 import {
+  GST_CREDIT_NOTE_STATUSES,
+  GST_PURCHASE_RETURN_STATUSES,
   GST_PURCHASE_STATUSES,
   GST_SALES_STATUSES,
   type GstPeriodSummary,
@@ -48,16 +50,28 @@ async function loadGstRows(input: {
   purchases: PurchasesRepository;
   expenses: ExpenseRepository;
 }): Promise<GstTransactionRow[]> {
-  const [invoices, purchases, expenses] = await Promise.all([
+  const [invoices, creditNotes, purchases, purchaseReturns, expenses] = await Promise.all([
     input.sales.listInvoices({
       tenantId: input.tenantId,
       statuses: GST_SALES_STATUSES,
       fromDate: input.fromDate,
       toDate: input.toDate,
     }),
+    input.sales.listCreditNotes({
+      tenantId: input.tenantId,
+      statuses: GST_CREDIT_NOTE_STATUSES,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+    }),
     input.purchases.listPurchases({
       tenantId: input.tenantId,
       statuses: GST_PURCHASE_STATUSES,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+    }),
+    input.purchases.listPurchaseReturns({
+      tenantId: input.tenantId,
+      statuses: GST_PURCHASE_RETURN_STATUSES,
       fromDate: input.fromDate,
       toDate: input.toDate,
     }),
@@ -85,6 +99,25 @@ async function loadGstRows(input: {
     });
   }
 
+  for (const creditNote of creditNotes) {
+    if (creditNote.tenantId !== input.tenantId) continue;
+    rows.push({
+      tenantId: creditNote.tenantId,
+      documentKind: "SALES_CREDIT_NOTE",
+      taxFlow: "OUTPUT",
+      documentId: creditNote.id,
+      documentNumber: creditNote.number,
+      businessDate: creditNote.issuedOn,
+      partyName: creditNote.customerName,
+      supplyType: creditNote.supplyType,
+      taxableAmount: negateMoney(creditNote.taxableAmount),
+      cgst: negateMoney(creditNote.cgst),
+      sgst: negateMoney(creditNote.sgst),
+      igst: negateMoney(creditNote.igst),
+      totalTax: negateMoney(creditNote.totalTax),
+    });
+  }
+
   for (const purchase of purchases) {
     if (purchase.tenantId !== input.tenantId) continue;
     rows.push({
@@ -97,6 +130,25 @@ async function loadGstRows(input: {
       partyName: purchase.supplierName,
       supplyType: purchase.supplyType,
       ...toStored(purchase),
+    });
+  }
+
+  for (const purchaseReturn of purchaseReturns) {
+    if (purchaseReturn.tenantId !== input.tenantId) continue;
+    rows.push({
+      tenantId: purchaseReturn.tenantId,
+      documentKind: "PURCHASE_RETURN",
+      taxFlow: "INPUT",
+      documentId: purchaseReturn.id,
+      documentNumber: purchaseReturn.number,
+      businessDate: purchaseReturn.issuedOn,
+      partyName: purchaseReturn.supplierName,
+      supplyType: purchaseReturn.supplyType,
+      taxableAmount: negateMoney(purchaseReturn.taxableAmount),
+      cgst: negateMoney(purchaseReturn.cgst),
+      sgst: negateMoney(purchaseReturn.sgst),
+      igst: negateMoney(purchaseReturn.igst),
+      totalTax: negateMoney(purchaseReturn.totalTax),
     });
   }
 

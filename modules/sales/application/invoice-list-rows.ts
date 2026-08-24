@@ -1,7 +1,8 @@
-import { remainingOutstanding } from "@/modules/payments/domain/allocation";
+import { remainingDocumentBalance } from "@/modules/payments/domain/allocation";
 import type { PaymentRepository } from "@/modules/payments/infrastructure/repositories";
 import { isInvoiceOverdue } from "@/modules/sales/domain/invoice-status";
 import type { SalesInvoice } from "@/modules/sales/domain/types";
+import type { SalesRepository } from "@/modules/sales/infrastructure/repositories";
 import type { BusinessDate } from "@/modules/shared-kernel/dates";
 import { money, type Money } from "@/modules/shared-kernel/money";
 
@@ -14,21 +15,29 @@ export async function decorateInvoiceListRows(input: {
   tenantId: string;
   invoices: SalesInvoice[];
   payments: PaymentRepository;
+  sales: SalesRepository;
   asOf: BusinessDate;
 }): Promise<InvoiceListRow[]> {
   if (input.invoices.length === 0) {
     return [];
   }
 
-  const allocated = await input.payments.allocatedTotalsForInvoices(
-    input.tenantId,
-    input.invoices.map((invoice) => invoice.id)
-  );
+  const invoiceIds = input.invoices.map((invoice) => invoice.id);
+  const [allocated, credited] = await Promise.all([
+    input.payments.allocatedTotalsForInvoices(input.tenantId, invoiceIds),
+    input.sales.creditedTotalsForInvoices(input.tenantId, invoiceIds),
+  ]);
 
   return input.invoices.map((invoice) => {
     const allocatedAmount =
       allocated.get(invoice.id) ?? money(0n, invoice.grandTotal.currency);
-    const outstanding = remainingOutstanding(invoice.grandTotal, allocatedAmount);
+    const creditedAmount =
+      credited.get(invoice.id) ?? money(0n, invoice.grandTotal.currency);
+    const outstanding = remainingDocumentBalance(
+      invoice.grandTotal,
+      allocatedAmount,
+      creditedAmount
+    );
     return {
       ...invoice,
       outstanding,

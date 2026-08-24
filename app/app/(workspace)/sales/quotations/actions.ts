@@ -25,6 +25,7 @@ import {
   buildQuotationDocumentView,
   cancelQuotation,
   convertQuotationToInvoice,
+  convertQuotationToSalesOrder,
   createQuotation,
   exportQuotationPdf,
   previewQuotation,
@@ -46,6 +47,7 @@ export type QuotationActionState = {
   error?: string;
   fieldErrors?: Record<string, string>;
   invoiceId?: string;
+  salesOrderId?: string;
   documentId?: string;
 };
 
@@ -224,6 +226,47 @@ export async function cancelQuotationAction(quotationId: string): Promise<Quotat
   return statusAction("quotation:cancel", quotationId, (ctx) =>
     cancelQuotation({ ...ctx, quotationId })
   );
+}
+
+export async function convertQuotationToSalesOrderAction(
+  quotationId: string
+): Promise<QuotationActionState> {
+  let salesOrderId: string;
+
+  try {
+    const tenant = await authorize("quotation:update");
+    const salesOrder = await prisma.$transaction(async (tx) =>
+      convertQuotationToSalesOrder({
+        tenantId: tenant.tenantId,
+        actorUserId: tenant.membership.userId,
+        quotationId,
+        taxContext: taxContextFromTenant(tenant),
+        sales: createPrismaSalesRepository(tx),
+        parties: createPrismaPartyRepository(tx),
+        catalog: createPrismaCatalogRepository(tx),
+        taxRates: prismaTaxRateRepository,
+        hsnSac: prismaHsnSacRepository,
+        audit: createPrismaAuditRepository(tx),
+        outbox: createPrismaOutboxRepository(tx),
+      })
+    );
+    salesOrderId = salesOrder.id;
+  } catch (error) {
+    if (error instanceof QuotationAlreadyConvertedError) {
+      return { error: error.message };
+    }
+    const mapped = mapError(error);
+    if (mapped) {
+      return mapped;
+    }
+    throw error;
+  }
+
+  revalidatePath("/app/sales/quotations");
+  revalidatePath(`/app/sales/quotations/${quotationId}`);
+  revalidatePath("/app/sales/orders");
+  revalidatePath(`/app/sales/orders/${salesOrderId}`);
+  return { salesOrderId };
 }
 
 export async function convertQuotationAction(quotationId: string): Promise<QuotationActionState> {

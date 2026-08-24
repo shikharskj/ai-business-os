@@ -34,3 +34,35 @@ export function formatInvoiceNumber(
 ): string {
   return `${INVOICE_SERIES_PREFIX}/${financialYearKey}/${String(sequence).padStart(4, "0")}`;
 }
+
+export const SALES_ORDER_SERIES_PREFIX = "SO";
+
+export function salesOrderFinancialYearKey(
+  date: BusinessDate,
+  financialYearStartMonth: number
+): string {
+  return quotationFinancialYearKey(date, financialYearStartMonth);
+}
+
+export function formatSalesOrderNumber(
+  financialYearKey: string,
+  sequence: number
+): string {
+  return `${SALES_ORDER_SERIES_PREFIX}/${financialYearKey}/${String(sequence).padStart(4, "0")}`;
+}
+
+export const CREDIT_NOTE_SERIES_PREFIX = "CN";
+
+export function creditNoteFinancialYearKey(
+  date: BusinessDate,
+  financialYearStartMonth: number
+): string {
+  return quotationFinancialYearKey(date, financialYearStartMonth);
+}
+
+export function formatCreditNoteNumber(
+  financialYearKey: string,
+  sequence: number
+): string {
+  return `${CREDIT_NOTE_SERIES_PREFIX}/${financialYearKey}/${String(sequence).padStart(4, "0")}`;
+}

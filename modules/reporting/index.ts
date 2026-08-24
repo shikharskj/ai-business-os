@@ -5,6 +5,8 @@ export type {
   GstTransactionRow,
 } from "@/modules/reporting/domain/gst-types";
 export {
+  GST_CREDIT_NOTE_STATUSES,
+  GST_PURCHASE_RETURN_STATUSES,
   GST_PURCHASE_STATUSES,
   GST_SALES_STATUSES,
 } from "@/modules/reporting/domain/gst-types";

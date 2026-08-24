@@ -65,7 +65,63 @@ export class InvoiceAlreadyPostedError extends SalesError {
 
 export class QuotationAlreadyConvertedError extends SalesError {
   constructor() {
-    super("This quotation has already been converted to an invoice.");
+    super("This quotation has already been converted.");
     this.name = "QuotationAlreadyConvertedError";
+  }
+}
+
+export class SalesOrderNotFoundError extends SalesError {
+  constructor() {
+    super("Sales order was not found.");
+    this.name = "SalesOrderNotFoundError";
+  }
+}
+
+export class SalesOrderValidationError extends SalesError {
+  constructor(message: string) {
+    super(message);
+    this.name = "SalesOrderValidationError";
+  }
+}
+
+export class SalesOrderStatusError extends SalesError {
+  constructor(message: string) {
+    super(message);
+    this.name = "SalesOrderStatusError";
+  }
+}
+
+export class SalesOrderAlreadyConvertedError extends SalesError {
+  constructor() {
+    super("This sales order has already been converted to an invoice.");
+    this.name = "SalesOrderAlreadyConvertedError";
+  }
+}
+
+export class CreditNoteNotFoundError extends SalesError {
+  constructor() {
+    super("Credit note was not found.");
+    this.name = "CreditNoteNotFoundError";
+  }
+}
+
+export class CreditNoteValidationError extends SalesError {
+  constructor(message: string) {
+    super(message);
+    this.name = "CreditNoteValidationError";
+  }
+}
+
+export class CreditNoteStatusError extends SalesError {
+  constructor(message: string) {
+    super(message);
+    this.name = "CreditNoteStatusError";
+  }
+}
+
+export class CreditNoteAlreadyPostedError extends SalesError {
+  constructor() {
+    super("This credit note has already been posted.");
+    this.name = "CreditNoteAlreadyPostedError";
   }
 }

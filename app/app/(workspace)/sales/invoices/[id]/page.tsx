@@ -11,6 +11,7 @@ import { MoneyDisplay } from "@/components/business/money-display";
 import { InvoiceStatusActions } from "@/components/business/invoice-status-actions";
 import { StatusBadge } from "@/components/business/status-badge";
 import {
+  CREDIT_NOTE_STATUS_TONES,
   invoicePaymentBadgePresentation,
 } from "@/components/business/status-tone";
 import { PageHeader } from "@/components/shell/page-header";
@@ -34,7 +35,9 @@ import { prisma } from "@/lib/db";
 import { authorize } from "@/lib/security";
 import { roleHasPermission } from "@/lib/security/permissions";
 import { formatQuantity } from "@/modules/inventory";
+import { ApplyAdvanceForm } from "@/components/business/apply-advance-form";
 import {
+  getCustomerAdvance,
   getInvoiceOutstanding,
   listPaymentsForInvoice,
   PAYMENT_METHOD_LABELS,
@@ -49,8 +52,11 @@ import {
   getInvoice,
   InvoiceNotFoundError,
   isInvoiceOverdue,
+  isPostedInvoiceStatus,
   isReceivableInvoiceStatus,
+  listCreditNotes,
   paymentStatusLabel,
+  creditNoteStatusLabel,
 } from "@/modules/sales";
 import { businessDate, todayInTimezone } from "@/modules/shared-kernel/dates";
 import { prismaSalesRepository } from "@/modules/sales/infrastructure/prisma-sales-repository";
@@ -71,6 +77,10 @@ export default async function InvoiceDetailPage({
   const canUpdate = roleHasPermission(tenant.membership.role, "invoice:update");
   const canCancel = roleHasPermission(tenant.membership.role, "invoice:cancel");
   const canRead = roleHasPermission(tenant.membership.role, "invoice:read");
+  const canCreateCreditNote = roleHasPermission(
+    tenant.membership.role,
+    "invoice:create",
+  );
   const canCreatePayment = roleHasPermission(
     tenant.membership.role,
     "payment:create",
@@ -101,12 +111,19 @@ export default async function InvoiceDetailPage({
   const placeOfSupply =
     GST_STATE_CODES[invoice.placeOfSupplyStateCode] ??
     invoice.placeOfSupplyStateCode;
-  const outstanding = await getInvoiceOutstanding({
-    tenantId: tenant.tenantId,
-    invoiceId: invoice.id,
-    sales: prismaSalesRepository,
-    payments: prismaPaymentRepository,
-  });
+  const [outstanding, advance] = await Promise.all([
+    getInvoiceOutstanding({
+      tenantId: tenant.tenantId,
+      invoiceId: invoice.id,
+      sales: prismaSalesRepository,
+      payments: prismaPaymentRepository,
+    }),
+    getCustomerAdvance({
+      tenantId: tenant.tenantId,
+      customerId: invoice.customerId,
+      payments: prismaPaymentRepository,
+    }),
+  ]);
   const customer = await prismaPartyRepository.findCustomerById(
     tenant.tenantId,
     invoice.customerId,
@@ -129,6 +146,11 @@ export default async function InvoiceDetailPage({
         payments: prismaPaymentRepository,
       })
     : [];
+  const creditNotes = await listCreditNotes({
+    tenantId: tenant.tenantId,
+    invoiceId: invoice.id,
+    sales: prismaSalesRepository,
+  });
   const activity = await audit.listForResource({
     tenantId: tenant.tenantId,
     resource: "invoice",
@@ -187,6 +209,19 @@ export default async function InvoiceDetailPage({
                 }
               >
                 Edit
+              </Button>
+            ) : null}
+            {canCreateCreditNote && isPostedInvoiceStatus(invoice.status) ? (
+              <Button
+                nativeButton={false}
+                variant="outline"
+                render={
+                  <Link
+                    href={`/app/sales/credit-notes/new?invoiceId=${invoice.id}`}
+                  />
+                }
+              >
+                Issue credit note
               </Button>
             ) : null}
             {canRecordPayment ? (
@@ -293,6 +328,19 @@ export default async function InvoiceDetailPage({
                     </Link>
                   </p>
                 ) : null}
+                {invoice.salesOrderId ? (
+                  <p className="flex items-center justify-between">
+                    <span className="text-muted-foreground">
+                      From order{" "}
+                    </span>
+                    <Link
+                      href={`/app/sales/orders/${invoice.salesOrderId}`}
+                      className="font-medium hover:underline"
+                    >
+                      View sales order
+                    </Link>
+                  </p>
+                ) : null}
                 {invoice.journalId && canReadJournal ? (
                   <p className="flex items-center justify-between">
                     <span className="text-muted-foreground">Accounting </span>
@@ -366,6 +414,49 @@ export default async function InvoiceDetailPage({
             </CardContent>
           </Card>
 
+          {creditNotes.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Credit notes</CardTitle>
+              </CardHeader>
+              <CardContent className="px-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Number</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {creditNotes.map((note) => (
+                      <TableRow key={note.id}>
+                        <TableCell>
+                          <Link
+                            href={`/app/sales/credit-notes/${note.id}`}
+                            className="font-mono text-sm font-medium hover:underline"
+                          >
+                            {note.number}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{formatDisplayDate(note.issuedOn)}</TableCell>
+                        <TableCell>
+                          <StatusBadge tone={CREDIT_NOTE_STATUS_TONES[note.status]}>
+                            {creditNoteStatusLabel(note.status)}
+                          </StatusBadge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <MoneyDisplay value={note.grandTotal} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          ) : null}
+
           {canReadPayments ? (
             <Card>
               <CardHeader>
@@ -430,6 +521,19 @@ export default async function InvoiceDetailPage({
                   </Table>
                 </CardContent>
               )}
+              {canCreatePayment &&
+              outstanding &&
+              outstanding.outstanding.amountMinor > 0n &&
+              advance.unallocated.amountMinor > 0n &&
+              isReceivableInvoiceStatus(invoice.status) ? (
+                <CardContent className={payments.length > 0 ? "border-t border-border pt-6" : undefined}>
+                  <ApplyAdvanceForm
+                    customerId={invoice.customerId}
+                    available={advance.unallocated}
+                    invoices={[outstanding]}
+                  />
+                </CardContent>
+              ) : null}
             </Card>
           ) : null}
         </DocumentFormPreviewMain>

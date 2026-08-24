@@ -87,9 +87,15 @@ model Business {
   quotations   Quotation[]
   quotationLines QuotationLine[]
   quotationNumberSeries QuotationNumberSeries[]
+  salesOrders SalesOrder[]
+  salesOrderLines SalesOrderLine[]
+  salesOrderNumberSeries SalesOrderNumberSeries[]
   salesInvoices SalesInvoice[]
   salesInvoiceLines SalesInvoiceLine[]
   invoiceNumberSeries InvoiceNumberSeries[]
+  creditNotes CreditNote[]
+  creditNoteLines CreditNoteLine[]
+  creditNoteNumberSeries CreditNoteNumberSeries[]
   customerPayments CustomerPayment[]
   customerPaymentAllocations CustomerPaymentAllocation[]
   customerPaymentNumberSeries CustomerPaymentNumberSeries[]
@@ -101,6 +107,9 @@ model Business {
   purchases Purchase[]
   purchaseLines PurchaseLine[]
   purchaseNumberSeries PurchaseNumberSeries[]
+  purchaseReturns PurchaseReturn[]
+  purchaseReturnLines PurchaseReturnLine[]
+  purchaseReturnNumberSeries PurchaseReturnNumberSeries[]
   listRowOrders ListRowOrder[]
   notifications Notification[]
   businessStateMeta BusinessStateMeta?
@@ -494,6 +503,8 @@ model Journal {
   supplierPayments SupplierPayment[]
   expenses Expense[]
   purchases Purchase[]
+  creditNotes CreditNote[]
+  purchaseReturns PurchaseReturn[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, reversalOfJournalId])
@@ -572,10 +583,13 @@ model Party {
 
   business    Business     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   quotations  Quotation[]
+  salesOrders SalesOrder[]
   salesInvoices SalesInvoice[]
   customerPayments CustomerPayment[]
   supplierPayments SupplierPayment[]
   purchases Purchase[]
+  creditNotes CreditNote[]
+  purchaseReturns PurchaseReturn[]
 
   @@unique([id, tenantId])
   @@index([tenantId, kind, status])
@@ -607,8 +621,11 @@ model Product {
   business        Business             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   movements       InventoryMovement[]
   quotationLines  QuotationLine[]
+  salesOrderLines SalesOrderLine[]
   salesInvoiceLines SalesInvoiceLine[]
   purchaseLines   PurchaseLine[]
+  creditNoteLines CreditNoteLine[]
+  purchaseReturnLines PurchaseReturnLine[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, sku])
@@ -690,6 +707,7 @@ model Quotation {
   customer Party          @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict)
   lines    QuotationLine[]
   invoice  SalesInvoice?
+  salesOrder SalesOrder?
 
   @@unique([id, tenantId])
   @@unique([tenantId, number])
@@ -745,6 +763,98 @@ model QuotationNumberSeries {
   @@map("quotation_number_series")
 }
 
+enum SalesOrderStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+  FULFILLED
+}
+
+model SalesOrder {
+  id                       String           @id @default(uuid())
+  tenantId                 String
+  number                   String
+  customerId               String
+  customerName             String
+  status                   SalesOrderStatus @default(DRAFT)
+  quotationId              String?
+  issuedOn                 String
+  expectedOn               String?
+  notes                    String?
+  placeOfSupplyStateCode   String
+  subtotal                 Decimal          @db.Decimal(18, 2)
+  discountTotal            Decimal          @db.Decimal(18, 2)
+  taxableAmount            Decimal          @db.Decimal(18, 2)
+  cgst                     Decimal          @db.Decimal(18, 2)
+  sgst                     Decimal          @db.Decimal(18, 2)
+  igst                     Decimal          @db.Decimal(18, 2)
+  totalTax                 Decimal          @db.Decimal(18, 2)
+  grandTotal               Decimal          @db.Decimal(18, 2)
+  supplyType               String
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+
+  business  Business        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer  Party           @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  quotation Quotation?      @relation(fields: [quotationId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  lines     SalesOrderLine[]
+  invoice   SalesInvoice?
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, number])
+  @@unique([quotationId, tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, customerId])
+  @@index([tenantId, issuedOn])
+  @@map("sales_orders")
+}
+
+model SalesOrderLine {
+  id                 String  @id @default(uuid())
+  tenantId           String
+  salesOrderId       String
+  sortOrder          Int
+  productId          String
+  productName        String
+  sku                String
+  unitOfMeasurement  String
+  hsnSac             String?
+  taxRateBps         Int
+  quantity           Decimal @db.Decimal(18, 4)
+  unitPrice          Decimal @db.Decimal(18, 2)
+  discount           Decimal @db.Decimal(18, 2)
+  lineSubtotal       Decimal @db.Decimal(18, 2)
+  taxableAmount      Decimal @db.Decimal(18, 2)
+  cgst               Decimal @db.Decimal(18, 2)
+  sgst               Decimal @db.Decimal(18, 2)
+  igst               Decimal @db.Decimal(18, 2)
+  totalTax           Decimal @db.Decimal(18, 2)
+  lineTotal          Decimal @db.Decimal(18, 2)
+  supplyType         String
+  treatment          String
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  product    Product    @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  business   Business   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, salesOrderId])
+  @@index([salesOrderId, sortOrder])
+  @@map("sales_order_lines")
+}
+
+model SalesOrderNumberSeries {
+  id               String @id @default(uuid())
+  tenantId         String
+  financialYearKey String
+  lastNumber       Int
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, financialYearKey])
+  @@map("sales_order_number_series")
+}
+
 enum SalesInvoiceStatus {
   DRAFT
   POSTED
@@ -762,6 +872,7 @@ model SalesInvoice {
   customerName             String
   status                   SalesInvoiceStatus @default(DRAFT)
   quotationId              String?
+  salesOrderId             String?
   journalId                String?
   issuedOn                 String
   dueOn                    String?
@@ -783,13 +894,16 @@ model SalesInvoice {
   business  Business          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer  Party             @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict)
   quotation Quotation?        @relation(fields: [quotationId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  salesOrder SalesOrder?      @relation(fields: [salesOrderId, tenantId], references: [id, tenantId], onDelete: Restrict)
   journal   Journal?          @relation(fields: [journalId, tenantId], references: [id, tenantId], onDelete: Restrict)
   lines     SalesInvoiceLine[]
   paymentAllocations CustomerPaymentAllocation[]
+  creditNotes CreditNote[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, number])
   @@unique([quotationId, tenantId])
+  @@unique([salesOrderId, tenantId])
   @@unique([journalId, tenantId])
   @@index([tenantId, status])
   @@index([tenantId, customerId])
@@ -824,6 +938,7 @@ model SalesInvoiceLine {
   invoice  SalesInvoice @relation(fields: [invoiceId, tenantId], references: [id, tenantId], onDelete: Cascade)
   product  Product      @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Restrict)
   business Business     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creditNoteLines CreditNoteLine[]
 
   @@unique([id, tenantId])
   @@index([tenantId, invoiceId])
@@ -841,6 +956,103 @@ model InvoiceNumberSeries {
 
   @@unique([tenantId, financialYearKey])
   @@map("invoice_number_series")
+}
+
+enum CreditNoteStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
+model CreditNote {
+  id                       String           @id @default(uuid())
+  tenantId                 String
+  number                   String
+  customerId               String
+  customerName             String
+  invoiceId                String
+  invoiceNumber            String
+  status                   CreditNoteStatus @default(DRAFT)
+  journalId                String?
+  issuedOn                 String
+  notes                    String?
+  placeOfSupplyStateCode   String
+  subtotal                 Decimal          @db.Decimal(18, 2)
+  discountTotal            Decimal          @db.Decimal(18, 2)
+  taxableAmount            Decimal          @db.Decimal(18, 2)
+  cgst                     Decimal          @db.Decimal(18, 2)
+  sgst                     Decimal          @db.Decimal(18, 2)
+  igst                     Decimal          @db.Decimal(18, 2)
+  totalTax                 Decimal          @db.Decimal(18, 2)
+  grandTotal               Decimal          @db.Decimal(18, 2)
+  supplyType               String
+  postedAt                 DateTime?
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+
+  business  Business          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer  Party             @relation(fields: [customerId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  invoice   SalesInvoice      @relation(fields: [invoiceId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  journal   Journal?          @relation(fields: [journalId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  lines     CreditNoteLine[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, number])
+  @@unique([journalId, tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, customerId])
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, issuedOn])
+  @@map("credit_notes")
+}
+
+model CreditNoteLine {
+  id                   String  @id @default(uuid())
+  tenantId             String
+  creditNoteId         String
+  sourceInvoiceLineId  String
+  sortOrder            Int
+  productId            String
+  productName          String
+  sku                  String
+  unitOfMeasurement    String
+  hsnSac               String?
+  taxRateBps           Int
+  quantity             Decimal @db.Decimal(18, 4)
+  unitPrice            Decimal @db.Decimal(18, 2)
+  discount             Decimal @db.Decimal(18, 2)
+  lineSubtotal         Decimal @db.Decimal(18, 2)
+  taxableAmount        Decimal @db.Decimal(18, 2)
+  cgst                 Decimal @db.Decimal(18, 2)
+  sgst                 Decimal @db.Decimal(18, 2)
+  igst                 Decimal @db.Decimal(18, 2)
+  totalTax             Decimal @db.Decimal(18, 2)
+  lineTotal            Decimal @db.Decimal(18, 2)
+  supplyType           String
+  treatment            String
+
+  creditNote        CreditNote      @relation(fields: [creditNoteId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  sourceInvoiceLine SalesInvoiceLine @relation(fields: [sourceInvoiceLineId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  product           Product         @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  business          Business        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, creditNoteId])
+  @@index([creditNoteId, sortOrder])
+  @@index([tenantId, sourceInvoiceLineId])
+  @@map("credit_note_lines")
+}
+
+model CreditNoteNumberSeries {
+  id               String @id @default(uuid())
+  tenantId         String
+  financialYearKey String
+  lastNumber       Int
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, financialYearKey])
+  @@map("credit_note_number_series")
 }
 
 enum PaymentMethod {
@@ -1064,6 +1276,7 @@ model Purchase {
   journal  Journal?       @relation(fields: [journalId, tenantId], references: [id, tenantId], onDelete: Restrict)
   lines    PurchaseLine[]
   paymentAllocations SupplierPaymentAllocation[]
+  purchaseReturns PurchaseReturn[]
 
   @@unique([id, tenantId])
   @@unique([tenantId, number])
@@ -1101,6 +1314,7 @@ model PurchaseLine {
   purchase Purchase @relation(fields: [purchaseId, tenantId], references: [id, tenantId], onDelete: Cascade)
   product  Product  @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Restrict)
   business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  purchaseReturnLines PurchaseReturnLine[]
 
   @@unique([id, tenantId])
   @@index([tenantId, purchaseId])
@@ -1118,4 +1332,101 @@ model PurchaseNumberSeries {
 
   @@unique([tenantId, financialYearKey])
   @@map("purchase_number_series")
+}
+
+enum PurchaseReturnStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
+model PurchaseReturn {
+  id                       String               @id @default(uuid())
+  tenantId                 String
+  number                   String
+  supplierId               String
+  supplierName             String
+  purchaseId               String
+  purchaseNumber           String
+  status                   PurchaseReturnStatus @default(DRAFT)
+  journalId                String?
+  issuedOn                 String
+  notes                    String?
+  placeOfSupplyStateCode   String
+  subtotal                 Decimal              @db.Decimal(18, 2)
+  discountTotal            Decimal              @db.Decimal(18, 2)
+  taxableAmount            Decimal              @db.Decimal(18, 2)
+  cgst                     Decimal              @db.Decimal(18, 2)
+  sgst                     Decimal              @db.Decimal(18, 2)
+  igst                     Decimal              @db.Decimal(18, 2)
+  totalTax                 Decimal              @db.Decimal(18, 2)
+  grandTotal               Decimal              @db.Decimal(18, 2)
+  supplyType               String
+  postedAt                 DateTime?
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+
+  business  Business            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier  Party               @relation(fields: [supplierId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  purchase  Purchase            @relation(fields: [purchaseId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  journal   Journal?            @relation(fields: [journalId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  lines     PurchaseReturnLine[]
+
+  @@unique([id, tenantId])
+  @@unique([tenantId, number])
+  @@unique([journalId, tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, supplierId])
+  @@index([tenantId, purchaseId])
+  @@index([tenantId, issuedOn])
+  @@map("purchase_returns")
+}
+
+model PurchaseReturnLine {
+  id                    String  @id @default(uuid())
+  tenantId              String
+  purchaseReturnId      String
+  sourcePurchaseLineId  String
+  sortOrder             Int
+  productId             String
+  productName           String
+  sku                   String
+  unitOfMeasurement     String
+  hsnSac                String?
+  taxRateBps            Int
+  quantity              Decimal @db.Decimal(18, 4)
+  unitPrice             Decimal @db.Decimal(18, 2)
+  discount              Decimal @db.Decimal(18, 2)
+  lineSubtotal          Decimal @db.Decimal(18, 2)
+  taxableAmount         Decimal @db.Decimal(18, 2)
+  cgst                  Decimal @db.Decimal(18, 2)
+  sgst                  Decimal @db.Decimal(18, 2)
+  igst                  Decimal @db.Decimal(18, 2)
+  totalTax              Decimal @db.Decimal(18, 2)
+  lineTotal             Decimal @db.Decimal(18, 2)
+  supplyType            String
+  treatment             String
+
+  purchaseReturn     PurchaseReturn @relation(fields: [purchaseReturnId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  sourcePurchaseLine PurchaseLine   @relation(fields: [sourcePurchaseLineId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  product            Product        @relation(fields: [productId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  business           Business       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([id, tenantId])
+  @@index([tenantId, purchaseReturnId])
+  @@index([purchaseReturnId, sortOrder])
+  @@index([tenantId, sourcePurchaseLineId])
+  @@map("purchase_return_lines")
+}
+
+model PurchaseReturnNumberSeries {
+  id               String @id @default(uuid())
+  tenantId         String
+  financialYearKey String
+  lastNumber       Int
+
+  business Business @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, financialYearKey])
+  @@map("purchase_return_number_series")
 }

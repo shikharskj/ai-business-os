@@ -3,6 +3,7 @@ export type EntityKind = "customer" | "product" | "supplier";
 export type EntityCreateReturnPath =
   | "/app/sales/invoices/new"
   | "/app/sales/quotations/new"
+  | "/app/sales/orders/new"
   | "/app/sales/payments/new"
   | "/app/purchases/bills/new"
   | "/app/purchases/payments/new";
@@ -35,6 +36,12 @@ const RETURN_TARGET_CONFIG: Record<
     lineIndex: true,
     backLabel: "Back to new quotation",
   },
+  "/app/sales/orders/new": {
+    customerId: true,
+    productId: true,
+    lineIndex: true,
+    backLabel: "Back to new sales order",
+  },
   "/app/sales/payments/new": {
     customerId: true,
     backLabel: "Back to record payment",
@@ -60,6 +67,7 @@ const ALLOWED_PRESERVE_QUERY_KEYS = new Set([
   "supplierId",
   "productId",
   "lineIndex",
+  "advance",
 ]);
 
 function isAllowedReturnPath(pathname: string): pathname is EntityCreateReturnPath {
@@ -156,6 +164,9 @@ export function buildReturnToUrl(
   }
   if (query?.lineIndex && config.lineIndex) {
     params.set("lineIndex", query.lineIndex);
+  }
+  if (query?.advance === "1" && basePath === "/app/sales/payments/new") {
+    params.set("advance", "1");
   }
 
   const search = params.toString();

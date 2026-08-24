@@ -2,7 +2,12 @@ import type { BusinessDate } from "@/modules/shared-kernel/dates";
 import type { Money } from "@/modules/shared-kernel/money";
 import type { StoredGstAmounts } from "@/modules/tax/domain/sum-stored-gst";
 
-export type GstDocumentKind = "SALES_INVOICE" | "PURCHASE" | "EXPENSE";
+export type GstDocumentKind =
+  | "SALES_INVOICE"
+  | "SALES_CREDIT_NOTE"
+  | "PURCHASE"
+  | "PURCHASE_RETURN"
+  | "EXPENSE";
 
 export type GstTaxFlow = "OUTPUT" | "INPUT";
 
@@ -49,3 +54,7 @@ export const GST_PURCHASE_STATUSES = [
   "PARTIALLY_PAID",
   "PAID",
 ] as const;
+
+export const GST_CREDIT_NOTE_STATUSES = ["POSTED"] as const;
+
+export const GST_PURCHASE_RETURN_STATUSES = ["POSTED"] as const;

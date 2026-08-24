@@ -1,9 +1,11 @@
 import type { BadgeTone } from "@/components/business/status-badge";
 import type {
+  CreditNoteStatus,
   QuotationStatus,
   SalesInvoiceStatus,
+  SalesOrderStatus,
 } from "@/modules/sales/domain/types";
-import type { PurchaseStatus } from "@/modules/purchases/domain/types";
+import type { PurchaseReturnStatus, PurchaseStatus } from "@/modules/purchases/domain/types";
 import { paymentStatusLabel } from "@/modules/sales/domain/invoice-status";
 
 export const QUOTATION_STATUS_LABELS: Record<QuotationStatus, string> = {
@@ -69,6 +71,44 @@ export const PURCHASE_STATUS_TONES: Record<PurchaseStatus, BadgeTone> = {
   UNPAID: "warning",
   PARTIALLY_PAID: "warning",
   PAID: "success",
+  CANCELLED: "danger",
+};
+
+export const SALES_ORDER_STATUS_LABELS: Record<SalesOrderStatus, string> = {
+  DRAFT: "Draft",
+  CONFIRMED: "Confirmed",
+  CANCELLED: "Cancelled",
+  FULFILLED: "Fulfilled",
+};
+
+export const SALES_ORDER_STATUS_TONES: Record<SalesOrderStatus, BadgeTone> = {
+  DRAFT: "neutral",
+  CONFIRMED: "info",
+  CANCELLED: "danger",
+  FULFILLED: "success",
+};
+
+export const CREDIT_NOTE_STATUS_LABELS: Record<CreditNoteStatus, string> = {
+  DRAFT: "Draft",
+  POSTED: "Posted",
+  CANCELLED: "Cancelled",
+};
+
+export const CREDIT_NOTE_STATUS_TONES: Record<CreditNoteStatus, BadgeTone> = {
+  DRAFT: "neutral",
+  POSTED: "info",
+  CANCELLED: "danger",
+};
+
+export const PURCHASE_RETURN_STATUS_LABELS: Record<PurchaseReturnStatus, string> = {
+  DRAFT: "Draft",
+  POSTED: "Posted",
+  CANCELLED: "Cancelled",
+};
+
+export const PURCHASE_RETURN_STATUS_TONES: Record<PurchaseReturnStatus, BadgeTone> = {
+  DRAFT: "neutral",
+  POSTED: "info",
   CANCELLED: "danger",
 };
 

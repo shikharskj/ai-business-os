@@ -4,7 +4,10 @@ import type { ProjectionFamily } from "@/modules/business-state/domain/types";
 const RECEIVABLES_EVENTS: ReadonlySet<string> = new Set<DomainEventType>([
   "SalesInvoicePosted",
   "SalesInvoiceCancelled",
+  "CreditNotePosted",
+  "CreditNoteCancelled",
   "PaymentReceived",
+  "AdvanceApplied",
 ]);
 
 const INVENTORY_EVENTS: ReadonlySet<string> = new Set<DomainEventType>([
@@ -17,6 +20,8 @@ const INVENTORY_EVENTS: ReadonlySet<string> = new Set<DomainEventType>([
 const SALES_EVENTS: ReadonlySet<string> = new Set<DomainEventType>([
   "SalesInvoicePosted",
   "SalesInvoiceCancelled",
+  "CreditNotePosted",
+  "CreditNoteCancelled",
 ]);
 
 const CASH_EVENTS: ReadonlySet<string> = new Set<DomainEventType>([
@@ -30,6 +35,11 @@ const CASH_EVENTS: ReadonlySet<string> = new Set<DomainEventType>([
 const ATTENTION_EVENTS: ReadonlySet<string> = new Set<DomainEventType>([
   "SalesInvoicePosted",
   "SalesInvoiceCancelled",
+  "CreditNotePosted",
+  "CreditNoteCancelled",
+  "AdvanceApplied",
+  "PurchaseReturnPosted",
+  "PurchaseReturnCancelled",
   "PaymentReceived",
   "InventoryOpened",
   "InventoryAdjusted",
@@ -39,6 +49,9 @@ const ATTENTION_EVENTS: ReadonlySet<string> = new Set<DomainEventType>([
   "QuotationAccepted",
   "QuotationConverted",
   "QuotationCancelled",
+  "SalesOrderConfirmed",
+  "SalesOrderCancelled",
+  "SalesOrderFulfilled",
   "InvoiceOverdue",
   "QuotationIdle",
   "ExpenseRecorded",

@@ -7,7 +7,7 @@ import {
   toQuantityMajorString,
   type InventoryRepository,
 } from "@/modules/inventory";
-import { remainingOutstanding } from "@/modules/payments/domain/allocation";
+import { remainingDocumentBalance } from "@/modules/payments/domain/allocation";
 import type { PaymentRepository } from "@/modules/payments";
 import {
   RECEIVABLE_INVOICE_STATUSES,
@@ -130,10 +130,11 @@ async function computeOverdueReceivableItems(input: {
     statuses: RECEIVABLE_INVOICE_STATUSES,
   });
   const scoped = invoices.filter((row) => row.tenantId === input.tenantId);
-  const allocated = await input.payments.allocatedTotalsForInvoices(
-    input.tenantId,
-    scoped.map((row) => row.id)
-  );
+  const invoiceIds = scoped.map((row) => row.id);
+  const [allocated, credited] = await Promise.all([
+    input.payments.allocatedTotalsForInvoices(input.tenantId, invoiceIds),
+    input.sales.creditedTotalsForInvoices(input.tenantId, invoiceIds),
+  ]);
 
   const drafts: AttentionItemDraft[] = [];
 
@@ -142,7 +143,13 @@ async function computeOverdueReceivableItems(input: {
     if (!invoice.dueOn || invoice.dueOn >= input.today) continue;
     const paid =
       allocated.get(invoice.id) ?? money(0n, invoice.grandTotal.currency);
-    const outstanding = remainingOutstanding(invoice.grandTotal, paid);
+    const creditedAmount =
+      credited.get(invoice.id) ?? money(0n, invoice.grandTotal.currency);
+    const outstanding = remainingDocumentBalance(
+      invoice.grandTotal,
+      paid,
+      creditedAmount
+    );
     if (outstanding.amountMinor <= 0n) continue;
 
     const daysOverdue = daysBetween(invoice.dueOn, input.today);

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { fetchOrderedPage } from "@/modules/list-order/infrastructure/ordered-page";
 import { businessDate } from "@/modules/shared-kernel/dates";
 import {
+  addMoney,
   money,
   moneyFromPrismaDecimal,
   toDecimalForPrisma,
@@ -267,6 +268,57 @@ export function createPrismaPaymentRepository(
         );
       }
       return totals;
+    },
+
+    async lockPaymentForUpdate(tenantId, paymentId) {
+      if (client === prisma) {
+        throw new Error(
+          "lockPaymentForUpdate requires a transaction-bound Prisma client. " +
+            "Use prisma.$transaction() and pass the transaction client to createPrismaPaymentRepository()."
+        );
+      }
+      await client.$queryRaw`
+        SELECT id FROM customer_payments
+        WHERE id = ${paymentId} AND "tenantId" = ${tenantId}
+        FOR UPDATE
+      `;
+      return this.findPaymentById(tenantId, paymentId);
+    },
+
+    async addPaymentAllocations(input) {
+      const existing = await client.customerPayment.findFirst({
+        where: { id: input.paymentId, tenantId: input.tenantId },
+        select: { id: true },
+      });
+      if (!existing) {
+        return null;
+      }
+      for (const allocation of input.allocations) {
+        const existing = await client.customerPaymentAllocation.findFirst({
+          where: {
+            tenantId: input.tenantId,
+            paymentId: input.paymentId,
+            invoiceId: allocation.invoiceId,
+          },
+        });
+        if (existing) {
+          const next = addMoney(moneyFromPrismaDecimal(existing.amount), allocation.amount);
+          await client.customerPaymentAllocation.update({
+            where: { id: existing.id },
+            data: { amount: toDecimalForPrisma(next) },
+          });
+        } else {
+          await client.customerPaymentAllocation.create({
+            data: {
+              tenantId: input.tenantId,
+              paymentId: input.paymentId,
+              invoiceId: allocation.invoiceId,
+              amount: toDecimalForPrisma(allocation.amount),
+            },
+          });
+        }
+      }
+      return this.findPaymentById(input.tenantId, input.paymentId);
     },
   };
 }

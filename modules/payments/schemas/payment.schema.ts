@@ -23,10 +23,36 @@ export const recordCustomerPaymentSchema = z.object({
   amount: positiveMoneyInputSchema,
   reference: optionalText,
   notes: optionalText,
+  allocations: z.array(paymentAllocationInputSchema).default([]),
+});
+
+export const applyCustomerAdvanceSchema = z.object({
+  paymentId: z.string().uuid("Payment was not found."),
   allocations: z
     .array(paymentAllocationInputSchema)
-    .min(1, "Allocate the payment to at least one invoice"),
+    .min(1, "Allocate the credit to at least one invoice"),
 });
+
+export const applyCustomerCreditSchema = z.object({
+  customerId: z.string().uuid("Select a customer"),
+  allocations: z
+    .array(paymentAllocationInputSchema)
+    .min(1, "Allocate the credit to at least one invoice"),
+});
+
+export type ApplyCustomerAdvanceFormInput = z.infer<typeof applyCustomerAdvanceSchema>;
+export type ApplyCustomerCreditFormInput = z.infer<typeof applyCustomerCreditSchema>;
+
+export function toAdvanceAllocationFields(
+  input: ApplyCustomerAdvanceFormInput | ApplyCustomerCreditFormInput
+) {
+  return {
+    allocations: input.allocations.map((allocation) => ({
+      invoiceId: allocation.invoiceId,
+      amount: moneyFromMajor(allocation.amount),
+    })),
+  };
+}
 
 export type RecordCustomerPaymentFormInput = z.infer<typeof recordCustomerPaymentSchema>;
 

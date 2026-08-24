@@ -67,6 +67,22 @@ export type RecordCustomerPaymentInput = {
   allocations: PaymentAllocationInput[];
 };
 
+export type ApplyCustomerAdvanceInput = {
+  paymentId: string;
+  allocations: PaymentAllocationInput[];
+};
+
+export type ApplyCustomerCreditInput = {
+  customerId: string;
+  allocations: PaymentAllocationInput[];
+};
+
+export type CustomerAdvance = {
+  customerId: string;
+  unallocated: Money;
+  receiptCount: number;
+};
+
 export type PaymentListFilter = {
   tenantId: string;
   query?: string;

@@ -47,10 +47,10 @@ export default async function DashboardPage({
     rangeError =
       error instanceof ReportingError
         ? error.message
-        : "Invalid date filter. Showing last 3 months.";
+        : "Invalid date filter. Showing last 7 days.";
     range = resolveDashboardDateRange({
       timezone: tenant.business.timezone,
-      preset: "last_3_months",
+      preset: "last_7_days",
     });
   }
 

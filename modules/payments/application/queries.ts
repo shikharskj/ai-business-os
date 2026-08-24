@@ -1,6 +1,10 @@
-import { remainingOutstanding } from "@/modules/payments/domain/allocation";
+import {
+  remainingDocumentBalance,
+  unallocatedAmount,
+} from "@/modules/payments/domain/allocation";
 import { PaymentNotFoundError } from "@/modules/payments/domain/errors";
 import type {
+  CustomerAdvance,
   CustomerOutstanding,
   CustomerPayment,
   InvoiceOutstanding,
@@ -75,13 +79,16 @@ async function outstandingForInvoices(input: {
   tenantId: string;
   invoices: Awaited<ReturnType<SalesRepository["listInvoices"]>>;
   payments: PaymentRepository;
+  sales: SalesRepository;
 }): Promise<InvoiceOutstanding[]> {
-  const allocated = await input.payments.allocatedTotalsForInvoices(
-    input.tenantId,
-    input.invoices.map((invoice) => invoice.id)
-  );
+  const invoiceIds = input.invoices.map((invoice) => invoice.id);
+  const [allocated, credited] = await Promise.all([
+    input.payments.allocatedTotalsForInvoices(input.tenantId, invoiceIds),
+    input.sales.creditedTotalsForInvoices(input.tenantId, invoiceIds),
+  ]);
   return input.invoices.map((invoice) => {
     const allocatedAmount = allocated.get(invoice.id) ?? money(0n, invoice.grandTotal.currency);
+    const creditedAmount = credited.get(invoice.id) ?? money(0n, invoice.grandTotal.currency);
     return {
       invoiceId: invoice.id,
       invoiceNumber: invoice.number,
@@ -92,7 +99,11 @@ async function outstandingForInvoices(input: {
       dueOn: invoice.dueOn,
       grandTotal: invoice.grandTotal,
       allocated: allocatedAmount,
-      outstanding: remainingOutstanding(invoice.grandTotal, allocatedAmount),
+      outstanding: remainingDocumentBalance(
+        invoice.grandTotal,
+        allocatedAmount,
+        creditedAmount
+      ),
     };
   });
 }
@@ -111,6 +122,7 @@ export async function getInvoiceOutstanding(input: {
     tenantId: input.tenantId,
     invoices: [invoice],
     payments: input.payments,
+    sales: input.sales,
   });
   return row ?? null;
 }
@@ -130,6 +142,7 @@ export async function listOpenReceivableInvoices(input: {
     tenantId: input.tenantId,
     invoices,
     payments: input.payments,
+    sales: input.sales,
   });
   return rows.filter((row) => row.outstanding.amountMinor > 0n);
 }
@@ -149,6 +162,7 @@ export async function getCustomerOutstanding(input: {
     tenantId: input.tenantId,
     invoices: posted,
     payments: input.payments,
+    sales: input.sales,
   });
   const outstanding = rows.reduce(
     (sum, row) => addMoney(sum, row.outstanding),
@@ -181,6 +195,7 @@ export async function outstandingByCustomerIds(input: {
     tenantId: input.tenantId,
     invoices,
     payments: input.payments,
+    sales: input.sales,
   });
 
   const totals = new Map<string, ReturnType<typeof money>>();
@@ -192,4 +207,30 @@ export async function outstandingByCustomerIds(input: {
     totals.set(row.customerId, addMoney(current, row.outstanding));
   }
   return totals;
+}
+
+export async function getCustomerAdvance(input: {
+  tenantId: string;
+  customerId: string;
+  payments: PaymentRepository;
+}): Promise<CustomerAdvance> {
+  const receipts = await input.payments.listPayments({
+    tenantId: input.tenantId,
+    customerId: input.customerId,
+  });
+  let unallocated = money(0n);
+  let receiptCount = 0;
+  for (const payment of receipts) {
+    const remaining = unallocatedAmount(payment);
+    if (remaining.amountMinor <= 0n) {
+      continue;
+    }
+    unallocated = addMoney(unallocated, remaining);
+    receiptCount += 1;
+  }
+  return {
+    customerId: input.customerId,
+    unallocated,
+    receiptCount,
+  };
 }

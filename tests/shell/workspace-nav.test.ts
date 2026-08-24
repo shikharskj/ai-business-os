@@ -66,6 +66,9 @@ describe("flattenWorkspaceNavLeaves", () => {
 
     expect(hrefs).toContain("/app");
     expect(hrefs).toContain("/app/sales/invoices");
+    expect(hrefs).toContain("/app/sales/orders");
+    expect(hrefs).toContain("/app/sales/credit-notes");
+    expect(hrefs).toContain("/app/purchases/returns");
     expect(hrefs).not.toContain("/app/sales");
     expect(hrefs).not.toContain("/app/reports");
     expect(hrefs).toContain("/app/settings");

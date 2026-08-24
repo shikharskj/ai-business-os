@@ -17,10 +17,11 @@ import { Plus } from "lucide-react";
 export default async function NewPaymentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ customerId?: string; invoiceId?: string }>;
+  searchParams: Promise<{ customerId?: string; invoiceId?: string; advance?: string }>;
 }) {
   const tenant = await authorize("payment:create");
   const params = await searchParams;
+  const isAdvance = params.advance === "1";
   const customers = await listCustomers({
     tenantId: tenant.tenantId,
     status: "ACTIVE",
@@ -47,8 +48,12 @@ export default async function NewPaymentPage({
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
       <PageHeader
-        title="Record payment"
-        description="Allocate the amount received to unpaid invoices. Cash, UPI, bank transfer, card, and cheque are recorded as labels only."
+        title={isAdvance ? "Record advance" : "Record payment"}
+        description={
+          isAdvance
+            ? "Record cash received before invoices. Apply the credit to invoices later — cash is not posted twice."
+            : "Allocate the amount received to unpaid invoices, or leave a remainder as customer credit. Cash, UPI, bank transfer, card, and cheque are recorded as labels only."
+        }
         actions={
           <Button
             nativeButton={false}
@@ -62,7 +67,10 @@ export default async function NewPaymentPage({
       {customers.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col gap-3 py-8 text-base">
-            <p>Add an active customer before recording a payment.</p>
+            <p>
+              Add an active customer before recording a{" "}
+              {isAdvance ? "advance" : "payment"}.
+            </p>
             <div>
               <Button
                 nativeButton={false}
@@ -71,6 +79,7 @@ export default async function NewPaymentPage({
                     href={buildEntityCreateHref({
                       entity: "customer",
                       returnTo: "/app/sales/payments/new",
+                      preserveQuery: isAdvance ? { advance: "1" } : undefined,
                     })}
                   />
                 }
@@ -87,7 +96,8 @@ export default async function NewPaymentPage({
             <RecordPaymentForm
               today={todayInTimezone(tenant.business.timezone)}
               selectedCustomerId={selectedCustomerId}
-              selectedInvoiceId={selectedInvoiceId}
+              selectedInvoiceId={isAdvance ? undefined : selectedInvoiceId}
+              mode={isAdvance ? "advance" : "receipt"}
               customers={customers.map((customer) => ({
                 id: customer.id,
                 name: customer.name,

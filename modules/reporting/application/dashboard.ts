@@ -6,7 +6,7 @@ import {
   parseLowStockThreshold,
   type InventoryRepository,
 } from "@/modules/inventory";
-import { remainingOutstanding } from "@/modules/payments/domain/allocation";
+import { remainingDocumentBalance } from "@/modules/payments/domain/allocation";
 import type { PaymentRepository, SupplierPaymentRepository } from "@/modules/payments";
 import {
   PAYABLE_PURCHASE_STATUSES,
@@ -18,7 +18,7 @@ import type {
   DashboardOverview,
   DashboardSeriesPoint,
 } from "@/modules/reporting/domain/dashboard-types";
-import { GST_SALES_STATUSES } from "@/modules/reporting/domain/gst-types";
+import { GST_CREDIT_NOTE_STATUSES, GST_SALES_STATUSES } from "@/modules/reporting/domain/gst-types";
 import {
   RECEIVABLE_INVOICE_STATUSES,
   type SalesRepository,
@@ -76,10 +76,16 @@ export type PeriodActivityDeps = {
 export async function getPeriodActivity(
   input: PeriodActivityDeps
 ): Promise<PeriodActivitySnapshot> {
-  const [periodInvoices, periodExpenses, receipts] = await Promise.all([
+  const [periodInvoices, periodCreditNotes, periodExpenses, receipts] = await Promise.all([
     input.sales.listInvoices({
       tenantId: input.tenantId,
       statuses: GST_SALES_STATUSES,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
+    }),
+    input.sales.listCreditNotes({
+      tenantId: input.tenantId,
+      statuses: GST_CREDIT_NOTE_STATUSES,
       fromDate: input.fromDate,
       toDate: input.toDate,
     }),
@@ -99,6 +105,10 @@ export async function getPeriodActivity(
   for (const invoice of periodInvoices) {
     if (invoice.tenantId !== input.tenantId) continue;
     sales = addMoney(sales, invoice.taxableAmount);
+  }
+  for (const creditNote of periodCreditNotes) {
+    if (creditNote.tenantId !== input.tenantId) continue;
+    sales = subtractMoney(sales, creditNote.taxableAmount);
   }
 
   let expenses = zeroMoney();
@@ -145,6 +155,7 @@ export async function getDashboardOverview(
 
   const [
     periodInvoices,
+    periodCreditNotes,
     receivableInvoices,
     payablePurchases,
     periodExpenses,
@@ -155,6 +166,12 @@ export async function getDashboardOverview(
     input.sales.listInvoices({
       tenantId: input.tenantId,
       statuses: GST_SALES_STATUSES,
+      fromDate,
+      toDate,
+    }),
+    input.sales.listCreditNotes({
+      tenantId: input.tenantId,
+      statuses: GST_CREDIT_NOTE_STATUSES,
       fromDate,
       toDate,
     }),
@@ -197,15 +214,22 @@ export async function getDashboardOverview(
   ];
   const purchaseIds = payablePurchases.map((row) => row.id);
 
-  const [invoiceAllocated, purchaseAllocated] = await Promise.all([
-    input.payments.allocatedTotalsForInvoices(input.tenantId, invoiceIds),
-    input.supplierPayments.allocatedTotalsForPurchases(input.tenantId, purchaseIds),
-  ]);
+  const [invoiceAllocated, invoiceCredited, purchaseAllocated, purchaseReturned] =
+    await Promise.all([
+      input.payments.allocatedTotalsForInvoices(input.tenantId, invoiceIds),
+      input.sales.creditedTotalsForInvoices(input.tenantId, invoiceIds),
+      input.supplierPayments.allocatedTotalsForPurchases(input.tenantId, purchaseIds),
+      input.purchases.returnedTotalsForPurchases(input.tenantId, purchaseIds),
+    ]);
 
   let revenue = zeroMoney();
   for (const invoice of periodInvoices) {
     if (invoice.tenantId !== input.tenantId) continue;
     revenue = addMoney(revenue, invoice.taxableAmount);
+  }
+  for (const creditNote of periodCreditNotes) {
+    if (creditNote.tenantId !== input.tenantId) continue;
+    revenue = subtractMoney(revenue, creditNote.taxableAmount);
   }
 
   let expensesTotal = zeroMoney();
@@ -219,20 +243,22 @@ export async function getDashboardOverview(
   let receivables = zeroMoney();
   for (const invoice of receivableInvoices) {
     if (invoice.tenantId !== input.tenantId) continue;
-    const allocated = invoiceAllocated.get(invoice.id) ?? zeroMoney();
+    const allocated = invoiceAllocated.get(invoice.id) ?? money(0n, invoice.grandTotal.currency, invoice.grandTotal.scale);
+    const credited = invoiceCredited.get(invoice.id) ?? money(0n, invoice.grandTotal.currency, invoice.grandTotal.scale);
     receivables = addMoney(
       receivables,
-      remainingOutstanding(invoice.grandTotal, allocated)
+      remainingDocumentBalance(invoice.grandTotal, allocated, credited)
     );
   }
 
   let payables = zeroMoney();
   for (const purchase of payablePurchases) {
     if (purchase.tenantId !== input.tenantId) continue;
-    const allocated = purchaseAllocated.get(purchase.id) ?? zeroMoney();
+    const allocated = purchaseAllocated.get(purchase.id) ?? money(0n, purchase.grandTotal.currency, purchase.grandTotal.scale);
+    const returned = purchaseReturned.get(purchase.id) ?? money(0n, purchase.grandTotal.currency, purchase.grandTotal.scale);
     payables = addMoney(
       payables,
-      remainingOutstanding(purchase.grandTotal, allocated)
+      remainingDocumentBalance(purchase.grandTotal, allocated, returned)
     );
   }
 
@@ -255,8 +281,13 @@ export async function getDashboardOverview(
   for (const invoice of receivableInvoices) {
     if (invoice.tenantId !== input.tenantId) continue;
     if (!invoice.dueOn || invoice.dueOn >= today) continue;
-    const allocated = invoiceAllocated.get(invoice.id) ?? zeroMoney();
-    const outstanding = remainingOutstanding(invoice.grandTotal, allocated);
+    const allocated = invoiceAllocated.get(invoice.id) ?? money(0n, invoice.grandTotal.currency, invoice.grandTotal.scale);
+    const credited = invoiceCredited.get(invoice.id) ?? money(0n, invoice.grandTotal.currency, invoice.grandTotal.scale);
+    const outstanding = remainingDocumentBalance(
+      invoice.grandTotal,
+      allocated,
+      credited
+    );
     if (outstanding.amountMinor <= 0n) continue;
     overdueInvoiceCount += 1;
     overdueOutstanding = addMoney(overdueOutstanding, outstanding);
@@ -314,6 +345,14 @@ export async function getDashboardOverview(
     if (invoice.tenantId !== input.tenantId) continue;
     const prev = salesByDate.get(invoice.issuedOn) ?? zeroMoney();
     salesByDate.set(invoice.issuedOn, addMoney(prev, invoice.taxableAmount));
+  }
+  for (const creditNote of periodCreditNotes) {
+    if (creditNote.tenantId !== input.tenantId) continue;
+    const prev = salesByDate.get(creditNote.issuedOn) ?? zeroMoney();
+    salesByDate.set(
+      creditNote.issuedOn,
+      subtractMoney(prev, creditNote.taxableAmount)
+    );
   }
   const expensesByDate = new Map<string, Money>();
   for (const expense of periodExpenses) {
