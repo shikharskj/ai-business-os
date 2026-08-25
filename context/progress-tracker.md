@@ -1400,6 +1400,18 @@ The first objective is to deliver a complete, reliable business workflow for sma
 
 # Implementation Unit Log
 
+## 2026-08-26 — Prisma generate in production build
+
+Status: Complete
+
+Implemented:
+- `package.json` `build` script runs `prisma generate && next build` so CI/Netlify/Vercel fresh clones get `@/generated/prisma/client` before Next compile.
+
+Files / Areas:
+- `package.json`, `context/progress-tracker.md`
+
+---
+
 ## 2026-08-26 — Public pages visual polish
 
 Status: Complete
