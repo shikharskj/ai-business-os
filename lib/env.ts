@@ -129,11 +129,9 @@ const isNextProductionBuild =
 if (
   env.NODE_ENV === "production" &&
   !isNextProductionBuild &&
-  (!env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
-    !env.CLERK_SECRET_KEY ||
-    !env.CLERK_WEBHOOK_SIGNING_SECRET)
+  (!env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || !env.CLERK_SECRET_KEY)
 ) {
   throw new Error(
-    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY, and CLERK_WEBHOOK_SIGNING_SECRET are required in production"
+    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY are required in production"
   );
 }

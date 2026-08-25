@@ -16,6 +16,12 @@ import {
 import { parseTenantLifecycleEvent } from "@/modules/tenant/schemas/org-lifecycle.schema";
 
 export async function POST(req: NextRequest) {
+  if (!env.CLERK_WEBHOOK_SIGNING_SECRET) {
+    return new Response("Webhook signing secret not configured", {
+      status: 503,
+    });
+  }
+
   let event;
 
   try {
