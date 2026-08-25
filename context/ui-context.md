@@ -424,6 +424,20 @@ Typical structure:
 
 
 
+# Public / auth pages
+
+Unauthenticated surfaces (`/`, `/sign-in`, `/sign-up`) use the same semantic tokens as the workspace — zinc/neutral, high-contrast `--primary`, no blue/orange brand, no hardcoded hex, no decorative gradients.
+
+**Landing (`/`):** `PublicHeader` (brand mark, Features / How it works hash links on desktop, theme toggle, Sign in / Sign up). Hero uses a **benefit H1** with Create account + ghost Sign in, then a full-width **real product screenshot** from `public/landing/` (dashboard). Below: Oculon-style **feature bands** (copy + bullets + product shots for Daily Brief, invoices list, invoice detail, light/dark dashboard), compact 4-up feature cards, how-it-works with business-settings shot, and closing CTA band. Screenshots use caption “Product UI (demo workspace)” — demo tenant data is illustrative of real UI, not invented KPI cards. No logo clouds, fake metrics, testimonials, or pricing. Wireframe mocks are not used. Signed-in visitors redirect to `/app`.
+
+**Sign-in / sign-up:** Split shell (`AuthSplitLayout`, `min-h-svh`, `max-w-5xl`) — left brand panel on `bg-primary text-primary-foreground`, right column hosts Clerk `<SignIn>` / `<SignUp>` with `elevation: "flush"`. Differentiated left-panel copy and capability lists (return vs get started). Mobile shows one short capability under the brand strip; full list on `md+`. Form column: “Back to home” + theme toggle. Hide Clerk’s default logo via appearance elements; keep Clerk’s “Secured by Clerk” / development-mode footer. Do not replace Clerk with a custom password stack.
+
+**Setup (`/app/setup`):** `AuthChrome` matches public brand (`PublicBrand` left, theme toggle right) — not the split auth layout.
+
+---
+
+
+
 # Sidebar
 
 The sidebar is the primary navigation mechanism.

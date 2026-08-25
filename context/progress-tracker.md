@@ -1400,6 +1400,79 @@ The first objective is to deliver a complete, reliable business workflow for sma
 
 # Implementation Unit Log
 
+## 2026-08-26 — Landing real product images (Oculon-style bands)
+
+Status: Complete
+
+Implemented:
+- Added `public/landing/` screenshots (dashboard light/dark, invoices list, invoice detail, business settings).
+- `LandingProductShot` + `LandingFeatureBand`; stacked hero with dashboard shot; alternating product bands.
+- How-it-works uses business-settings shot; removed wireframe workspace/setup mocks.
+
+Files / Areas:
+- `public/landing/*.png`
+- `app/page.tsx`, `landing-product-shot.tsx`, `landing-feature-band.tsx`, `landing-how-it-works.tsx`
+- Removed `landing-workspace-preview.tsx`, `landing-setup-preview.tsx`
+- `context/ui-context.md`
+
+---
+
+## 2026-08-26 — Landing page upgrade (structure from SaaS templates)
+
+Status: Complete
+
+Implemented:
+- Richer hero workspace chrome preview (sidebar + Daily Brief + activity labels).
+- Features bento (4 cards), how-it-works (3 steps + setup mock), closing primary CTA band.
+- Header/footer hash links to Features and How it works.
+- Token-only palette; no fake social proof or pricing.
+
+Files / Areas:
+- `app/page.tsx`, `components/shell/public-header.tsx`
+- `landing-workspace-preview.tsx`, `landing-features.tsx`, `landing-how-it-works.tsx`, `landing-setup-preview.tsx`, `landing-cta-band.tsx`
+- Removed `landing-brief-preview.tsx`
+- `context/ui-context.md`
+
+---
+
+## 2026-08-26 — Public pages polish
+
+Status: Complete
+
+Implemented:
+- Landing: benefit H1, primary Create account + ghost Sign in, first-viewport Daily Brief chrome preview (labels only), footer auth links, metadata, motion-safe fade-in.
+- Auth split: `min-h-svh`, `max-w-5xl`, Back to home, mobile capability line, differentiated sign-in/sign-up copy + Clerk element density.
+- Setup `AuthChrome` aligned with `PublicBrand`.
+
+Files / Areas:
+- `app/page.tsx`, `app/sign-in/`, `app/sign-up/`
+- `components/shell/landing-brief-preview.tsx`, `auth-split-layout.tsx`, `auth-chrome.tsx`
+- `lib/clerk/auth-page-appearance.ts`
+- `context/ui-context.md`
+
+---
+
+## 2026-08-26 — Professional public / sign-in / sign-up pages
+
+Status: Complete
+
+Implemented:
+- Landing (`/`) hero, three real value-prop cards, footer; header CTAs link to `/sign-in` and `/sign-up`.
+- Shared `PublicBrand` and `AuthSplitLayout` (token-based split panel; dark-mode primary panel; mobile stack).
+- Sign-in / sign-up wrap Clerk `<SignIn>` / `<SignUp>` with flush elevation and hidden Clerk logo (brand in left panel).
+- Documented public/auth page conventions in `ui-context.md`.
+
+Files / Areas:
+- `app/page.tsx`, `app/sign-in/[[...sign-in]]/page.tsx`, `app/sign-up/[[...sign-up]]/page.tsx`
+- `components/shell/public-brand.tsx`, `auth-split-layout.tsx`, `public-header.tsx`
+- `lib/clerk/auth-page-appearance.ts`
+- `context/ui-context.md`
+
+Notes:
+- Setup (`/app/setup`) still uses `AuthChrome`; no custom password stack.
+
+---
+
 ## 2026-08-23 — Dashboard chart default Last 7 days
 
 Status: Complete
