@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 
+import { OfhikosCredit } from "@/components/shell/ofhikos-credit";
 import { PublicBrand } from "@/components/shell/public-brand";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 
@@ -70,8 +71,9 @@ export function AuthSplitLayout({
             </Link>
             <ThemeToggle />
           </div>
-          <div className="flex flex-1 items-center justify-center p-6 md:p-8">
+          <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6 md:p-8">
             {children}
+            <OfhikosCredit className="pb-2" />
           </div>
         </div>
       </div>

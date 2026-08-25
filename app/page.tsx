@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { LandingCtaBand } from "@/components/shell/landing-cta-band";
 import { LandingFeatureBand } from "@/components/shell/landing-feature-band";
 import { LandingFeatures } from "@/components/shell/landing-features";
+import { LandingFooter } from "@/components/shell/landing-footer";
 import { LandingHowItWorks } from "@/components/shell/landing-how-it-works";
 import { LandingProductShot } from "@/components/shell/landing-product-shot";
 import { PublicHeader } from "@/components/shell/public-header";
@@ -27,7 +28,7 @@ export default async function Home() {
   return (
     <>
       <PublicHeader />
-      <main className="flex flex-1 flex-col">
+      <main className="flex flex-1 flex-col bg-accent">
         <section className="mx-auto flex w-full max-w-6xl flex-col items-center gap-10 px-6 py-16 text-center motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">
           <div className="flex max-w-3xl flex-col items-center gap-6">
             <div className="flex flex-col gap-3">
@@ -66,7 +67,6 @@ export default async function Home() {
         </section>
 
         <LandingFeatureBand
-          muted
           title="See what needs attention — every day."
           description="The Daily Brief ranks overdue invoices, low stock, and idle quotations so you know where to act next."
           bullets={[
@@ -79,6 +79,8 @@ export default async function Home() {
         />
 
         <LandingFeatureBand
+                  muted
+
           reverse
           title="Sales and GST invoices that stay correct."
           description="Quotations through tax invoices, payments, and outstanding — with GST-ready records for Indian SMEs."
@@ -92,7 +94,6 @@ export default async function Home() {
         />
 
         <LandingFeatureBand
-          muted
           title="Document detail with tax preview and activity."
           description="Open an invoice to see GST breakdown, line items, payments, and a live tax-invoice preview."
           bullets={[
@@ -105,6 +106,7 @@ export default async function Home() {
         />
 
         <LandingFeatureBand
+        muted
           reverse
           title="Light and dark — same clear workspace."
           description="Work in the theme that fits your day. Financial status colors stay readable in both modes."
@@ -122,42 +124,7 @@ export default async function Home() {
         <LandingCtaBand />
       </main>
 
-      <footer className="border-t border-border px-6 py-6">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex flex-col gap-1 text-center sm:text-left">
-            <p className="text-base font-medium">AI Business OS</p>
-            <p className="text-sm text-muted-foreground">
-              Built for Indian GST workflows and day-to-day SME operations.
-            </p>
-          </div>
-          <nav className="flex flex-wrap items-center justify-center gap-4 text-sm">
-            <Link
-              href="#features"
-              className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              Features
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              How it works
-            </Link>
-            <Link
-              href="/sign-in"
-              className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/sign-up"
-              className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              Sign up
-            </Link>
-          </nav>
-        </div>
-      </footer>
+      <LandingFooter />
     </>
   );
 }

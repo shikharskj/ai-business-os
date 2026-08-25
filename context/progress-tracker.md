@@ -1400,6 +1400,46 @@ The first objective is to deliver a complete, reliable business workflow for sma
 
 # Implementation Unit Log
 
+## 2026-08-26 — Ofhikos credit on auth + setup
+
+Status: Complete
+
+Implemented:
+- Shared `OfhikosCredit`; used in landing footer, auth split form column, and setup page below the card.
+- Not placed in PublicHeader, AuthChrome, or workspace shell.
+
+Files / Areas:
+- `components/shell/ofhikos-credit.tsx`, `landing-footer.tsx`, `auth-split-layout.tsx`
+- `app/app/setup/page.tsx`, `context/ui-context.md`
+
+---
+
+## 2026-08-26 — Landing footer ofhikos credit + copyright
+
+Status: Complete
+
+Implemented:
+- `LandingFooter` with nav, “Made with ♥️ by ofhikos” (theme-aware logos), and `© 2026 AI Business OS`.
+- Logos at `public/branding/ofhikos-light.png` and `ofhikos-dark.png`.
+
+Files / Areas:
+- `components/shell/landing-footer.tsx`, `app/page.tsx`, `public/branding/`
+- `context/ui-context.md`
+
+---
+
+## 2026-08-26 — Smooth scroll for landing anchors
+
+Status: Complete
+
+Implemented:
+- `scroll-smooth` on `html` in `app/globals.css`; `prefers-reduced-motion: reduce` sets `scroll-behavior: auto`.
+
+Files / Areas:
+- `app/globals.css`, `context/ui-context.md`
+
+---
+
 ## 2026-08-26 — Landing real product images (Oculon-style bands)
 
 Status: Complete

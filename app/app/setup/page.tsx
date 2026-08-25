@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { CreateBusinessForm } from "@/components/business/create-business-form";
 import { AuthChrome } from "@/components/shell/auth-chrome";
+import { OfhikosCredit } from "@/components/shell/ofhikos-credit";
 import { Card, CardContent } from "@/components/ui/card";
 import { getCurrentTenant } from "@/lib/tenant";
 
@@ -30,6 +31,7 @@ export default async function BusinessSetupPage() {
             <CreateBusinessForm />
           </CardContent>
         </Card>
+        <OfhikosCredit className="pb-2" />
       </div>
     </>
   );
