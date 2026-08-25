@@ -424,6 +424,20 @@ Typical structure:
 
 
 
+# Public / auth pages
+
+Unauthenticated surfaces (`/`, `/sign-in`, `/sign-up`) use the same semantic tokens as the workspace — zinc/neutral, high-contrast `--primary`, no blue/orange brand, no hardcoded hex, no decorative gradients.
+
+**Landing (`/`):** `PublicHeader` is sticky with `bg-background/80 backdrop-blur-sm`; brand mark, Features / How it works hash links (all breakpoints), theme toggle, Sign in / Sign up. Active section highlighting via IntersectionObserver on `#features` / `#how-it-works`. Hero uses a **benefit H1** with Create account + ghost Sign in, then a full-width **real product screenshot** from `public/landing/` (dashboard). Hero load entrance: copy rises/fades first; shot follows with farther travel + slight scale (`motion-safe`); soft `bg-muted` blur wash behind the shot (not overlaid on the image). `LandingProductShot` supports optional `darkSrc` (theme swap) for dashboard pairs. Below: Oculon-style **feature bands** (copy + bullets + product shots), compact 4-up feature cards, how-it-works with business-settings shot, and closing CTA band — each wrapped in `RevealOnView` (one-shot scroll reveal, skipped under reduced motion). Screenshots use caption “Product UI (demo workspace)” — demo tenant data is illustrative of real UI, not invented KPI cards. No logo clouds, fake metrics, testimonials, pricing, or scroll-linked parallax. Document root uses `scroll-smooth` for in-page anchors; `prefers-reduced-motion: reduce` disables smooth scroll and entrance motion. Footer (`LandingFooter`): product blurb + nav; `OfhikosCredit` (“Made with ♥️ by” + theme-aware logos in `public/branding/`) + `© 2026 AI Business OS`. Signed-in visitors redirect to `/app`.
+
+**Sign-in / sign-up:** Split shell (`AuthSplitLayout`, `min-h-svh`, `max-w-5xl`) on muted page atmosphere (`bg-muted/30`). Left brand panel on `bg-primary text-primary-foreground` with staggered `motion-safe` entrance (headline → description → capabilities) and a quiet cropped dashboard product cue on `md+`. Right column hosts Clerk `<SignIn>` / `<SignUp>` with `elevation: "flush"` in a denser `max-w-sm` form host. Differentiated left-panel copy and capability lists (return vs get started). Mobile shows one short capability under the brand strip; full list on `md+`. Form column: “Back to home” (focus-visible ring) + theme toggle + `OfhikosCredit` under the Clerk form. Hide Clerk’s default logo via appearance elements; keep Clerk’s “Secured by Clerk” / development-mode footer. Do not replace Clerk with a custom password stack.
+
+**Setup (`/app/setup`):** `AuthChrome` matches public brand (`PublicBrand` left, theme toggle right) — not the split auth layout. `OfhikosCredit` sits below the setup card (not in the header).
+
+---
+
+
+
 # Sidebar
 
 The sidebar is the primary navigation mechanism.

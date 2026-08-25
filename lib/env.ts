@@ -121,8 +121,14 @@ export const env = envSchema.parse({
   AI_ACTION_SIGNING_SECRET: process.env.AI_ACTION_SIGNING_SECRET,
 });
 
+// Skip during `next build` page-data collection so deploy hosts can compile
+ // without runtime secrets. Runtime (server start / serverless invoke) still requires them.
+const isNextProductionBuild =
+  process.env.NEXT_PHASE === "phase-production-build";
+
 if (
   env.NODE_ENV === "production" &&
+  !isNextProductionBuild &&
   (!env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
     !env.CLERK_SECRET_KEY ||
     !env.CLERK_WEBHOOK_SIGNING_SECRET)

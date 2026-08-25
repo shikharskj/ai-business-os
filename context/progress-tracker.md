@@ -1400,6 +1400,153 @@ The first objective is to deliver a complete, reliable business workflow for sma
 
 # Implementation Unit Log
 
+## 2026-08-26 — Prisma generate in production build
+
+Status: Complete
+
+Implemented:
+- `scripts/run-production-build.mjs` runs `prisma generate` + `next build`, and supplies a placeholder `DATABASE_URL` when unset so Netlify/CI fresh clones can compile.
+- `prisma.config.ts` also falls back when `DATABASE_URL` is unset for generate-only hosts.
+- Production Clerk key check in `lib/env.ts` skips during `NEXT_PHASE=phase-production-build` (runtime still requires keys).
+- `RevealOnView` uses DOM `data-reveal` attributes (no setState-in-effect) to clear lint on PR #30.
+
+Files / Areas:
+- `package.json`, `scripts/run-production-build.mjs`, `prisma.config.ts`, `lib/env.ts`
+- `components/shell/reveal-on-view.tsx`, `context/progress-tracker.md`
+
+---
+
+## 2026-08-26 — Public pages visual polish
+
+Status: Complete
+
+Implemented:
+- Landing hero load parallax (staggered copy vs shot) + soft muted ambient behind shot.
+- `LandingProductShot` optional `darkSrc`; dashboard light/dark pairs on hero and relevant bands.
+- `RevealOnView` scroll reveal for feature bands, features, how-it-works, CTA.
+- Sticky translucent `PublicHeader` with mobile hash nav, focus rings, active section.
+- Auth: muted page atmosphere, staggered brand panel, dashboard product cue on md+, denser Clerk column.
+
+Files / Areas:
+- `app/page.tsx`, `landing-product-shot.tsx`, `reveal-on-view.tsx`, `landing-feature-band.tsx`
+- `landing-features.tsx`, `landing-how-it-works.tsx`, `landing-cta-band.tsx`, `public-header.tsx`
+- `auth-split-layout.tsx`, `lib/clerk/auth-page-appearance.ts`, `context/ui-context.md`
+
+---
+
+## 2026-08-26 — Ofhikos credit on auth + setup
+
+Status: Complete
+
+Implemented:
+- Shared `OfhikosCredit`; used in landing footer, auth split form column, and setup page below the card.
+- Not placed in PublicHeader, AuthChrome, or workspace shell.
+
+Files / Areas:
+- `components/shell/ofhikos-credit.tsx`, `landing-footer.tsx`, `auth-split-layout.tsx`
+- `app/app/setup/page.tsx`, `context/ui-context.md`
+
+---
+
+## 2026-08-26 — Landing footer ofhikos credit + copyright
+
+Status: Complete
+
+Implemented:
+- `LandingFooter` with nav, “Made with ♥️ by ofhikos” (theme-aware logos), and `© 2026 AI Business OS`.
+- Logos at `public/branding/ofhikos-light.png` and `ofhikos-dark.png`.
+
+Files / Areas:
+- `components/shell/landing-footer.tsx`, `app/page.tsx`, `public/branding/`
+- `context/ui-context.md`
+
+---
+
+## 2026-08-26 — Smooth scroll for landing anchors
+
+Status: Complete
+
+Implemented:
+- `scroll-smooth` on `html` in `app/globals.css`; `prefers-reduced-motion: reduce` sets `scroll-behavior: auto`.
+
+Files / Areas:
+- `app/globals.css`, `context/ui-context.md`
+
+---
+
+## 2026-08-26 — Landing real product images (Oculon-style bands)
+
+Status: Complete
+
+Implemented:
+- Added `public/landing/` screenshots (dashboard light/dark, invoices list, invoice detail, business settings).
+- `LandingProductShot` + `LandingFeatureBand`; stacked hero with dashboard shot; alternating product bands.
+- How-it-works uses business-settings shot; removed wireframe workspace/setup mocks.
+
+Files / Areas:
+- `public/landing/*.png`
+- `app/page.tsx`, `landing-product-shot.tsx`, `landing-feature-band.tsx`, `landing-how-it-works.tsx`
+- Removed `landing-workspace-preview.tsx`, `landing-setup-preview.tsx`
+- `context/ui-context.md`
+
+---
+
+## 2026-08-26 — Landing page upgrade (structure from SaaS templates)
+
+Status: Complete
+
+Implemented:
+- Richer hero workspace chrome preview (sidebar + Daily Brief + activity labels).
+- Features bento (4 cards), how-it-works (3 steps + setup mock), closing primary CTA band.
+- Header/footer hash links to Features and How it works.
+- Token-only palette; no fake social proof or pricing.
+
+Files / Areas:
+- `app/page.tsx`, `components/shell/public-header.tsx`
+- `landing-workspace-preview.tsx`, `landing-features.tsx`, `landing-how-it-works.tsx`, `landing-setup-preview.tsx`, `landing-cta-band.tsx`
+- Removed `landing-brief-preview.tsx`
+- `context/ui-context.md`
+
+---
+
+## 2026-08-26 — Public pages polish
+
+Status: Complete
+
+Implemented:
+- Landing: benefit H1, primary Create account + ghost Sign in, first-viewport Daily Brief chrome preview (labels only), footer auth links, metadata, motion-safe fade-in.
+- Auth split: `min-h-svh`, `max-w-5xl`, Back to home, mobile capability line, differentiated sign-in/sign-up copy + Clerk element density.
+- Setup `AuthChrome` aligned with `PublicBrand`.
+
+Files / Areas:
+- `app/page.tsx`, `app/sign-in/`, `app/sign-up/`
+- `components/shell/landing-brief-preview.tsx`, `auth-split-layout.tsx`, `auth-chrome.tsx`
+- `lib/clerk/auth-page-appearance.ts`
+- `context/ui-context.md`
+
+---
+
+## 2026-08-26 — Professional public / sign-in / sign-up pages
+
+Status: Complete
+
+Implemented:
+- Landing (`/`) hero, three real value-prop cards, footer; header CTAs link to `/sign-in` and `/sign-up`.
+- Shared `PublicBrand` and `AuthSplitLayout` (token-based split panel; dark-mode primary panel; mobile stack).
+- Sign-in / sign-up wrap Clerk `<SignIn>` / `<SignUp>` with flush elevation and hidden Clerk logo (brand in left panel).
+- Documented public/auth page conventions in `ui-context.md`.
+
+Files / Areas:
+- `app/page.tsx`, `app/sign-in/[[...sign-in]]/page.tsx`, `app/sign-up/[[...sign-up]]/page.tsx`
+- `components/shell/public-brand.tsx`, `auth-split-layout.tsx`, `public-header.tsx`
+- `lib/clerk/auth-page-appearance.ts`
+- `context/ui-context.md`
+
+Notes:
+- Setup (`/app/setup`) still uses `AuthChrome`; no custom password stack.
+
+---
+
 ## 2026-08-23 — Dashboard chart default Last 7 days
 
 Status: Complete
