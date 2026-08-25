@@ -29,8 +29,8 @@ export default async function Home() {
     <>
       <PublicHeader />
       <main className="flex flex-1 flex-col bg-accent">
-        <section className="mx-auto flex w-full max-w-6xl flex-col items-center gap-10 px-6 py-16 text-center motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">
-          <div className="flex max-w-3xl flex-col items-center gap-6">
+        <section className="mx-auto flex w-full max-w-6xl flex-col items-center gap-10 px-6 py-16 text-center">
+          <div className="flex max-w-3xl flex-col items-center gap-6 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-500 motion-safe:fill-mode-both">
             <div className="flex flex-col gap-3">
               <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
                 Know what your business needs today.
@@ -58,12 +58,19 @@ export default async function Home() {
               </Button>
             </div>
           </div>
-          <LandingProductShot
-            src="/landing/dashboard-light.png"
-            alt="Dashboard with sales metrics, Needs attention brief, and recent activity"
-            priority
-            className="max-w-5xl"
-          />
+          <div className="relative w-full max-w-5xl motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-8 motion-safe:zoom-in-95 motion-safe:duration-700 motion-safe:delay-150 motion-safe:fill-mode-both">
+            <div
+              className="pointer-events-none absolute inset-x-8 -inset-y-6 rounded-full bg-muted/50 blur-3xl md:inset-x-16"
+              aria-hidden
+            />
+            <LandingProductShot
+              src="/landing/dashboard-light.png"
+              darkSrc="/landing/dashboard-dark.png"
+              alt="Dashboard with sales metrics, Needs attention brief, and recent activity"
+              priority
+              className="relative"
+            />
+          </div>
         </section>
 
         <LandingFeatureBand
@@ -75,12 +82,12 @@ export default async function Home() {
             "Grounded facts — not decorative charts",
           ]}
           imageSrc="/landing/dashboard-light.png"
+          imageDarkSrc="/landing/dashboard-dark.png"
           imageAlt="Dashboard Needs attention panel with overdue customer actions"
         />
 
         <LandingFeatureBand
-                  muted
-
+          muted
           reverse
           title="Sales and GST invoices that stay correct."
           description="Quotations through tax invoices, payments, and outstanding — with GST-ready records for Indian SMEs."
@@ -106,7 +113,7 @@ export default async function Home() {
         />
 
         <LandingFeatureBand
-        muted
+          muted
           reverse
           title="Light and dark — same clear workspace."
           description="Work in the theme that fits your day. Financial status colors stay readable in both modes."
@@ -115,7 +122,8 @@ export default async function Home() {
             "Sidebar, KPIs, and Daily Brief stay high-contrast",
             "Built for long sessions with dense business data",
           ]}
-          imageSrc="/landing/dashboard-dark.png"
+          imageSrc="/landing/dashboard-light.png"
+          imageDarkSrc="/landing/dashboard-dark.png"
           imageAlt="Dashboard in dark mode with KPIs, chart, and Needs attention"
         />
 

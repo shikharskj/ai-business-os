@@ -11,7 +11,7 @@ export const AUTH_PAGE_APPEARANCE = {
     // Brand lives in the left panel — hide Clerk's default logo.
     logoBox: "hidden",
     logoImage: "hidden",
-    rootBox: "w-full",
+    rootBox: "mx-auto w-full max-w-sm",
     cardBox: "w-full shadow-none border-0",
     headerTitle: "text-2xl font-semibold tracking-tight",
     headerSubtitle: "text-base text-muted-foreground",

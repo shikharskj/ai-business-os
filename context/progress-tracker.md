@@ -1400,6 +1400,24 @@ The first objective is to deliver a complete, reliable business workflow for sma
 
 # Implementation Unit Log
 
+## 2026-08-26 — Public pages visual polish
+
+Status: Complete
+
+Implemented:
+- Landing hero load parallax (staggered copy vs shot) + soft muted ambient behind shot.
+- `LandingProductShot` optional `darkSrc`; dashboard light/dark pairs on hero and relevant bands.
+- `RevealOnView` scroll reveal for feature bands, features, how-it-works, CTA.
+- Sticky translucent `PublicHeader` with mobile hash nav, focus rings, active section.
+- Auth: muted page atmosphere, staggered brand panel, dashboard product cue on md+, denser Clerk column.
+
+Files / Areas:
+- `app/page.tsx`, `landing-product-shot.tsx`, `reveal-on-view.tsx`, `landing-feature-band.tsx`
+- `landing-features.tsx`, `landing-how-it-works.tsx`, `landing-cta-band.tsx`, `public-header.tsx`
+- `auth-split-layout.tsx`, `lib/clerk/auth-page-appearance.ts`, `context/ui-context.md`
+
+---
+
 ## 2026-08-26 — Ofhikos credit on auth + setup
 
 Status: Complete

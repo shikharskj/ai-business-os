@@ -6,6 +6,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { RevealOnView } from "@/components/shell/reveal-on-view";
 import {
   Card,
   CardDescription,
@@ -46,37 +47,39 @@ const FEATURES: {
 
 export function LandingFeatures() {
   return (
-    <section
-      id="features"
-      className="scroll-mt-20 border-t border-borde bg-white px-6 py-16"
-    >
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-        <div className="flex flex-col gap-2 text-center md:text-left">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Everything you need to run the business.
-          </h2>
-          <p className="max-w-2xl text-base text-muted-foreground">
-            Essential operations and a clear attention surface — without ERP
-            clutter.
-          </p>
+    <RevealOnView>
+      <section
+        id="features"
+        className="scroll-mt-20 border-t border-border bg-background px-6 py-16"
+      >
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+          <div className="flex flex-col gap-2 text-center md:text-left">
+            <h2 className="text-2xl font-semibold tracking-tight">
+              Everything you need to run the business.
+            </h2>
+            <p className="max-w-2xl text-base text-muted-foreground">
+              Essential operations and a clear attention surface — without ERP
+              clutter.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {FEATURES.map(({ icon: Icon, title, description }) => (
+              <Card
+                key={title}
+                className="border border-border bg-muted/40 shadow-none ring-0"
+              >
+                <CardHeader>
+                  <div className="mb-2 flex size-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                    <Icon className="size-5" aria-hidden />
+                  </div>
+                  <CardTitle>{title}</CardTitle>
+                  <CardDescription>{description}</CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {FEATURES.map(({ icon: Icon, title, description }) => (
-            <Card
-              key={title}
-              className="border border-border bg-muted/40 shadow-none ring-0"
-            >
-              <CardHeader>
-                <div className="mb-2 flex size-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                  <Icon className="size-5" aria-hidden />
-                </div>
-                <CardTitle>{title}</CardTitle>
-                <CardDescription>{description}</CardDescription>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-      </div>
-    </section>
+      </section>
+    </RevealOnView>
   );
 }
