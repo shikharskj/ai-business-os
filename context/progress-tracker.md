@@ -1405,12 +1405,14 @@ The first objective is to deliver a complete, reliable business workflow for sma
 Status: Complete
 
 Implemented:
-- `package.json` `build` script runs `prisma generate && next build` so CI/Netlify/Vercel fresh clones get `@/generated/prisma/client` before Next compile.
-- `prisma.config.ts` falls back to a local placeholder URL when `DATABASE_URL` is unset so `prisma generate` works on deploy hosts without secrets at generate time.
-- `RevealOnView` uses DOM `data-reveal` attributes (no setState-in-effect) to clear `react-hooks/set-state-in-effect` lint on PR #30.
+- `scripts/run-production-build.mjs` runs `prisma generate` + `next build`, and supplies a placeholder `DATABASE_URL` when unset so Netlify/CI fresh clones can compile.
+- `prisma.config.ts` also falls back when `DATABASE_URL` is unset for generate-only hosts.
+- Production Clerk key check in `lib/env.ts` skips during `NEXT_PHASE=phase-production-build` (runtime still requires keys).
+- `RevealOnView` uses DOM `data-reveal` attributes (no setState-in-effect) to clear lint on PR #30.
 
 Files / Areas:
-- `package.json`, `prisma.config.ts`, `components/shell/reveal-on-view.tsx`, `context/progress-tracker.md`
+- `package.json`, `scripts/run-production-build.mjs`, `prisma.config.ts`, `lib/env.ts`
+- `components/shell/reveal-on-view.tsx`, `context/progress-tracker.md`
 
 ---
 

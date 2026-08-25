@@ -5,7 +5,7 @@
   "packageManager": "npm@11.17.0",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "node scripts/run-production-build.mjs",
     "start": "next start",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
