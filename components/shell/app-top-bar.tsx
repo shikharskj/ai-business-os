@@ -1,6 +1,7 @@
 "use client";
 
-import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
+import { UserButton } from "@clerk/nextjs";
+// import { OrganizationSwitcher } from "@clerk/nextjs";
 
 import { AssistantLauncher } from "@/components/shell/assistant-launcher";
 import { NotificationInbox } from "@/components/shell/notification-inbox";
@@ -29,6 +30,7 @@ export function AppTopBar({
         <WorkspaceCommandMenu role={role} />
         <AssistantLauncher />
         <NotificationInbox />
+        {/* Company switcher — temporarily hidden
         <OrganizationSwitcher
           hidePersonal
           afterSelectOrganizationUrl="/app"
@@ -43,6 +45,7 @@ export function AppTopBar({
             },
           }}
         />
+        */}
         <ThemeToggle />
         <UserButton />
       </div>
