@@ -1400,6 +1400,24 @@ The first objective is to deliver a complete, reliable business workflow for sma
 
 # Implementation Unit Log
 
+## 2026-08-26 — Neon migrate deploy: remove CONCURRENTLY from index migration
+
+Status: Complete
+
+Implemented:
+- `20260822122000_align_quotation_and_projection_indexes` uses transactional `CREATE INDEX` / `DROP INDEX` so `prisma migrate deploy` works on Neon (Postgres rejects `CREATE INDEX CONCURRENTLY` inside Prisma’s migration transaction).
+
+Recovery on Neon after a failed deploy:
+```bash
+DATABASE_URL="your-neon-url" npx prisma migrate resolve --rolled-back 20260822122000_align_quotation_and_projection_indexes
+DATABASE_URL="your-neon-url" npx prisma migrate deploy
+```
+
+Files / Areas:
+- `prisma/migrations/20260822122000_align_quotation_and_projection_indexes/migration.sql`
+
+---
+
 ## 2026-08-26 — Prisma generate in production build
 
 Status: Complete
