@@ -1406,9 +1406,11 @@ Status: Complete
 
 Implemented:
 - `package.json` `build` script runs `prisma generate && next build` so CI/Netlify/Vercel fresh clones get `@/generated/prisma/client` before Next compile.
+- `prisma.config.ts` falls back to a local placeholder URL when `DATABASE_URL` is unset so `prisma generate` works on deploy hosts without secrets at generate time.
+- `RevealOnView` uses DOM `data-reveal` attributes (no setState-in-effect) to clear `react-hooks/set-state-in-effect` lint on PR #30.
 
 Files / Areas:
-- `package.json`, `context/progress-tracker.md`
+- `package.json`, `prisma.config.ts`, `components/shell/reveal-on-view.tsx`, `context/progress-tracker.md`
 
 ---
 

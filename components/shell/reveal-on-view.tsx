@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -17,32 +12,26 @@ type RevealOnViewProps = {
 /**
  * One-shot fade/rise when the block enters the viewport.
  * Skips animation when prefers-reduced-motion is set.
- * Without JS, content stays visible (no opacity hide until mount).
+ * Without JS, content stays visible (no data-reveal attribute).
+ * Visibility is driven via DOM data attributes to avoid setState-in-effect.
  */
 export function RevealOnView({ children, className }: RevealOnViewProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
-  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
 
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-
-    setMounted(true);
-
-    if (reduceMotion) {
-      setVisible(true);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
     }
+
+    el.dataset.reveal = "pending";
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) {
-          setVisible(true);
+          el.dataset.reveal = "visible";
           observer.disconnect();
         }
       },
@@ -57,11 +46,8 @@ export function RevealOnView({ children, className }: RevealOnViewProps) {
     <div
       ref={ref}
       className={cn(
-        mounted &&
-          !visible &&
-          "opacity-0",
-        visible &&
-          "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-500 motion-safe:fill-mode-both",
+        "data-[reveal=pending]:opacity-0",
+        "data-[reveal=visible]:motion-safe:animate-in data-[reveal=visible]:motion-safe:fade-in data-[reveal=visible]:motion-safe:slide-in-from-bottom-4 data-[reveal=visible]:motion-safe:duration-500 data-[reveal=visible]:motion-safe:fill-mode-both",
         className
       )}
     >
