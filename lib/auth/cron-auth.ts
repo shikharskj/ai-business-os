@@ -22,12 +22,16 @@ export function authorizeCronRequest(
     const header = request.headers.get("authorization");
     const expected = `Bearer ${configured}`;
 
-    if (!header || header.length !== expected.length) {
+    if (!header) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const headerBuf = Buffer.from(header);
     const expectedBuf = Buffer.from(expected);
+
+    if (headerBuf.length !== expectedBuf.length) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     if (!timingSafeEqual(headerBuf, expectedBuf)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

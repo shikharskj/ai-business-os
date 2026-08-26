@@ -126,10 +126,9 @@ async function applyOrganizationMembershipEvent(
   );
 
   let publicMetadata = event.publicMetadata;
-  if (
-    !membershipMetadataHasRole(publicMetadata) &&
-    deps.invitationMetadataLookup
-  ) {
+  const hasMetadataRole = membershipMetadataHasRole(publicMetadata);
+
+  if (!hasMetadataRole && deps.invitationMetadataLookup) {
     const invitationMetadata =
       await deps.invitationMetadataLookup.findInvitationPublicMetadata({
         clerkOrganizationId: event.clerkOrganizationId,
@@ -140,12 +139,27 @@ async function applyOrganizationMembershipEvent(
     }
   }
 
-  // Always recompute on created/updated — never sticky existing.role.
-  const role = resolveMembershipRole({
+  // Check if existing membership has ACCOUNTANT role before recomputing
+  const existingMembership = await deps.membershipRepository.findActiveMembership(
+    applicationUserId,
+    business.id
+  );
+
+  // Recompute role, but preserve ACCOUNTANT when no authoritative source exists
+  let role = resolveMembershipRole({
     clerkRole: event.clerkRole,
     publicMetadata,
     isCreator: business.ownerUserId === applicationUserId,
   });
+
+  // Preserve existing ACCOUNTANT role when update lacks metadata and invitation has no role
+  if (
+    !hasMetadataRole &&
+    !membershipMetadataHasRole(publicMetadata) &&
+    existingMembership?.role === "ACCOUNTANT"
+  ) {
+    role = "ACCOUNTANT";
+  }
 
   await deps.membershipRepository.upsertActiveMembership({
     userId: applicationUserId,

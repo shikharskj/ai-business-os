@@ -151,16 +151,33 @@ export const clerkInvitationMetadataLookup: InvitationMetadataLookup = {
       }
 
       const emailLower = email.trim().toLowerCase();
-      const invitations =
-        await client.organizations.getOrganizationInvitationList({
-          organizationId: input.clerkOrganizationId,
-          limit: 100,
-        });
 
-      const match = invitations.data.find(
+      // Fetch all invitations with pagination to find the accepted one
+      const allInvitations = [];
+      let hasMore = true;
+      let offset = 0;
+      const limit = 100;
+
+      while (hasMore && offset < 1000) {
+        const invitations =
+          await client.organizations.getOrganizationInvitationList({
+            organizationId: input.clerkOrganizationId,
+            limit,
+            offset,
+          });
+
+        allInvitations.push(...invitations.data);
+        hasMore = invitations.data.length === limit;
+        offset += limit;
+      }
+
+      // Find accepted invitation matching the user's email
+      const match = allInvitations.find(
         (invitation) =>
-          invitation.emailAddress.trim().toLowerCase() === emailLower
+          invitation.emailAddress.trim().toLowerCase() === emailLower &&
+          invitation.status === "accepted"
       );
+
       if (!match?.publicMetadata) {
         return null;
       }

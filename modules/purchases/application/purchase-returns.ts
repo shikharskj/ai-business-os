@@ -141,7 +141,7 @@ async function preparePurchaseReturn(input: {
   });
 
   const seen = new Set<string>();
-  const currency = input.taxContext.currency;
+  const currency = purchase.grandTotal.currency;
   const lines: PreparedPurchaseReturnLine[] = [];
 
   for (const [index, lineInput] of input.fields.lines.entries()) {
