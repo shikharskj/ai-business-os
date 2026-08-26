@@ -70,7 +70,7 @@ export function PendingActionCard({
       <div className="flex items-center gap-2">
         <Button
           type="button"
-          size="sm"
+          className="min-h-10"
           disabled={isRunning}
           onClick={onConfirm}
         >
@@ -84,7 +84,7 @@ export function PendingActionCard({
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          className="min-h-10"
           disabled={isRunning}
           onClick={onCancel}
         >

@@ -16,7 +16,7 @@ type AuthSplitLayoutProps = {
   headline: string;
   description: string;
   capabilities?: AuthSplitCapability[];
-  /** Short line shown under the brand strip on small screens. Defaults to first capability. */
+  /** @deprecated Mobile no longer shows a marketing strip; kept for call-site compatibility. */
   mobileCapability?: string;
   children: ReactNode;
 };
@@ -25,17 +25,13 @@ export function AuthSplitLayout({
   headline,
   description,
   capabilities = [],
-  mobileCapability,
   children,
 }: AuthSplitLayoutProps) {
-  const mobileLine =
-    mobileCapability ?? (capabilities.length > 0 ? capabilities[0].label : null);
-
   return (
-    <div className="flex min-h-svh flex-1 flex-col items-center justify-center bg-muted/30 p-4 md:p-6">
-      <div className="grid w-full max-w-5xl overflow-hidden rounded-md border border-border bg-card motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500 md:grid-cols-2">
-        <aside className="flex flex-col gap-4 bg-primary p-6 text-primary-foreground md:min-h-128 md:justify-between md:gap-6 md:p-8">
-          <div className="flex flex-col gap-4 md:gap-6">
+    <div className="flex min-h-svh flex-1 flex-col items-center justify-center bg-muted/30 p-0 md:p-6">
+      <div className="grid w-full max-w-5xl overflow-hidden bg-card motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500 md:grid-cols-2 md:rounded-md md:border md:border-border">
+        <aside className="hidden flex-col gap-4 bg-primary p-8 text-primary-foreground md:flex md:min-h-128 md:justify-between md:gap-6">
+          <div className="flex flex-col gap-6">
             <PublicBrand inverted size="sm" />
             <div className="flex flex-col gap-2">
               <h1 className="text-2xl font-semibold tracking-tight motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:fill-mode-both">
@@ -45,15 +41,10 @@ export function AuthSplitLayout({
                 {description}
               </p>
             </div>
-            {mobileLine ? (
-              <p className="text-sm text-primary-foreground/70 md:hidden">
-                {mobileLine}
-              </p>
-            ) : null}
           </div>
 
           {capabilities.length > 0 ? (
-            <ul className="hidden flex-col gap-3 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:delay-200 motion-safe:fill-mode-both md:flex">
+            <ul className="flex flex-col gap-3 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-safe:delay-200 motion-safe:fill-mode-both">
               {capabilities.map(({ icon: Icon, label }) => (
                 <li key={label} className="flex items-start gap-3 text-base">
                   <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-primary-foreground/10">
@@ -65,29 +56,32 @@ export function AuthSplitLayout({
             </ul>
           ) : null}
 
-          <div className="mt-auto hidden motion-safe:animate-in motion-safe:fade-in motion-safe:duration-700 motion-safe:delay-300 motion-safe:fill-mode-both md:block">
+          <div className="mt-auto motion-safe:animate-in motion-safe:fade-in motion-safe:duration-700 motion-safe:delay-300 motion-safe:fill-mode-both">
             <LandingProductShot
               src="/landing/dashboard-light.png"
               darkSrc="/landing/dashboard-dark.png"
               alt=""
               showCaption={false}
               frameClassName="max-h-36 border-primary-foreground/15 bg-primary-foreground/5 shadow-none"
-              imageClassName="h-36 w-full object-cover object-top opacity-90"
+              imageClassName="h-36 w-full max-w-full object-cover object-top opacity-90"
             />
           </div>
         </aside>
 
-        <div className="relative flex flex-col">
-          <div className="flex items-center justify-between gap-3 px-6 pt-4 md:px-8">
+        <div className="relative flex min-h-svh flex-col md:min-h-0">
+          <div className="flex items-center gap-3 border-b border-border px-4 py-3 md:border-b-0 md:px-8 md:pt-4">
+            <PublicBrand size="sm" className="md:hidden" />
             <Link
               href="/"
-              className="rounded-sm text-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="hidden rounded-sm text-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:inline"
             >
               Back to home
             </Link>
-            <ThemeToggle />
+            <div className="ml-auto">
+              <ThemeToggle />
+            </div>
           </div>
-          <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-6 md:px-8 md:py-8">
+          <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-6 sm:px-6 md:px-8 md:py-8">
             <div className="w-full max-w-sm">{children}</div>
             <OfhikosCredit className="pb-2" />
           </div>

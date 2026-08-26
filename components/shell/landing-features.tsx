@@ -50,7 +50,7 @@ export function LandingFeatures() {
     <RevealOnView>
       <section
         id="features"
-        className="scroll-mt-20 border-t border-border bg-background px-6 py-16"
+        className="scroll-mt-20 border-t border-border bg-background px-4 py-12 sm:px-6 sm:py-16"
       >
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
           <div className="flex flex-col gap-2 text-center md:text-left">

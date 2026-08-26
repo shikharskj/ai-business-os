@@ -4,6 +4,11 @@ import Link from "next/link";
 import { ProductsDataTable } from "@/components/business/products-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
 import { DatePicker } from "@/components/date-picker";
+import {
+  ListFilterBar,
+  ListFilterField,
+  ListFilterSearch,
+} from "@/components/shell/list-filter-bar";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,68 +83,77 @@ export default async function ProductsPage({
         }
       />
 
-      <form className="flex flex-wrap items-end gap-3" method="get">
-        {pageSize !== 10 ? (
-          <input type="hidden" name="pageSize" value={pageSize} />
-        ) : null}
-        <div className="flex min-w-56 flex-1 flex-col gap-2">
-          <label htmlFor="q" className="text-base font-medium">
-            Search
-          </label>
-          <Input
-            id="q"
-            name="q"
-            defaultValue={filters.q}
-            placeholder="Name, SKU, HSN/SAC, or category..."
-            className="max-w-xl"
-            leftIcon={<Search className="size-5" />}
-          />
-        </div>
-        <div className="flex w-40 flex-col gap-2">
-          <label htmlFor="kind" className="text-base font-medium">
-            Type
-          </label>
-          <Select
-            name="kind"
-            defaultValue={filters.kind}
-            items={{ ALL: "All", PRODUCT: "Products", SERVICE: "Services" }}
-          >
-            <SelectTrigger id="kind" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All</SelectItem>
-              <SelectItem value="PRODUCT">Products</SelectItem>
-              <SelectItem value="SERVICE">Services</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex w-44 flex-col gap-2">
-          <label htmlFor="from" className="text-base font-medium">
-            From
-          </label>
-          <DatePicker
-            id="from"
-            name="from"
-            defaultValue={filters.from}
-            placeholder="From"
-          />
-        </div>
-        <div className="flex w-44 flex-col gap-2">
-          <label htmlFor="to" className="text-base font-medium">
-            To
-          </label>
-          <DatePicker
-            id="to"
-            name="to"
-            defaultValue={filters.to}
-            placeholder="To"
-          />
-        </div>
-        <Button type="submit" variant="outline">
-          Filter
-        </Button>
-      </form>
+      <ListFilterBar
+        hiddenFields={
+          pageSize !== 10 ? (
+            <input type="hidden" name="pageSize" value={pageSize} />
+          ) : null
+        }
+        search={
+          <ListFilterSearch>
+            <label htmlFor="q" className="text-base font-medium">
+              Search
+            </label>
+            <Input
+              id="q"
+              name="q"
+              defaultValue={filters.q}
+              placeholder="Name, SKU, HSN/SAC, or category..."
+              leftIcon={<Search className="size-5" />}
+            />
+          </ListFilterSearch>
+        }
+        filters={
+          <>
+            <ListFilterField className="md:w-40">
+              <label htmlFor="kind" className="text-base font-medium">
+                Type
+              </label>
+              <Select
+                name="kind"
+                defaultValue={filters.kind}
+                items={{ ALL: "All", PRODUCT: "Products", SERVICE: "Services" }}
+              >
+                <SelectTrigger id="kind" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All</SelectItem>
+                  <SelectItem value="PRODUCT">Products</SelectItem>
+                  <SelectItem value="SERVICE">Services</SelectItem>
+                </SelectContent>
+              </Select>
+            </ListFilterField>
+            <ListFilterField className="md:w-44">
+              <label htmlFor="from" className="text-base font-medium">
+                From
+              </label>
+              <DatePicker
+                id="from"
+                name="from"
+                defaultValue={filters.from}
+                placeholder="From"
+              />
+            </ListFilterField>
+            <ListFilterField className="md:w-44">
+              <label htmlFor="to" className="text-base font-medium">
+                To
+              </label>
+              <DatePicker
+                id="to"
+                name="to"
+                defaultValue={filters.to}
+                placeholder="To"
+              />
+            </ListFilterField>
+          </>
+        }
+        actions={
+          <Button type="submit" variant="outline">
+            Filter
+          </Button>
+        }
+      />
 
       {result.total === 0 ? (
         <EmptyState

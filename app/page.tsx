@@ -29,8 +29,8 @@ export default async function Home() {
     <>
       <PublicHeader />
       <main className="flex flex-1 flex-col bg-accent">
-        <section className="mx-auto flex w-full max-w-6xl flex-col items-center gap-10 px-6 py-16 text-center">
-          <div className="flex max-w-3xl flex-col items-center gap-6 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-500 motion-safe:fill-mode-both">
+        <section className="mx-auto flex w-full max-w-6xl flex-col items-center gap-8 px-4 py-10 text-center sm:px-6 sm:gap-10 sm:py-16">
+          <div className="flex max-w-3xl flex-col items-center gap-5 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-500 motion-safe:fill-mode-both sm:gap-6">
             <div className="flex flex-col gap-3">
               <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
                 Know what your business needs today.
@@ -58,7 +58,7 @@ export default async function Home() {
               </Button>
             </div>
           </div>
-          <div className="relative w-full max-w-5xl motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-8 motion-safe:zoom-in-95 motion-safe:duration-700 motion-safe:delay-150 motion-safe:fill-mode-both">
+          <div className="relative w-full max-w-5xl min-w-0 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-8 motion-safe:zoom-in-95 motion-safe:duration-700 motion-safe:delay-150 motion-safe:fill-mode-both">
             <div
               className="pointer-events-none absolute inset-x-8 -inset-y-6 rounded-full bg-muted/50 blur-3xl md:inset-x-16"
               aria-hidden
@@ -68,7 +68,7 @@ export default async function Home() {
               darkSrc="/landing/dashboard-dark.png"
               alt="Dashboard with sales metrics, Needs attention brief, and recent activity"
               priority
-              className="relative"
+              className="relative min-w-0 max-w-full"
             />
           </div>
         </section>

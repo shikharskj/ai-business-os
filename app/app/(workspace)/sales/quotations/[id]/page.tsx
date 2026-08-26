@@ -14,6 +14,7 @@ import {
   QUOTATION_STATUS_TONES,
 } from "@/components/business/status-tone";
 import { QuotationStatusActions } from "@/components/business/quotation-status-actions";
+import { DetailMoreMenu } from "@/components/shell/detail-more-menu";
 import { PageHeader } from "@/components/shell/page-header";
 import {
   DocumentFormPreviewAside,
@@ -129,17 +130,9 @@ export default async function QuotationDetailPage({
             <StatusBadge tone={QUOTATION_STATUS_TONES[quotation.status]}>
               {QUOTATION_STATUS_LABELS[quotation.status]}
             </StatusBadge>
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<Link href="/app/sales/quotations" />}
-            >
-              Back
-            </Button>
             {canUpdate && quotation.status === "DRAFT" ? (
               <Button
                 nativeButton={false}
-                variant="outline"
                 render={
                   <Link href={`/app/sales/quotations/${quotation.id}/edit`} />
                 }
@@ -147,6 +140,14 @@ export default async function QuotationDetailPage({
                 Edit
               </Button>
             ) : null}
+            <DetailMoreMenu
+              items={[
+                {
+                  href: "/app/sales/quotations",
+                  label: "Back to quotations",
+                },
+              ]}
+            />
             <QuotationStatusActions
               quotationId={quotation.id}
               status={quotation.status}

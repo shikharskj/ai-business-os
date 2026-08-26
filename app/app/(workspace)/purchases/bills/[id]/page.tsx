@@ -11,6 +11,7 @@ import {
   PURCHASE_STATUS_TONES,
 } from "@/components/business/status-tone";
 import { PageHeader } from "@/components/shell/page-header";
+import { DetailMoreMenu } from "@/components/shell/detail-more-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -108,35 +109,6 @@ export default async function BillDetailPage({
             <StatusBadge tone={PURCHASE_STATUS_TONES[purchase.status]}>
               {PURCHASE_STATUS_LABELS[purchase.status]}
             </StatusBadge>
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<Link href="/app/purchases/bills" />}
-            >
-              Back
-            </Button>
-            {canUpdate && purchase.status === "DRAFT" ? (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={<Link href={`/app/purchases/bills/${purchase.id}/edit`} />}
-              >
-                Edit
-              </Button>
-            ) : null}
-            {canCreateReturn && isPostedPurchaseStatus(purchase.status) ? (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={
-                  <Link
-                    href={`/app/purchases/returns/new?purchaseId=${purchase.id}`}
-                  />
-                }
-              >
-                Issue return
-              </Button>
-            ) : null}
             {canRecordPayment ? (
               <Button
                 nativeButton={false}
@@ -148,7 +120,39 @@ export default async function BillDetailPage({
               >
                 Record payment
               </Button>
+            ) : canUpdate && purchase.status === "DRAFT" ? (
+              <Button
+                nativeButton={false}
+                render={
+                  <Link href={`/app/purchases/bills/${purchase.id}/edit`} />
+                }
+              >
+                Edit
+              </Button>
             ) : null}
+            <DetailMoreMenu
+              items={[
+                { href: "/app/purchases/bills", label: "Back to bills" },
+                ...(canUpdate &&
+                purchase.status === "DRAFT" &&
+                canRecordPayment
+                  ? [
+                      {
+                        href: `/app/purchases/bills/${purchase.id}/edit`,
+                        label: "Edit",
+                      },
+                    ]
+                  : []),
+                ...(canCreateReturn && isPostedPurchaseStatus(purchase.status)
+                  ? [
+                      {
+                        href: `/app/purchases/returns/new?purchaseId=${purchase.id}`,
+                        label: "Issue return",
+                      },
+                    ]
+                  : []),
+              ]}
+            />
             <BillStatusActions
               purchaseId={purchase.id}
               status={purchase.status}

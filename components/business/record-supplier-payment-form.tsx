@@ -286,7 +286,7 @@ function RecordSupplierPaymentFormFields({
           </p>
         ) : (
           <div className="overflow-hidden rounded-md border border-border">
-            <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 border-b border-border bg-muted/40 px-4 py-3 text-sm font-medium">
+            <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 border-b border-border bg-muted/40 px-4 py-3 text-sm font-medium md:grid">
               <span>Bill</span>
               <span className="text-right">Outstanding</span>
               <span className="text-right">Allocate</span>
@@ -294,7 +294,7 @@ function RecordSupplierPaymentFormFields({
             {purchases.map((purchase, index) => (
               <div
                 key={purchase.purchaseId}
-                className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 border-b border-border px-4 py-3 last:border-b-0"
+                className="flex flex-col gap-3 border-b border-border px-4 py-3 last:border-b-0 md:grid md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-3"
               >
                 <input
                   type="hidden"
@@ -305,14 +305,24 @@ function RecordSupplierPaymentFormFields({
                   <p className="font-mono text-sm font-medium">{purchase.purchaseNumber}</p>
                   <p className="text-xs text-muted-foreground">{purchase.issuedOn}</p>
                 </div>
-                <div className="text-right">
+                <div className="flex items-center justify-between gap-2 md:block md:text-right">
+                  <span className="text-sm text-muted-foreground md:hidden">
+                    Outstanding
+                  </span>
                   <MoneyDisplay value={purchase.outstanding} />
                 </div>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor={`allocation-${index}-amount`}
+                    className="text-sm font-medium md:hidden"
+                  >
+                    Allocate
+                  </label>
                   <Input
+                    id={`allocation-${index}-amount`}
                     name={`allocation-${index}-amount`}
                     inputMode="decimal"
-                    className="text-right"
+                    className="w-full text-right"
                     placeholder="0.00"
                     value={allocations[purchase.purchaseId] ?? ""}
                     onChange={(event) =>

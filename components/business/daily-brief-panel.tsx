@@ -435,7 +435,7 @@ export function DailyBriefPanel({ brief }: { brief: DailyBriefView }) {
                               <Button
                                 nativeButton={false}
                                 variant="default"
-                                size="sm"
+                                className="min-h-10"
                                 render={<Link href={prepareAction.prepareHref} />}
                               >
                                 <span className="mr-1 text-xs uppercase tracking-wide opacity-80">
@@ -448,7 +448,7 @@ export function DailyBriefPanel({ brief }: { brief: DailyBriefView }) {
                               <Button
                                 type="button"
                                 variant="default"
-                                size="sm"
+                                className="min-h-10"
                                 disabled={proposingId === item.id}
                                 onClick={() => {
                                   void prepareReminder(item.id);
@@ -463,7 +463,7 @@ export function DailyBriefPanel({ brief }: { brief: DailyBriefView }) {
                             <Button
                               nativeButton={false}
                               variant="outline"
-                              size="sm"
+                              className="min-h-10"
                               render={<Link href={item.href} />}
                             >
                               {recordLabel}
@@ -471,7 +471,7 @@ export function DailyBriefPanel({ brief }: { brief: DailyBriefView }) {
                             <Button
                               type="button"
                               variant="ghost"
-                              size="sm"
+                              className="min-h-10"
                               disabled={dismissingId === item.id}
                               onClick={() => {
                                 void dismiss(item.id);

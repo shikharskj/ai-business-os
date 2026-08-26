@@ -1,7 +1,10 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import { documentPreviewAsideStyle } from "@/components/business/invoice-document";
+import { DocumentFormPreviewAside } from "@/components/shell/document-form-preview-aside";
 import { cn } from "@/lib/utils";
+
+export { DocumentFormPreviewAside };
 
 /** Full-width shell for create/edit/detail pages with a document preview column. */
 export function DocumentPreviewPageShell({
@@ -20,7 +23,7 @@ export function DocumentPreviewPageShell({
 
 /**
  * Two-column layout: main content grows (`1fr`), preview uses a fixed A4-scaled width.
- * Stacks on small screens.
+ * Stacks on small screens; preview collapses behind disclosure below lg via Aside.
  */
 export function DocumentFormPreviewLayout({
   children,
@@ -52,20 +55,4 @@ export function DocumentFormPreviewMain({
   className?: string;
 }) {
   return <div className={cn("min-w-0 w-full", className)}>{children}</div>;
-}
-
-export function DocumentFormPreviewAside({
-  children,
-  className,
-  style,
-}: {
-  children: ReactNode;
-  className?: string;
-  style?: CSSProperties;
-}) {
-  return (
-    <aside className={cn("min-w-0 w-full lg:sticky lg:top-4", className)} style={style}>
-      {children}
-    </aside>
-  );
 }

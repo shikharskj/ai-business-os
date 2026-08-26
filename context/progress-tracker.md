@@ -1400,6 +1400,46 @@ The first objective is to deliver a complete, reliable business workflow for sma
 
 # Implementation Unit Log
 
+## 2026-08-26 — Workspace mobile UX (post-login)
+
+Status: Complete
+
+Implemented:
+- Auto-close mobile sidebar Sheet on pathname change.
+- Stacked payment/advance allocation rows below `md`.
+- Dashboard chart range short labels + flex-wrap.
+- Detail page More menus (invoice, customer, bill, quotation).
+- `ListFilterBar` for list GET filters (collapsible Filters on mobile).
+- Document preview disclosure below `lg`.
+- Notification popover width, members `overflow-x-auto`, brief touch targets, safe-area top bar.
+
+Files / Areas:
+- `components/shell/app-sidebar.tsx`, `list-filter-bar.tsx`, `detail-more-menu.tsx`, `document-form-preview-layout.tsx`, `document-form-preview-aside.tsx`, `app-top-bar.tsx`, `notification-inbox.tsx`
+- `components/business/record-payment-form.tsx`, `record-supplier-payment-form.tsx`, `apply-advance-form.tsx`, `dashboard-chart-range-filters.tsx`, `members-table.tsx`, `daily-brief-panel.tsx`
+- `components/assistant/pending-action-card.tsx`
+- Detail pages under `app/app/(workspace)/sales|purchases/...`
+- List pages on `ListFilterBar`: invoices (template), quotations, orders, sales/payments, credit-notes, customers, bills, purchase payments, returns, suppliers, stock, products, expenses
+- `context/ui-context.md`
+
+---
+
+## 2026-08-26 — Mobile public / auth / shell usability
+
+Status: Complete
+
+Implemented:
+- `PublicHeader`: single-row mobile chrome; Features / How it works in Sheet below `md`; inline nav on `md+`.
+- `AuthSplitLayout`: form-first mobile (hide marketing aside); desktop split unchanged; brand + theme chrome on small screens.
+- Landing hero / bands: tighter mobile padding; `LandingProductShot` overflow guards (`min-w-0 max-w-full`).
+- `AppTopBar`: denser icon cluster (`gap-0.5` / tighter padding) for ~360px widths.
+
+Files / Areas:
+- `components/shell/public-header.tsx`, `public-brand.tsx`, `auth-split-layout.tsx`, `landing-product-shot.tsx`, `landing-feature-band.tsx`, `landing-features.tsx`, `landing-how-it-works.tsx`, `landing-cta-band.tsx`, `app-top-bar.tsx`
+- `app/page.tsx`, `lib/clerk/auth-page-appearance.ts`
+- `context/ui-context.md`
+
+---
+
 ## 2026-08-26 — Neon migrate deploy: remove CONCURRENTLY from index migration
 
 Status: Complete

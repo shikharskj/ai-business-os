@@ -16,6 +16,7 @@ import {
   SALES_ORDER_STATUS_TONES,
 } from "@/components/business/status-tone";
 import { PageHeader } from "@/components/shell/page-header";
+import { DetailMoreMenu } from "@/components/shell/detail-more-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -141,35 +142,6 @@ export default async function CustomerDetailPage({
             <StatusBadge tone={PARTY_STATUS_TONES[customer.status]}>
               {PARTY_STATUS_LABELS[customer.status]}
             </StatusBadge>
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<Link href="/app/sales/customers" />}
-            >
-              Back
-            </Button>
-            {canCreateInvoice && customer.status === "ACTIVE" ? (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={<Link href="/app/sales/invoices/new" />}
-              >
-                New invoice
-              </Button>
-            ) : null}
-            {canCreatePayment && customer.status === "ACTIVE" ? (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={
-                  <Link
-                    href={`/app/sales/payments/new?advance=1&customerId=${customer.id}`}
-                  />
-                }
-              >
-                Record advance
-              </Button>
-            ) : null}
             {canRecordPayment ? (
               <Button
                 nativeButton={false}
@@ -181,23 +153,45 @@ export default async function CustomerDetailPage({
               >
                 Record payment
               </Button>
+            ) : canCreateInvoice && customer.status === "ACTIVE" ? (
+              <Button
+                nativeButton={false}
+                render={<Link href="/app/sales/invoices/new" />}
+              >
+                New invoice
+              </Button>
             ) : null}
+            <DetailMoreMenu
+              items={[
+                { href: "/app/sales/customers", label: "Back to customers" },
+                ...(canCreateInvoice &&
+                customer.status === "ACTIVE" &&
+                canRecordPayment
+                  ? [{ href: "/app/sales/invoices/new", label: "New invoice" }]
+                  : []),
+                ...(canCreatePayment && customer.status === "ACTIVE"
+                  ? [
+                      {
+                        href: `/app/sales/payments/new?advance=1&customerId=${customer.id}`,
+                        label: "Record advance",
+                      },
+                    ]
+                  : []),
+                ...(canUpdate && customer.status === "ACTIVE"
+                  ? [
+                      {
+                        href: `/app/sales/customers/${customer.id}/edit`,
+                        label: "Edit",
+                      },
+                    ]
+                  : []),
+              ]}
+            />
             {canUpdate && customer.status === "ACTIVE" ? (
-              <>
-                <Button
-                  nativeButton={false}
-                  variant="outline"
-                  render={
-                    <Link href={`/app/sales/customers/${customer.id}/edit`} />
-                  }
-                >
-                  Edit
-                </Button>
-                <DeactivateCustomerButton
-                  customerId={customer.id}
-                  customerName={customer.name}
-                />
-              </>
+              <DeactivateCustomerButton
+                customerId={customer.id}
+                customerName={customer.name}
+              />
             ) : null}
             {canUpdate && customer.status === "INACTIVE" ? (
               <ReactivateCustomerButton

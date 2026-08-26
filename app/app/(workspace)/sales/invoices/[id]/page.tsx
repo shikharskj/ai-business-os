@@ -14,6 +14,7 @@ import {
   CREDIT_NOTE_STATUS_TONES,
   invoicePaymentBadgePresentation,
 } from "@/components/business/status-tone";
+import { DetailMoreMenu } from "@/components/shell/detail-more-menu";
 import { PageHeader } from "@/components/shell/page-header";
 import {
   DocumentFormPreviewAside,
@@ -193,37 +194,6 @@ export default async function InvoiceDetailPage({
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <StatusBadge tone={paymentBadge.tone}>{paymentBadge.label}</StatusBadge>
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<Link href="/app/sales/invoices" />}
-            >
-              Back
-            </Button>
-            {canUpdate && invoice.status === "DRAFT" ? (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={
-                  <Link href={`/app/sales/invoices/${invoice.id}/edit`} />
-                }
-              >
-                Edit
-              </Button>
-            ) : null}
-            {canCreateCreditNote && isPostedInvoiceStatus(invoice.status) ? (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={
-                  <Link
-                    href={`/app/sales/credit-notes/new?invoiceId=${invoice.id}`}
-                  />
-                }
-              >
-                Issue credit note
-              </Button>
-            ) : null}
             {canRecordPayment ? (
               <Button
                 nativeButton={false}
@@ -231,7 +201,39 @@ export default async function InvoiceDetailPage({
               >
                 Record payment
               </Button>
+            ) : canUpdate && invoice.status === "DRAFT" ? (
+              <Button
+                nativeButton={false}
+                render={
+                  <Link href={`/app/sales/invoices/${invoice.id}/edit`} />
+                }
+              >
+                Edit
+              </Button>
             ) : null}
+            <DetailMoreMenu
+              items={[
+                { href: "/app/sales/invoices", label: "Back to invoices" },
+                ...(canUpdate &&
+                invoice.status === "DRAFT" &&
+                canRecordPayment
+                  ? [
+                      {
+                        href: `/app/sales/invoices/${invoice.id}/edit`,
+                        label: "Edit",
+                      },
+                    ]
+                  : []),
+                ...(canCreateCreditNote && isPostedInvoiceStatus(invoice.status)
+                  ? [
+                      {
+                        href: `/app/sales/credit-notes/new?invoiceId=${invoice.id}`,
+                        label: "Issue credit note",
+                      },
+                    ]
+                  : []),
+              ]}
+            />
             <InvoiceStatusActions
               invoiceId={invoice.id}
               status={invoice.status}

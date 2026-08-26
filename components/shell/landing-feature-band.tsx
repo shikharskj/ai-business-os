@@ -36,7 +36,7 @@ export function LandingFeatureBand({
       <section
         id={id}
         className={cn(
-          "scroll-mt-20 border-t border-border px-6 py-16",
+          "scroll-mt-20 border-t border-border px-4 py-12 sm:px-6 sm:py-16",
           muted ? "bg-muted/40" : "bg-background"
         )}
       >

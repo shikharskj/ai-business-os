@@ -2,11 +2,19 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Menu } from "lucide-react";
 import { Show, UserButton } from "@clerk/nextjs";
 
 import { PublicBrand } from "@/components/shell/public-brand";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -19,6 +27,7 @@ const navLinkClass =
 
 export function PublicHeader() {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const sections = NAV_LINKS.map(({ id }) =>
@@ -48,10 +57,13 @@ export function PublicHeader() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-sm">
+    <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border bg-background/80 px-3 backdrop-blur-sm sm:gap-3 sm:px-4">
       <div className="flex min-w-0 items-center gap-3 sm:gap-6">
-        <PublicBrand size="sm" />
-        <nav className="flex flex-wrap items-center gap-3 text-sm sm:gap-4">
+        <PublicBrand
+          size="sm"
+          wordmarkClassName="max-[380px]:hidden"
+        />
+        <nav className="hidden items-center gap-4 text-sm md:flex">
           {NAV_LINKS.map(({ href, id, label }) => (
             <Link
               key={id}
@@ -66,23 +78,65 @@ export function PublicHeader() {
           ))}
         </nav>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <ThemeToggle />
         <Show when="signed-out">
           <Button
             variant="ghost"
+            size="sm"
             nativeButton={false}
             render={<Link href="/sign-in" />}
           >
             Sign in
           </Button>
-          <Button nativeButton={false} render={<Link href="/sign-up" />}>
+          <Button
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/sign-up" />}
+          >
             Sign up
           </Button>
         </Show>
         <Show when="signed-in">
           <UserButton />
         </Show>
+        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+          <SheetTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                aria-label="Open menu"
+              />
+            }
+          >
+            <Menu className="size-5" />
+          </SheetTrigger>
+          <SheetContent side="right" className="w-full max-w-xs gap-0 p-0">
+            <SheetHeader className="border-b border-border">
+              <SheetTitle>Menu</SheetTitle>
+            </SheetHeader>
+            <nav className="flex flex-col gap-1 p-4">
+              {NAV_LINKS.map(({ href, id, label }) => (
+                <Link
+                  key={id}
+                  href={href}
+                  onClick={() => setMenuOpen(false)}
+                  className={cn(
+                    "rounded-md px-3 py-2.5 text-base outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
+                    activeId === id
+                      ? "font-medium text-foreground"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          </SheetContent>
+        </Sheet>
       </div>
     </header>
   );

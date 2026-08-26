@@ -20,13 +20,16 @@ export function AppTopBar({
   role: MembershipRole;
 }) {
   return (
-    <header className="flex h-14 min-w-0 shrink-0 items-center gap-2 overflow-x-hidden border-b border-border bg-background px-4">
-      <SidebarTrigger className="-ml-1 shrink-0" />
-      <Separator orientation="vertical" className="mr-2 h-4 shrink-0" />
+    <header className="flex h-14 min-w-0 shrink-0 items-center gap-1 overflow-x-hidden border-b border-border bg-background px-2 pt-[env(safe-area-inset-top)] sm:gap-2 sm:px-4">
+      <SidebarTrigger className="-ml-0.5 shrink-0 sm:-ml-1" />
+      <Separator
+        orientation="vertical"
+        className="mr-1 hidden h-4 shrink-0 sm:mr-2 sm:block"
+      />
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         {children}
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
         <WorkspaceCommandMenu role={role} />
         <AssistantLauncher />
         <NotificationInbox />

@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 export function LandingCtaBand() {
   return (
     <RevealOnView>
-      <section className="px-6 pb-16">
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-6 rounded-md bg-primary px-6 py-12 text-center text-primary-foreground md:px-12">
+      <section className="px-4 pb-12 sm:px-6 sm:pb-16">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-6 rounded-md bg-primary px-4 py-10 text-center text-primary-foreground sm:px-6 sm:py-12 md:px-12">
           <h2 className="text-2xl font-semibold tracking-tight">
             Ready to run your business with clarity?
           </h2>
