@@ -658,7 +658,7 @@ Row order within a page can be changed with the drag handle; order is persisted 
 
 **Sales detail pages:** One primary header action (Post, Record payment, Mark sent, etc.); secondary actions (Cancel, Export PDF) live in the overflow menu. Overdue receivables show semantic overdue copy beside the due date. Line tables show GST rate and tax amount. Non-draft edit URLs redirect to detail with `?locked=1` instead of 404.
 
-**Customer hub:** Detail page is the sales record for a party — outstanding card, capped related invoices/quotations/payments with “View all” filtered links, New invoice / Record payment when permitted, reactivate for inactive customers.
+**Customer hub:** Detail page is the sales record for a party — outstanding card, capped related invoices/quotations/payments with “View all” filtered links, New invoice / Record payment when permitted, Edit as primary when those are absent, Deactivate in More (never more prominent than Edit), reactivate for inactive customers.
 
 **Sales forms:** Customer and product fields use the searchable `Combobox`; business dates use the shared `DatePicker` (ISO `value` / `onValueChange`). Line rows show pre-GST subtotal (qty × rate − discount); tax amounts come from the server preview only. “New customer” / “New product” are text links to full create pages (no inline modals).
 
@@ -1118,11 +1118,12 @@ Do not aim for a full desktop clone on mobile. Complex accounting/reporting work
 
 ### Workspace mobile patterns (authenticated)
 
-- **Nav drawer:** Mobile sidebar Sheet closes automatically on route change (`pathname` → `setOpenMobile(false)`).
-- **Payment allocations:** Customer/supplier payment and apply-advance forms stack allocation rows below `md` (document + outstanding + full-width amount); 3-column grid on `md+`.
-- **List filters:** `ListFilterBar` — full-width search; secondary filters in a collapsible “Filters” panel below `md`, inline wrap on `md+`.
-- **Detail headers:** Status badge + one primary CTA; secondary navigation in `DetailMoreMenu`.
-- **Document preview:** Below `lg`, preview sits behind a collapsed “Show preview” disclosure (`DocumentFormPreviewAside`).
+- **Nav drawer:** Mobile sidebar Sheet closes on route change (`pathname` → `setOpenMobile(false)`; deps centered on `pathname`).
+- **Payment allocations:** Customer/supplier payment and apply-advance forms stack allocation rows below `md` (document + outstanding + full-width amount); 3-column grid on `md+`. Prefill amount + allocation when opened with `invoiceId` / `purchaseId` (same as fill outstanding).
+- **List filters:** `ListFilterBar` — full-width search; Filter/Clear actions stay visible on mobile; secondary filter fields in a collapsible “Filters” panel below `md`, inline wrap on `md+`.
+- **Detail headers:** Status badge + one primary CTA; secondary navigation and status overflow share one `DetailMoreMenu` (single More trigger).
+- **Document preview:** Below `lg`, preview sits behind a collapsed “Show preview” disclosure (`DocumentFormPreviewAside`); collapse state uses `useSyncExternalStore` with server snapshot collapsed to avoid CLS.
+- **Mobile breakpoint hook:** `useIsMobile` uses `useSyncExternalStore` (`getServerSnapshot` → false); never read `window` in a `useState` initializer.
 - **Dashboard chart ranges:** Short labels (`7d` / `30d` / `3mo`) below `sm`; chips wrap.
 - **Shell polish:** Notification popover `min(20rem, 100vw - 1.5rem)`; members table `overflow-x-auto`; brief Confirm/Prepare use `min-h-10`; top bar respects `safe-area-inset-top`.
 

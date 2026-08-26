@@ -7,6 +7,10 @@ import {
   cancelPurchaseAction,
   postPurchaseAction,
 } from "@/app/app/(workspace)/purchases/bills/actions";
+import {
+  DetailMoreMenu,
+  type DetailMoreMenuItem,
+} from "@/components/shell/detail-more-menu";
 import { PendingButton } from "@/components/ui/pending-button";
 import { notifyError, notifySuccess } from "@/lib/feedback/toast";
 import type { PurchaseStatus } from "@/modules/purchases/domain/types";
@@ -18,11 +22,13 @@ export function BillStatusActions({
   status,
   canUpdate,
   canCancel,
+  moreItems = [],
 }: {
   purchaseId: string;
   status: PurchaseStatus;
   canUpdate: boolean;
   canCancel: boolean;
+  moreItems?: DetailMoreMenuItem[];
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -53,9 +59,31 @@ export function BillStatusActions({
     });
   }
 
+  const actionItems =
+    canCancel && status === "DRAFT"
+      ? [
+          {
+            key: "cancel",
+            label: "Cancel draft",
+            onClick: () =>
+              run(
+                "cancel",
+                "Cancel this draft bill? It will remain in your list as cancelled. Stock and accounts are not affected.",
+                cancelPurchaseAction,
+                {
+                  title: "Draft cancelled",
+                  description: "The bill remains in your list as cancelled.",
+                }
+              ),
+            disabled: isPending,
+            destructive: true,
+          },
+        ]
+      : [];
+
   return (
     <div className="flex flex-col items-end gap-2">
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {canUpdate && status === "DRAFT" ? (
           <PendingButton
             type="button"
@@ -75,26 +103,11 @@ export function BillStatusActions({
             Post bill
           </PendingButton>
         ) : null}
-        {canCancel && status === "DRAFT" ? (
-          <PendingButton
-            type="button"
-            variant="destructive"
-            pending={isPending && pendingAction === "cancel"}
-            onClick={() =>
-              run(
-                "cancel",
-                "Cancel this draft bill? It will remain in your list as cancelled. Stock and accounts are not affected.",
-                cancelPurchaseAction,
-                {
-                  title: "Draft cancelled",
-                  description: "The bill remains in your list as cancelled.",
-                }
-              )
-            }
-          >
-            Cancel draft
-          </PendingButton>
-        ) : null}
+        <DetailMoreMenu
+          items={moreItems}
+          actionItems={actionItems}
+          disabled={isPending}
+        />
       </div>
       {error ? (
         <p className="text-base text-destructive" role="alert">

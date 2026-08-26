@@ -11,7 +11,6 @@ import {
   PURCHASE_STATUS_TONES,
 } from "@/components/business/status-tone";
 import { PageHeader } from "@/components/shell/page-header";
-import { DetailMoreMenu } from "@/components/shell/detail-more-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -57,7 +56,7 @@ export default async function BillDetailPage({
   const canUpdate = roleHasPermission(tenant.membership.role, "purchase:update");
   const canCancel = roleHasPermission(tenant.membership.role, "purchase:cancel");
   const canCreatePayment = roleHasPermission(tenant.membership.role, "payment:create");
-  const canCreateReturn = roleHasPermission(tenant.membership.role, "purchase:create");
+  const canCreateReturn = roleHasPermission(tenant.membership.role, "purchase-return:create");
   const canReadPayments = roleHasPermission(tenant.membership.role, "payment:read");
 
   let purchase;
@@ -130,8 +129,12 @@ export default async function BillDetailPage({
                 Edit
               </Button>
             ) : null}
-            <DetailMoreMenu
-              items={[
+            <BillStatusActions
+              purchaseId={purchase.id}
+              status={purchase.status}
+              canUpdate={canUpdate}
+              canCancel={canCancel}
+              moreItems={[
                 { href: "/app/purchases/bills", label: "Back to bills" },
                 ...(canUpdate &&
                 purchase.status === "DRAFT" &&
@@ -152,12 +155,6 @@ export default async function BillDetailPage({
                     ]
                   : []),
               ]}
-            />
-            <BillStatusActions
-              purchaseId={purchase.id}
-              status={purchase.status}
-              canUpdate={canUpdate}
-              canCancel={canCancel}
             />
           </div>
         }

@@ -27,7 +27,7 @@ export default async function NewSalesOrderPage({
     lineIndex?: string;
   }>;
 }) {
-  const tenant = await authorize("quotation:create");
+  const tenant = await authorize("sales-order:create");
   const params = await searchParams;
   const [customers, products] = await Promise.all([
     listCustomers({

@@ -176,12 +176,12 @@ export async function attachExistingOrganizationToBusiness(input: {
     throw new Error("Authenticated user is not a member of this organization");
   }
 
-  const role = mapClerkOrganizationRoleToMembershipRole(
+  const provisionalRole = mapClerkOrganizationRoleToMembershipRole(
     clerkMembership.role,
     false
   );
 
-  if (role !== "OWNER" && role !== "ADMIN") {
+  if (provisionalRole !== "OWNER" && provisionalRole !== "ADMIN") {
     throw new Error("Only organization admins can attach a business workspace");
   }
 
@@ -194,6 +194,12 @@ export async function attachExistingOrganizationToBusiness(input: {
       clerkOrganizationId: input.clerkOrganizationId,
       ownerUserId: input.owner.id,
     }));
+
+  // OWNER only when this user is the business owner (creator), never blanket org:admin.
+  const role = mapClerkOrganizationRoleToMembershipRole(
+    clerkMembership.role,
+    business.ownerUserId === input.owner.id
+  );
 
   const membership = await input.membershipRepository.upsertActiveMembership({
     userId: input.owner.id,

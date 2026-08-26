@@ -17,7 +17,6 @@ import { PartyInactiveError, PartyNotFoundError } from "@/modules/party/domain/e
 import type { PartyRepository } from "@/modules/party/infrastructure/repositories";
 import { calculateTax } from "@/modules/tax/application/calculate-tax";
 import {
-  gstinStateCode,
   requireGstStateCode,
   stateCodeFromName,
 } from "@/modules/tax/domain/gstin";
@@ -73,23 +72,17 @@ function moneySnapshot(value: Money) {
 
 function resolvePlaceOfSupply(input: {
   explicit?: string | null;
-  supplierGstin: string | null;
-  supplierState: string | null;
+  businessStateName: string;
 }): string {
   if (input.explicit?.trim()) {
     return requireGstStateCode(input.explicit.trim());
   }
-  if (input.supplierGstin) {
-    return gstinStateCode(input.supplierGstin);
-  }
-  if (input.supplierState) {
-    const fromName = stateCodeFromName(input.supplierState);
-    if (fromName) {
-      return fromName;
-    }
+  const fromBusiness = stateCodeFromName(input.businessStateName);
+  if (fromBusiness) {
+    return fromBusiness;
   }
   throw new PurchaseValidationError(
-    "Choose a place of supply. Add the supplier's state or GSTIN, or select a state on the bill."
+    "Choose a place of supply. Set the business state, or select a state on the bill."
   );
 }
 
@@ -119,8 +112,7 @@ async function preparePurchase(input: {
 
   const placeOfSupplyStateCode = resolvePlaceOfSupply({
     explicit: input.fields.placeOfSupplyStateCode,
-    supplierGstin: supplier.gstin,
-    supplierState: supplier.state,
+    businessStateName: input.taxContext.stateName,
   });
 
   const currency = input.taxContext.currency;
@@ -361,6 +353,15 @@ export async function listPurchases(input: {
   return input.purchases.listPurchases(filter);
 }
 
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code: unknown }).code === "P2002"
+  );
+}
+
 export async function postPurchase(input: {
   tenantId: string;
   actorUserId: string;
@@ -368,7 +369,10 @@ export async function postPurchase(input: {
   taxContext: PurchaseTaxContext;
   closedThroughPeriodKey: string | null;
 } & PurchasePostDeps): Promise<Purchase> {
-  const existing = await input.purchases.findPurchaseById(input.tenantId, input.purchaseId);
+  const existing = await input.purchases.lockPurchaseForUpdate(
+    input.tenantId,
+    input.purchaseId
+  );
   if (!existing) {
     throw new PurchaseNotFoundError();
   }
@@ -406,19 +410,6 @@ export async function postPurchase(input: {
 
   const journalLines = buildPurchaseJournalLines(existing, productMap);
 
-  const journal = await postJournal({
-    tenantId: input.tenantId,
-    accountingDate: existing.issuedOn,
-    financialYearStartMonth: input.taxContext.financialYearStartMonth,
-    closedThroughPeriodKey: input.closedThroughPeriodKey,
-    sourceType: "Purchase",
-    sourceId: existing.id,
-    memo: `Purchase ${existing.number}`,
-    lines: journalLines,
-    accountRepository: input.accounts,
-    journalRepository: input.journals,
-  });
-
   for (const line of existing.lines) {
     const product = productMap.get(line.productId)!;
     if (!product.tracksInventory) {
@@ -443,6 +434,27 @@ export async function postPurchase(input: {
         reason: `Purchase ${existing.number}`,
       },
     });
+  }
+
+  let journal;
+  try {
+    journal = await postJournal({
+      tenantId: input.tenantId,
+      accountingDate: existing.issuedOn,
+      financialYearStartMonth: input.taxContext.financialYearStartMonth,
+      closedThroughPeriodKey: input.closedThroughPeriodKey,
+      sourceType: "Purchase",
+      sourceId: existing.id,
+      memo: `Purchase ${existing.number}`,
+      lines: journalLines,
+      accountRepository: input.accounts,
+      journalRepository: input.journals,
+    });
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      throw new PurchaseAlreadyPostedError();
+    }
+    throw error;
   }
 
   const purchase = await input.purchases.markPurchasePosted({

@@ -20,6 +20,7 @@ import {
   createPrismaAccountRepository,
   createPrismaJournalRepository,
 } from "@/modules/accounting/infrastructure/prisma-accounting-repositories";
+import { scheduleNotificationOutboxProcessing } from "@/modules/notifications";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 import { businessDate, todayInTimezone } from "@/modules/shared-kernel/dates";
@@ -53,8 +54,10 @@ export async function closePeriodAction(
   _prev: AccountingActionState,
   formData: FormData
 ): Promise<AccountingActionState> {
+  let tenantId: string;
   try {
     const tenant = await authorize("accounting:post");
+    tenantId = tenant.tenantId;
     const parsed = closePeriodSchema.parse({
       periodKey: formData.get("periodKey"),
     });
@@ -105,6 +108,7 @@ export async function closePeriodAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/accounting");
   revalidatePath("/app/accounting/periods");
   redirect("/app/accounting/periods?closed=1");
@@ -115,8 +119,10 @@ export async function postAdjustmentAction(
   formData: FormData
 ): Promise<AccountingActionState> {
   let journalId: string;
+  let tenantId: string;
   try {
     const tenant = await authorize("accounting:post");
+    tenantId = tenant.tenantId;
     const lineCount = Number(formData.get("lineCount") ?? 0);
     if (!Number.isSafeInteger(lineCount) || lineCount < 2 || lineCount > 50) {
       throw new ZodError([
@@ -168,6 +174,7 @@ export async function postAdjustmentAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/accounting/journals");
   revalidatePath("/app/accounting/ledger");
   revalidatePath("/app/accounting/trial-balance");
@@ -179,8 +186,10 @@ export async function reverseJournalAction(
   formData: FormData
 ): Promise<AccountingActionState> {
   let reversalId: string;
+  let tenantId: string;
   try {
     const tenant = await authorize("accounting:post");
+    tenantId = tenant.tenantId;
     const parsed = reverseJournalSchema.parse({
       journalId: formData.get("journalId"),
       accountingDate:
@@ -213,6 +222,7 @@ export async function reverseJournalAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/accounting/journals");
   revalidatePath("/app/accounting/ledger");
   revalidatePath("/app/accounting/trial-balance");

@@ -24,7 +24,7 @@ export default async function EditPurchaseReturnPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const tenant = await authorize("purchase:update");
+  const tenant = await authorize("purchase-return:update");
   const { id } = await params;
 
   let purchaseReturn;

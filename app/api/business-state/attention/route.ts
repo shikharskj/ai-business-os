@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db/client";
-import { authorize, AuthorizationError } from "@/lib/security/authorize";
+import { authzErrorResponse } from "@/lib/http/auth-errors";
+import { authorize } from "@/lib/security/authorize";
 import {
   attentionItemToDto,
   listOpenAttention,
 } from "@/modules/business-state";
 import { createPrismaAttentionQueueRepository } from "@/modules/business-state/infrastructure/prisma-attention-repository";
-import { TenantRequiredError } from "@/modules/tenant/domain/errors";
 
 /**
  * List open AttentionQueue items for the current tenant, ranked by severity.
@@ -24,11 +24,9 @@ export async function GET() {
       items: items.map(attentionItemToDto),
     });
   } catch (error) {
-    if (error instanceof TenantRequiredError) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (error instanceof AuthorizationError) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const authz = authzErrorResponse(error);
+    if (authz) {
+      return authz;
     }
     throw error;
   }

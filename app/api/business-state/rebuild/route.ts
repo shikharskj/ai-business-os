@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db/client";
-import { authorize, AuthorizationError } from "@/lib/security/authorize";
+import { authzErrorResponse } from "@/lib/http/auth-errors";
+import { authorize } from "@/lib/security/authorize";
 import {
   businessStateSummaryToDto,
   getBusinessStateSummary,
@@ -10,7 +11,6 @@ import {
 import { createPrismaAttentionQueueRepository } from "@/modules/business-state/infrastructure/prisma-attention-repository";
 import { createPrismaBusinessStateConsumerDeps } from "@/modules/business-state/infrastructure/prisma-consumer-deps";
 import { createPrismaBusinessStateProjectionRepository } from "@/modules/business-state/infrastructure/prisma-projection-repository";
-import { TenantRequiredError } from "@/modules/tenant/domain/errors";
 
 /**
  * Rebuild BusinessState projections for the current tenant from domain truth.
@@ -53,11 +53,9 @@ export async function POST() {
       state: businessStateSummaryToDto(summary),
     });
   } catch (error) {
-    if (error instanceof TenantRequiredError) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (error instanceof AuthorizationError) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const authz = authzErrorResponse(error);
+    if (authz) {
+      return authz;
     }
     throw error;
   }

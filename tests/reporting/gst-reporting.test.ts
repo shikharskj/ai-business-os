@@ -43,6 +43,7 @@ function invoiceFixture(
     taxRateBps: 1800,
     quantity: quantityFromMajor("1"),
     unitPrice: taxable,
+    unitCost: null,
     discount: zero,
     lineSubtotal: taxable,
     taxableAmount: taxable,

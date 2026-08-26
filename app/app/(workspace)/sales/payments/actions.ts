@@ -189,9 +189,11 @@ export async function applyCustomerAdvanceAction(
   formData: FormData
 ): Promise<PaymentActionState> {
   let paymentId: string;
+  let tenantId: string;
 
   try {
     const tenant = await authorize("payment:create");
+    tenantId = tenant.tenantId;
     const parsed = applyCustomerAdvanceSchema.parse({
       paymentId: formData.get("paymentId"),
       allocations: readAdvanceAllocations(formData),
@@ -220,6 +222,7 @@ export async function applyCustomerAdvanceAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/payments");
   revalidatePath(`/app/sales/payments/${paymentId}`);
   revalidatePath("/app/sales/invoices");
@@ -232,9 +235,11 @@ export async function applyCustomerCreditAction(
   formData: FormData
 ): Promise<PaymentActionState> {
   let invoiceId: string | null = null;
+  let tenantId: string;
 
   try {
     const tenant = await authorize("payment:create");
+    tenantId = tenant.tenantId;
     const parsed = applyCustomerCreditSchema.parse({
       customerId: formData.get("customerId"),
       allocations: readAdvanceAllocations(formData),
@@ -263,6 +268,7 @@ export async function applyCustomerCreditAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/payments");
   revalidatePath("/app/sales/invoices");
   revalidatePath("/app/sales/customers");

@@ -10,6 +10,7 @@ import {
   parseReturnToValue,
 } from "@/lib/navigation/entity-create-return";
 import { authorize, AuthorizationError } from "@/lib/security";
+import { scheduleNotificationOutboxProcessing } from "@/modules/notifications";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 import {
@@ -86,10 +87,12 @@ export async function createProductAction(
   formData: FormData
 ): Promise<ProductActionState> {
   let productId: string;
+  let tenantId: string;
   const submittedValues = submittedProductValues(formData);
 
   try {
     const tenant = await authorize("product:create");
+    tenantId = tenant.tenantId;
     const fields = readProductFields(formData);
     const product = await createProduct({
       tenantId: tenant.tenantId,
@@ -113,6 +116,7 @@ export async function createProductAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/inventory/products");
   const returnTo = parseReturnToValue(String(formData.get("returnTo") || ""));
   if (returnTo) {
@@ -134,10 +138,12 @@ export async function updateProductAction(
   formData: FormData
 ): Promise<ProductActionState> {
   const productId = String(formData.get("productId") ?? "");
+  let tenantId: string;
   const submittedValues = submittedProductValues(formData);
 
   try {
     const tenant = await authorize("product:update");
+    tenantId = tenant.tenantId;
     const fields = readProductFields(formData);
     await updateProduct({
       tenantId: tenant.tenantId,
@@ -161,6 +167,7 @@ export async function updateProductAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/inventory/products");
   revalidatePath(`/app/inventory/products/${productId}`);
   redirect(`/app/inventory/products/${productId}?saved=1`);

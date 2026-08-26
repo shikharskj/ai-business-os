@@ -14,7 +14,6 @@ import {
   QUOTATION_STATUS_TONES,
 } from "@/components/business/status-tone";
 import { QuotationStatusActions } from "@/components/business/quotation-status-actions";
-import { DetailMoreMenu } from "@/components/shell/detail-more-menu";
 import { PageHeader } from "@/components/shell/page-header";
 import {
   DocumentFormPreviewAside,
@@ -140,20 +139,18 @@ export default async function QuotationDetailPage({
                 Edit
               </Button>
             ) : null}
-            <DetailMoreMenu
-              items={[
-                {
-                  href: "/app/sales/quotations",
-                  label: "Back to quotations",
-                },
-              ]}
-            />
             <QuotationStatusActions
               quotationId={quotation.id}
               status={quotation.status}
               canUpdate={canUpdate}
               canCancel={canCancel}
               canRead={canRead}
+              moreItems={[
+                {
+                  href: "/app/sales/quotations",
+                  label: "Back to quotations",
+                },
+              ]}
             />
           </div>
         }

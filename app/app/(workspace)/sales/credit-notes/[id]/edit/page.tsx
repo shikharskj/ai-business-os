@@ -24,7 +24,7 @@ export default async function EditCreditNotePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const tenant = await authorize("invoice:update");
+  const tenant = await authorize("credit-note:update");
   const { id } = await params;
 
   let creditNote;

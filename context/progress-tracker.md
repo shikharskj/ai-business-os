@@ -106,6 +106,47 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 
 # Completed
 
+* **Audit Wave 0 — Auth P0/P1:**
+  * Role model: `org:admin` → `ADMIN` (OWNER only when `isCreator` / `ownerUserId` match); invitations set `publicMetadata.appMembershipRole`; membership created/updated prefer metadata and always recompute (no sticky role).
+  * Cron: `/api/internal/outbox/process` public + `authorizeCronRequest` (Bearer `CRON_SECRET`, fail-closed in production).
+  * `user.deleted`: revoke memberships; anonymize `clerkUserId` when Business owner / Restrict FKs block hard delete; webhook errors logged and acknowledged.
+  * Wired `authzErrorResponse` into reports export helper, documents, business-state, and assistant routes; workspace layout redirects on `TenantMembershipUnavailableError`.
+  * Tests: org-lifecycle roles/metadata, invite metadata, attach OWNER/ADMIN, cron auth, user.deleted swallow.
+
+* **Audit Wave 0 — Infra P0/P1:**
+  * FTS migrations `20260821010000` / `20260822121000`: removed `CREATE INDEX CONCURRENTLY`; transactional `CREATE INDEX IF NOT EXISTS` for `prisma migrate deploy` on Neon.
+  * CI uses `npx prisma migrate deploy`; package script `db:migrate:deploy`.
+  * Journal `@@unique([tenantId, sourceType, sourceId])` + migration `20260826020000_journal_source_unique`.
+  * `lib/db/client.ts`: PrismaPg pool `max: 3` for serverless Neon; `.env.example` documents pooled Neon URL + `CRON_SECRET`.
+  * `netlify.toml` (Node 22, `npm run build`); `run-production-build.mjs` placeholder `DATABASE_URL` only for generate; fails early on Netlify without Clerk publishable key; no invented migrate URL.
+  * Dropped `openai` from `AI_PROVIDER` env enum.
+  * Tests: outbox cron Bearer auth, Clerk webhook verify failure, mocked R2 adapter, Prisma search FTS smoke; vitest `fileParallelism: false`.
+  * Shared note in `audit-fix-contracts.md`: all Wave 0 deferred action paths now call `scheduleNotificationOutboxProcessing`.
+
+* **Audit Wave 0 — Domain P0/P1:**
+  * Post concurrency: invoice + credit note + purchase bill + purchase return `FOR UPDATE`, `markPosted` with `expectedStatus: DRAFT`, journal unique conflict (`P2002`) → already-posted.
+  * Purchase PoS defaults to business state (not supplier GSTIN); bill form + KA supplier / MH business → IGST test.
+  * Credit/return cap vs `remainingDocumentBalance` in prepare/post; payments/supplierPayments on create paths.
+  * Negative stock: refuse OUT when on-hand would go below zero (product lock).
+  * COGS: `SalesInvoiceLine.unitCost` at invoice post; credit note uses stored cost (`20260826070000_add_sales_invoice_line_unit_cost`).
+  * Stock opening/adjustment actions in `prisma.$transaction`; RBAC `credit-note:*` / `purchase-return:*` / `sales-order:*` in actions (pages may still use legacy perms).
+
+* **Audit Wave 0 — UI P0/P1:**
+  * `useIsMobile` + document preview aside via `useSyncExternalStore` (SSR snapshot non-mobile / collapsed).
+  * Single More menu on invoice/bill/quotation detail; customer Edit vs Deactivate chrome; payment allocation prefill; `ListFilterBar` Filter/Clear outside closed details on mobile.
+
+* **Audit Wave 0 — Supervisor close-out:**
+  * Wave 2: `tsc` clean; 88 targeted vitest tests green; unused import cleanup on credit-note journal path.
+  * Wave 3: Security review — no blockers. Bugbot — bill/return post journal guards fixed to match invoice/credit-note.
+  * **Ship checklist (human ops — run before relying on prod):**
+    1. Neon: `npx prisma migrate deploy` (must apply `20260826020000_journal_source_unique` + `20260826070000_add_sales_invoice_line_unit_cost`). If FTS migrations were marked applied without indexes, run matching `CREATE INDEX IF NOT EXISTS` from rewritten FTS SQL once.
+    2. Netlify: set `CRON_SECRET`, pooled Neon `DATABASE_URL`, ensure `NODE_ENV=production`; redeploy.
+    3. Smoke: `POST /api/internal/outbox/process` with `Authorization: Bearer $CRON_SECRET` → 200.
+  * **Wave 0 deferred follow-ups (complete):**
+    * `scheduleNotificationOutboxProcessing` on remaining mutation actions (`audit-fix-contracts.md`).
+    * Credit-note / purchase-return / sales-order pages (+ invoice/bill CTAs) use granular permissions.
+    * Membership sync falls back to Clerk invitation `publicMetadata` by invitee email when membership metadata is empty.
+
 * **Local volume seed script (dev tooling):**
   * `npm run db:seed:volume` — seeds one business with `SEED-` customers/products/quotations/invoices plus sales orders, credit notes, customer payments, suppliers, bills, purchase returns, and supplier payments via domain use cases. Fill-gaps mode skips entity types that already have SEED-* rows. Abort if production. Optional `SEED_TENANT_ID`. Reset with `npx tsx scripts/cleanup-seed-volume.ts`. Not a roadmap feature.
 
@@ -1400,6 +1441,62 @@ The first objective is to deliver a complete, reliable business workflow for sma
 
 # Implementation Unit Log
 
+## 2026-08-26 — Wave 0 deferred follow-ups
+
+Status: Complete
+
+Implemented:
+- Ops ship checklist documented for Neon migrate / Netlify `CRON_SECRET` / outbox smoke.
+- Remaining mutation actions call `scheduleNotificationOutboxProcessing` after success.
+- Page RBAC: credit-notes, purchase-returns, sales-orders (+ Issue credit note / Issue return CTAs) use granular permissions.
+- Invitation metadata fallback via `clerkInvitationMetadataLookup` on membership webhooks.
+- Tests: org-lifecycle invitation ACCOUNTANT recovery; OWNER metadata ignored.
+
+---
+
+## 2026-08-26 — Audit fix Wave 0 (supervisor close-out)
+
+Status: Complete
+
+Implemented:
+- Wave 2 smoke: `tsc --noEmit` clean; targeted vitest (tenant/auth/sales/purchases/inventory/api/storage) green.
+- Wave 3 Bugbot blockers: `postPurchase` / `postPurchaseReturn` now `FOR UPDATE` + catch journal `P2002` → already-posted (parity with invoice/credit note).
+- Docs: this tracker + architecture notes (OWNER mapping, journal uniqueness, cron Bearer).
+
+Ship checklist:
+- Neon: `npx prisma migrate deploy` (includes journal unique + invoice line `unitCost`).
+- Netlify: set `CRON_SECRET`, pooled `DATABASE_URL`, redeploy.
+- Verify `POST /api/internal/outbox/process` with Bearer secret.
+
+---
+
+## 2026-08-26 — Audit fix Wave 0 (UI P0/P1)
+
+Status: Complete
+
+Implemented:
+- `useIsMobile` rewritten with `useSyncExternalStore` (`getServerSnapshot` → false); no `window` in `useState` initializer.
+- Mobile sidebar Sheet closes on pathname (`setOpenMobile(false)`; deps `[pathname, setOpenMobile]`).
+- `DocumentFormPreviewAside` collapse via `useSyncExternalStore` (lg/1023; server snapshot collapsed) to avoid CLS.
+- Invoice / bill / quotation detail: one More menu (`DetailMoreMenu` + status overflow actions).
+- Payment forms prefill amount + allocation when `invoiceId` / `purchaseId` selected on mount.
+- `ListFilterBar`: Filter/Clear actions visible outside closed Filters details on mobile.
+- Customer detail: Edit primary when no Record payment / New invoice; Deactivate in More.
+
+Files / Areas:
+- `hooks/use-mobile.ts`
+- `components/shell/app-sidebar.tsx`, `document-form-preview-aside.tsx`, `list-filter-bar.tsx`, `detail-more-menu.tsx`
+- `components/business/invoice-status-actions.tsx`, `quotation-status-actions.tsx`, `bill-status-actions.tsx`, `customer-detail-more-menu.tsx`, `record-payment-form.tsx`, `record-supplier-payment-form.tsx`
+- `app/app/(workspace)/sales/invoices/[id]/page.tsx`, `quotations/[id]/page.tsx`, `customers/[id]/page.tsx`
+- `app/app/(workspace)/purchases/bills/[id]/page.tsx`
+- `context/ui-context.md`
+
+Residual risks:
+- Desktop document forms briefly show collapsed preview until after hydration (SSR snapshot prefers narrow).
+- `DeactivateCustomerButton` remains for other call sites; customer detail uses `CustomerDetailMoreMenu` instead.
+
+---
+
 ## 2026-08-26 — Workspace mobile UX (post-login)
 
 Status: Complete
@@ -1446,6 +1543,7 @@ Status: Complete
 
 Implemented:
 - `20260822122000_align_quotation_and_projection_indexes` uses transactional `CREATE INDEX` / `DROP INDEX` so `prisma migrate deploy` works on Neon (Postgres rejects `CREATE INDEX CONCURRENTLY` inside Prisma’s migration transaction).
+- Audit Wave 0 Infra: rewrote `20260821010000_add_search_fts_indexes` and `20260822121000_fix_expenses_search_fts_index` the same way (`CREATE INDEX IF NOT EXISTS`, no `CONCURRENTLY`).
 
 Recovery on Neon after a failed deploy:
 ```bash
@@ -1455,6 +1553,8 @@ DATABASE_URL="your-neon-url" npx prisma migrate deploy
 
 Files / Areas:
 - `prisma/migrations/20260822122000_align_quotation_and_projection_indexes/migration.sql`
+- `prisma/migrations/20260821010000_add_search_fts_indexes/migration.sql`
+- `prisma/migrations/20260822121000_fix_expenses_search_fts_index/migration.sql`
 
 ---
 

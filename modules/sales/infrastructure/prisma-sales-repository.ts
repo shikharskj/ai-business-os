@@ -335,6 +335,7 @@ function mapInvoiceLine(record: {
   taxRateBps: number;
   quantity: { toString(): string };
   unitPrice: { toString(): string };
+  unitCost: { toString(): string } | null;
   discount: { toString(): string };
   lineSubtotal: { toString(): string };
   taxableAmount: { toString(): string };
@@ -359,6 +360,7 @@ function mapInvoiceLine(record: {
     taxRateBps: record.taxRateBps,
     quantity: quantityFromPrismaDecimal(record.quantity),
     unitPrice: moneyFromPrismaDecimal(record.unitPrice),
+    unitCost: record.unitCost ? moneyFromPrismaDecimal(record.unitCost) : null,
     discount: moneyFromPrismaDecimal(record.discount),
     lineSubtotal: moneyFromPrismaDecimal(record.lineSubtotal),
     taxableAmount: moneyFromPrismaDecimal(record.taxableAmount),
@@ -1155,7 +1157,11 @@ export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRep
 
     async markInvoicePosted(input) {
       const existing = await client.salesInvoice.findFirst({
-        where: { id: input.invoiceId, tenantId: input.tenantId },
+        where: {
+          id: input.invoiceId,
+          tenantId: input.tenantId,
+          status: input.expectedStatus,
+        },
       });
       if (!existing) {
         return null;
@@ -1187,6 +1193,31 @@ export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRep
       return mapInvoice(record);
     },
 
+    async setInvoiceLineUnitCosts(input) {
+      const existing = await client.salesInvoice.findFirst({
+        where: { id: input.invoiceId, tenantId: input.tenantId },
+        include: { lines: true },
+      });
+      if (!existing) {
+        return null;
+      }
+      for (const cost of input.costs) {
+        await client.salesInvoiceLine.updateMany({
+          where: {
+            id: cost.lineId,
+            invoiceId: input.invoiceId,
+            tenantId: input.tenantId,
+          },
+          data: { unitCost: toDecimalForPrisma(cost.unitCost) },
+        });
+      }
+      const record = await client.salesInvoice.findFirst({
+        where: { id: input.invoiceId, tenantId: input.tenantId },
+        include: { lines: true },
+      });
+      return record ? mapInvoice(record) : null;
+    },
+
     async lockInvoiceForUpdate(tenantId, invoiceId) {
       if (client === prisma) {
         throw new Error(
@@ -1205,6 +1236,25 @@ export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRep
         include: { lines: true },
       });
       return record ? mapInvoice(record) : null;
+    },
+
+    async lockCreditNoteForUpdate(tenantId, creditNoteId) {
+      if (client === prisma) {
+        throw new Error(
+          "lockCreditNoteForUpdate requires a transaction-bound Prisma client. " +
+          "Use prisma.$transaction() and pass the transaction client to createPrismaSalesRepository()."
+        );
+      }
+      await client.$queryRaw`
+        SELECT id FROM credit_notes
+        WHERE id = ${creditNoteId} AND "tenantId" = ${tenantId}
+        FOR UPDATE
+      `;
+      const record = await client.creditNote.findFirst({
+        where: { id: creditNoteId, tenantId },
+        include: { lines: true },
+      });
+      return record ? mapCreditNote(record) : null;
     },
 
     async findInvoiceById(tenantId, invoiceId) {
@@ -1423,7 +1473,11 @@ export function createPrismaSalesRepository(client: PrismaSalesClient): SalesRep
 
     async markCreditNotePosted(input) {
       const existing = await client.creditNote.findFirst({
-        where: { id: input.creditNoteId, tenantId: input.tenantId },
+        where: {
+          id: input.creditNoteId,
+          tenantId: input.tenantId,
+          status: input.expectedStatus,
+        },
       });
       if (!existing) {
         return null;

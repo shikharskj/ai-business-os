@@ -88,7 +88,7 @@ const envSchema = z.object({
   CRON_SECRET: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   AI_PROVIDER: z.preprocess((value) => {
     return emptyToUndefined(value);
-  }, z.enum(["gemini", "stub", "openai"]).optional()),
+  }, z.enum(["gemini", "stub"]).optional()),
   GEMINI_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   GEMINI_MODEL: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   // Signs AI action confirmations. When unset, a domain-separated key is

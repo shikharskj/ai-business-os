@@ -52,7 +52,7 @@ export default async function SalesOrdersPage({
     pageSize?: string;
   }>;
 }) {
-  const tenant = await authorize("quotation:read");
+  const tenant = await authorize("sales-order:read");
   const params = await searchParams;
   const { page, pageSize } = parseListTableParams(params);
   const parseResult = salesOrderSearchSchema.safeParse({
@@ -71,7 +71,7 @@ export default async function SalesOrdersPage({
         from: undefined,
         to: undefined,
       };
-  const canCreate = roleHasPermission(tenant.membership.role, "quotation:create");
+  const canCreate = roleHasPermission(tenant.membership.role, "sales-order:create");
   const result = await listSalesOrdersPage({
     tenantId: tenant.tenantId,
     query: filters.q,

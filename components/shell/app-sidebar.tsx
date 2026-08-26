@@ -285,7 +285,7 @@ export function AppSidebar({
   role: MembershipRole;
 }) {
   const pathname = usePathname();
-  const { isMobile, setOpenMobile } = useSidebar();
+  const { setOpenMobile } = useSidebar();
   const mainNav = useMemo(() => filterWorkspaceNav(role, WORKSPACE_MAIN_NAV), [role]);
   const footerNav = useMemo(
     () => filterWorkspaceNav(role, WORKSPACE_FOOTER_NAV),
@@ -293,10 +293,8 @@ export function AppSidebar({
   );
 
   useEffect(() => {
-    if (isMobile) {
-      setOpenMobile(false);
-    }
-  }, [pathname, isMobile, setOpenMobile]);
+    setOpenMobile(false);
+  }, [pathname, setOpenMobile]);
 
   const persistedGroups = useSyncExternalStore(
     () => () => {},

@@ -5,16 +5,10 @@ import {
   subtractQuantity,
 } from "@/modules/inventory/domain/quantity";
 import { recordInventoryMovement } from "@/modules/inventory/application/stock";
-import { toMajorString, money, type Money } from "@/modules/shared-kernel/money";
-import type { AuditRepository } from "@/modules/shared-kernel/audit";
-import type { OutboxRepository } from "@/modules/shared-kernel/outbox";
+import { toMajorString, money, compareMoney, type Money } from "@/modules/shared-kernel/money";
 import { persistDomainEvent } from "@/modules/events/application/persist-domain-event";
 import { ensureChartOfAccounts } from "@/modules/accounting/application/seed-chart";
 import { postJournal } from "@/modules/accounting/application/post-journal";
-import type {
-  AccountRepository,
-  JournalRepository,
-} from "@/modules/accounting/infrastructure/repositories";
 import type { PartyRepository } from "@/modules/party/infrastructure/repositories";
 import { CatalogNotFoundError } from "@/modules/catalog/domain/errors";
 import type { CatalogRepository } from "@/modules/catalog/infrastructure/repositories";
@@ -65,7 +59,9 @@ import type { PaymentRepository } from "@/modules/payments/infrastructure/reposi
 import { nextInvoicePaymentStatus } from "@/modules/payments/domain/status";
 import { remainingDocumentBalance } from "@/modules/payments/domain/allocation";
 
-export type CreditNoteUseCaseDeps = InvoiceUseCaseDeps;
+export type CreditNoteUseCaseDeps = InvoiceUseCaseDeps & {
+  payments: PaymentRepository;
+};
 
 export type CreditNotePostDeps = InvoicePostDeps & {
   payments: PaymentRepository;
@@ -73,6 +69,47 @@ export type CreditNotePostDeps = InvoicePostDeps & {
 
 function moneySnapshot(value: Money) {
   return { amount: toMajorString(value), currency: value.currency };
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code: unknown }).code === "P2002"
+  );
+}
+
+async function assertCreditWithinRemainingBalance(input: {
+  tenantId: string;
+  invoiceId: string;
+  invoiceGrandTotal: Money;
+  creditGrandTotal: Money;
+  sales: SalesRepository;
+  payments: PaymentRepository;
+}): Promise<void> {
+  const allocated =
+    (
+      await input.payments.allocatedTotalsForInvoices(input.tenantId, [
+        input.invoiceId,
+      ])
+    ).get(input.invoiceId) ?? money(0n, input.invoiceGrandTotal.currency);
+  const credited =
+    (
+      await input.sales.creditedTotalsForInvoices(input.tenantId, [
+        input.invoiceId,
+      ])
+    ).get(input.invoiceId) ?? money(0n, input.invoiceGrandTotal.currency);
+  const remaining = remainingDocumentBalance(
+    input.invoiceGrandTotal,
+    allocated,
+    credited
+  );
+  if (compareMoney(input.creditGrandTotal, remaining) > 0) {
+    throw new CreditNoteValidationError(
+      "Credit note total cannot exceed the invoice remaining balance."
+    );
+  }
 }
 
 async function prepareCreditNote(input: {
@@ -84,6 +121,7 @@ async function prepareCreditNote(input: {
   catalog: CatalogRepository;
   taxRates: TaxRateRepository;
   hsnSac: HsnSacRepository;
+  payments: PaymentRepository;
   excludeCreditNoteId?: string;
 }): Promise<PreparedCreditNote> {
   if (input.fields.lines.length === 0) {
@@ -206,6 +244,15 @@ async function prepareCreditNote(input: {
   const totals = aggregateQuotationLines(lines, currency);
   const notes = input.fields.notes?.trim() ? input.fields.notes.trim() : null;
 
+  await assertCreditWithinRemainingBalance({
+    tenantId: input.tenantId,
+    invoiceId: invoice.id,
+    invoiceGrandTotal: invoice.grandTotal,
+    creditGrandTotal: totals.grandTotal,
+    sales: input.sales,
+    payments: input.payments,
+  });
+
   return {
     customerId: invoice.customerId,
     customerName: invoice.customerName,
@@ -224,7 +271,10 @@ export async function previewCreditNote(input: {
   fields: CreditNoteInput;
   taxContext: SalesTaxContext;
   excludeCreditNoteId?: string;
-} & Pick<CreditNoteUseCaseDeps, "sales" | "parties" | "catalog" | "taxRates" | "hsnSac">): Promise<PreparedCreditNote> {
+} & Pick<
+  CreditNoteUseCaseDeps,
+  "sales" | "parties" | "catalog" | "taxRates" | "hsnSac" | "payments"
+>): Promise<PreparedCreditNote> {
   return prepareCreditNote(input);
 }
 
@@ -399,7 +449,7 @@ export async function postCreditNote(input: {
   taxContext: SalesTaxContext;
   closedThroughPeriodKey: string | null;
 } & CreditNotePostDeps): Promise<CreditNote> {
-  const existing = await input.sales.findCreditNoteById(
+  const existing = await input.sales.lockCreditNoteForUpdate(
     input.tenantId,
     input.creditNoteId
   );
@@ -427,6 +477,15 @@ export async function postCreditNote(input: {
       "Credit notes can only be posted against a posted invoice."
     );
   }
+
+  await assertCreditWithinRemainingBalance({
+    tenantId: input.tenantId,
+    invoiceId: invoice.id,
+    invoiceGrandTotal: invoice.grandTotal,
+    creditGrandTotal: existing.grandTotal,
+    sales: input.sales,
+    payments: input.payments,
+  });
 
   const creditedByLine = await input.sales.creditedQuantityByInvoiceLine({
     tenantId: input.tenantId,
@@ -473,7 +532,14 @@ export async function postCreditNote(input: {
     }
   }
 
-  const cogsLines = computeCreditNoteCogsLines(existing, productMap);
+  const invoiceLineMap = new Map(
+    invoice.lines.map((line) => [line.id, line] as const)
+  );
+  const cogsLines = computeCreditNoteCogsLines(
+    existing,
+    invoiceLineMap,
+    productMap
+  );
   const journalLines = buildCreditNoteJournalLines(existing, cogsLines);
 
   for (const line of existing.lines) {
@@ -502,18 +568,26 @@ export async function postCreditNote(input: {
     });
   }
 
-  const journal = await postJournal({
-    tenantId: input.tenantId,
-    accountingDate: existing.issuedOn,
-    financialYearStartMonth: input.taxContext.financialYearStartMonth,
-    closedThroughPeriodKey: input.closedThroughPeriodKey,
-    sourceType: "CreditNote",
-    sourceId: existing.id,
-    memo: `Credit note ${existing.number}`,
-    lines: journalLines,
-    accountRepository: input.accounts,
-    journalRepository: input.journals,
-  });
+  let journal;
+  try {
+    journal = await postJournal({
+      tenantId: input.tenantId,
+      accountingDate: existing.issuedOn,
+      financialYearStartMonth: input.taxContext.financialYearStartMonth,
+      closedThroughPeriodKey: input.closedThroughPeriodKey,
+      sourceType: "CreditNote",
+      sourceId: existing.id,
+      memo: `Credit note ${existing.number}`,
+      lines: journalLines,
+      accountRepository: input.accounts,
+      journalRepository: input.journals,
+    });
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      throw new CreditNoteAlreadyPostedError();
+    }
+    throw error;
+  }
 
   const creditNote = await input.sales.markCreditNotePosted({
     tenantId: input.tenantId,
@@ -521,9 +595,12 @@ export async function postCreditNote(input: {
     journalId: journal.id,
     postedAt: journal.postedAt,
     status: "POSTED",
+    expectedStatus: "DRAFT",
   });
   if (!creditNote) {
-    throw new CreditNoteNotFoundError();
+    throw new CreditNoteStatusError(
+      "Credit note was modified or posted by another operation. Please refresh and try again."
+    );
   }
 
   const allocated =

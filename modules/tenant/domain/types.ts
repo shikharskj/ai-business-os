@@ -64,11 +64,12 @@ export function mapClerkOrganizationRoleToMembershipRole(
   clerkRole: string,
   isCreator: boolean
 ): MembershipRole {
-  if (isCreator || clerkRole === "org:admin") {
+  // OWNER only for the business creator / ownerUserId match — never blanket org:admin.
+  if (isCreator) {
     return "OWNER";
   }
 
-  if (clerkRole.includes("admin")) {
+  if (clerkRole === "org:admin" || clerkRole.includes("admin")) {
     return "ADMIN";
   }
 

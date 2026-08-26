@@ -54,7 +54,7 @@ export default async function PurchaseReturnsPage({
     pageSize?: string;
   }>;
 }) {
-  const tenant = await authorize("purchase:read");
+  const tenant = await authorize("purchase-return:read");
   const params = await searchParams;
   const { page, pageSize } = parseListTableParams(params);
   const parseResult = purchaseReturnSearchSchema.safeParse({
@@ -73,7 +73,7 @@ export default async function PurchaseReturnsPage({
         from: undefined,
         to: undefined,
       };
-  const canCreate = roleHasPermission(tenant.membership.role, "purchase:create");
+  const canCreate = roleHasPermission(tenant.membership.role, "purchase-return:create");
   const result = await listPurchaseReturnsPage({
     tenantId: tenant.tenantId,
     query: filters.q,

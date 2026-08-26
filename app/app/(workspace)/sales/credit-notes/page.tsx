@@ -51,7 +51,7 @@ export default async function CreditNotesPage({
     pageSize?: string;
   }>;
 }) {
-  const tenant = await authorize("invoice:read");
+  const tenant = await authorize("credit-note:read");
   const params = await searchParams;
   const { page, pageSize } = parseListTableParams(params);
   const parseResult = creditNoteSearchSchema.safeParse({
@@ -70,7 +70,7 @@ export default async function CreditNotesPage({
         from: undefined,
         to: undefined,
       };
-  const canCreate = roleHasPermission(tenant.membership.role, "invoice:create");
+  const canCreate = roleHasPermission(tenant.membership.role, "credit-note:create");
   const result = await listCreditNotesPage({
     tenantId: tenant.tenantId,
     query: filters.q,

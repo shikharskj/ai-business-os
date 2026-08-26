@@ -17,6 +17,7 @@ import { InventoryError } from "@/modules/inventory/domain/errors";
 import { createPrismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";
 import { PartyError } from "@/modules/party";
 import { createPrismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
+import { scheduleNotificationOutboxProcessing } from "@/modules/notifications";
 import { createPrismaSupplierPaymentRepository } from "@/modules/payments/infrastructure/prisma-supplier-payments-repository";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
@@ -115,9 +116,11 @@ export async function createPurchaseReturnAction(
   formData: FormData
 ): Promise<PurchaseReturnActionState> {
   let purchaseReturnId: string;
+  let tenantId: string;
 
   try {
-    const tenant = await authorize("purchase:create");
+    const tenant = await authorize("purchase-return:create");
+    tenantId = tenant.tenantId;
     const fields = readPurchaseReturnFields(formData);
     const purchaseReturn = await prisma.$transaction(async (tx) =>
       createPurchaseReturn({
@@ -130,6 +133,7 @@ export async function createPurchaseReturnAction(
         catalog: createPrismaCatalogRepository(tx),
         taxRates: prismaTaxRateRepository,
         hsnSac: prismaHsnSacRepository,
+        supplierPayments: createPrismaSupplierPaymentRepository(tx),
         audit: createPrismaAuditRepository(tx),
         outbox: createPrismaOutboxRepository(tx),
       })
@@ -143,6 +147,7 @@ export async function createPurchaseReturnAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/purchases/returns");
   redirect(`/app/purchases/returns/${purchaseReturnId}?created=1`);
 }
@@ -152,9 +157,11 @@ export async function updatePurchaseReturnAction(
   formData: FormData
 ): Promise<PurchaseReturnActionState> {
   const purchaseReturnId = String(formData.get("purchaseReturnId") ?? "");
+  let tenantId: string;
 
   try {
-    const tenant = await authorize("purchase:update");
+    const tenant = await authorize("purchase-return:update");
+    tenantId = tenant.tenantId;
     const fields = readPurchaseReturnFields(formData);
     await prisma.$transaction(async (tx) =>
       updatePurchaseReturn({
@@ -168,6 +175,7 @@ export async function updatePurchaseReturnAction(
         catalog: createPrismaCatalogRepository(tx),
         taxRates: prismaTaxRateRepository,
         hsnSac: prismaHsnSacRepository,
+        supplierPayments: createPrismaSupplierPaymentRepository(tx),
         audit: createPrismaAuditRepository(tx),
         outbox: createPrismaOutboxRepository(tx),
       })
@@ -180,13 +188,14 @@ export async function updatePurchaseReturnAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/purchases/returns");
   revalidatePath(`/app/purchases/returns/${purchaseReturnId}`);
   redirect(`/app/purchases/returns/${purchaseReturnId}?saved=1`);
 }
 
 async function statusAction(
-  permission: "purchase:update" | "purchase:cancel",
+  permission: "purchase-return:update" | "purchase-return:cancel",
   purchaseReturnId: string,
   run: (input: {
     tenantId: string;
@@ -196,8 +205,10 @@ async function statusAction(
     outbox: OutboxRepository;
   }) => Promise<unknown>
 ): Promise<PurchaseReturnActionState> {
+  let tenantId: string;
   try {
     const tenant = await authorize(permission);
+    tenantId = tenant.tenantId;
     await prisma.$transaction(async (tx) =>
       run({
         tenantId: tenant.tenantId,
@@ -215,6 +226,7 @@ async function statusAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/purchases/returns");
   revalidatePath(`/app/purchases/returns/${purchaseReturnId}`);
   revalidatePath("/app/purchases/bills");
@@ -224,8 +236,10 @@ async function statusAction(
 export async function postPurchaseReturnAction(
   purchaseReturnId: string
 ): Promise<PurchaseReturnActionState> {
+  let tenantId: string;
   try {
-    const tenant = await authorize("purchase:update");
+    const tenant = await authorize("purchase-return:update");
+    tenantId = tenant.tenantId;
     await prisma.$transaction(async (tx) => {
       const business = await tx.business.findUnique({
         where: { id: tenant.tenantId },
@@ -257,6 +271,7 @@ export async function postPurchaseReturnAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/purchases/returns");
   revalidatePath(`/app/purchases/returns/${purchaseReturnId}`);
   revalidatePath("/app/purchases/bills");
@@ -266,7 +281,7 @@ export async function postPurchaseReturnAction(
 export async function cancelPurchaseReturnAction(
   purchaseReturnId: string
 ): Promise<PurchaseReturnActionState> {
-  return statusAction("purchase:cancel", purchaseReturnId, (ctx) =>
+  return statusAction("purchase-return:cancel", purchaseReturnId, (ctx) =>
     cancelPurchaseReturn({ ...ctx, purchaseReturnId })
   );
 }
@@ -280,7 +295,7 @@ export async function previewPurchaseReturnTotalsAction(input: {
 }): Promise<PurchaseReturnPreviewState> {
   try {
     const tenant = await authorize(
-      input.purchaseReturnId ? "purchase:update" : "purchase:create"
+      input.purchaseReturnId ? "purchase-return:update" : "purchase-return:create"
     );
     const completeLines = input.lines
       .slice(0, 1000)
@@ -313,6 +328,7 @@ export async function previewPurchaseReturnTotalsAction(input: {
       catalog: createPrismaCatalogRepository(prisma),
       taxRates: prismaTaxRateRepository,
       hsnSac: prismaHsnSacRepository,
+      supplierPayments: createPrismaSupplierPaymentRepository(prisma),
     });
 
     return {

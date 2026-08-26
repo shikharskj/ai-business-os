@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { MoreHorizontal } from "lucide-react";
 
@@ -16,9 +17,31 @@ export type DetailMoreMenuItem = {
   label: string;
 };
 
-/** Collapses secondary detail-page navigation into a More menu. */
-export function DetailMoreMenu({ items }: { items: DetailMoreMenuItem[] }) {
-  if (items.length === 0) {
+export type DetailMoreMenuActionItem = {
+  key: string;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  destructive?: boolean;
+};
+
+/** Collapses secondary detail-page navigation/actions into a single More menu. */
+export function DetailMoreMenu({
+  items,
+  actionItems = [],
+  children,
+  disabled = false,
+}: {
+  items?: DetailMoreMenuItem[];
+  actionItems?: DetailMoreMenuActionItem[];
+  children?: ReactNode;
+  disabled?: boolean;
+}) {
+  const navItems = items ?? [];
+  const hasContent =
+    navItems.length > 0 || actionItems.length > 0 || children != null;
+
+  if (!hasContent) {
     return null;
   }
 
@@ -29,6 +52,7 @@ export function DetailMoreMenu({ items }: { items: DetailMoreMenuItem[] }) {
           <Button
             type="button"
             variant="outline"
+            disabled={disabled}
             aria-label="More actions"
           />
         }
@@ -37,7 +61,7 @@ export function DetailMoreMenu({ items }: { items: DetailMoreMenuItem[] }) {
         <span className="sr-only">More</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {items.map((item) => (
+        {navItems.map((item) => (
           <DropdownMenuItem
             key={`${item.href}:${item.label}`}
             render={<Link href={item.href} />}
@@ -45,6 +69,17 @@ export function DetailMoreMenu({ items }: { items: DetailMoreMenuItem[] }) {
             {item.label}
           </DropdownMenuItem>
         ))}
+        {actionItems.map((item) => (
+          <DropdownMenuItem
+            key={item.key}
+            disabled={item.disabled}
+            onClick={item.onClick}
+            className={item.destructive ? "text-destructive" : undefined}
+          >
+            {item.label}
+          </DropdownMenuItem>
+        ))}
+        {children}
       </DropdownMenuContent>
     </DropdownMenu>
   );

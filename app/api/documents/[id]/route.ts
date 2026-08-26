@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { authorize, AuthorizationError } from "@/lib/security";
+import { authzErrorResponse } from "@/lib/http/auth-errors";
+import { authorize } from "@/lib/security";
 import { getStorageAdapter } from "@/lib/storage";
 import {
   DocumentError,
@@ -42,12 +43,13 @@ export async function GET(
       },
     });
   } catch (error) {
-    if (error instanceof DocumentNotFoundError) {
-      return NextResponse.json({ error: "Document was not found." }, { status: 404 });
+    const authz = authzErrorResponse(error);
+    if (authz) {
+      return authz;
     }
 
-    if (error instanceof AuthorizationError) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (error instanceof DocumentNotFoundError) {
+      return NextResponse.json({ error: "Document was not found." }, { status: 404 });
     }
 
     if (error instanceof DocumentError) {

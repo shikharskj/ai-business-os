@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { AuthorizationError } from "@/lib/security";
+import { authzErrorResponse } from "@/lib/http/auth-errors";
 import { ReportingError } from "@/modules/reporting";
 
 export function contentDisposition(filename: string): string {
@@ -22,8 +22,9 @@ export function csvResponse(filename: string, csv: string) {
 }
 
 export function reportExportErrorResponse(error: unknown) {
-  if (error instanceof AuthorizationError) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const authz = authzErrorResponse(error);
+  if (authz) {
+    return authz;
   }
   if (error instanceof ReportingError) {
     return NextResponse.json({ error: error.message }, { status: 400 });

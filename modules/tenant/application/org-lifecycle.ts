@@ -1,5 +1,9 @@
 import type { ApplicationUserStore } from "@/lib/auth/application-user-store";
 import {
+  APP_MEMBERSHIP_ROLE_METADATA_KEY,
+  parseAppMembershipRole,
+} from "@/modules/tenant/domain/invite-metadata";
+import {
   mapClerkOrganizationRoleToMembershipRole,
   type MembershipRole,
 } from "@/modules/tenant/domain/types";
@@ -13,6 +17,17 @@ import type {
   TenantLifecycleEvent,
 } from "@/modules/tenant/schemas/org-lifecycle.schema";
 
+/**
+ * Optional Clerk lookup when membership webhook publicMetadata is empty
+ * (Clerk often does not copy invitation publicMetadata onto memberships).
+ */
+export type InvitationMetadataLookup = {
+  findInvitationPublicMetadata(input: {
+    clerkOrganizationId: string;
+    clerkUserId: string;
+  }): Promise<Record<string, unknown> | null>;
+};
+
 function mapInviteRoleToMembershipRole(role: string): MembershipRole {
   if (role === "ADMIN") {
     return "ADMIN";
@@ -23,6 +38,41 @@ function mapInviteRoleToMembershipRole(role: string): MembershipRole {
   }
 
   return "STAFF";
+}
+
+function resolveMembershipRole(input: {
+  clerkRole: string;
+  publicMetadata: Record<string, unknown> | null;
+  isCreator: boolean;
+}): MembershipRole {
+  // OWNER only when this application user owns the business.
+  if (input.isCreator) {
+    return "OWNER";
+  }
+
+  const metaRole = parseAppMembershipRole(
+    input.publicMetadata?.[APP_MEMBERSHIP_ROLE_METADATA_KEY]
+  );
+  if (metaRole && metaRole !== "OWNER") {
+    return metaRole;
+  }
+
+  const rawMeta = input.publicMetadata?.[APP_MEMBERSHIP_ROLE_METADATA_KEY];
+  if (typeof rawMeta === "string" && rawMeta.length > 0) {
+    return mapInviteRoleToMembershipRole(rawMeta);
+  }
+
+  return mapClerkOrganizationRoleToMembershipRole(input.clerkRole, false);
+}
+
+function membershipMetadataHasRole(
+  publicMetadata: Record<string, unknown> | null
+): boolean {
+  if (!publicMetadata) {
+    return false;
+  }
+  const value = publicMetadata[APP_MEMBERSHIP_ROLE_METADATA_KEY];
+  return typeof value === "string" && value.length > 0;
 }
 
 async function resolveApplicationUserId(
@@ -38,6 +88,7 @@ async function applyOrganizationMembershipEvent(
     userStore: ApplicationUserStore;
     businessRepository: BusinessRepository;
     membershipRepository: MembershipRepository;
+    invitationMetadataLookup?: InvitationMetadataLookup;
   },
   event: OrganizationMembershipLifecycleEvent
 ) {
@@ -74,15 +125,27 @@ async function applyOrganizationMembershipEvent(
     event.clerkUserId
   );
 
-  const existing = await deps.membershipRepository.findByClerkOrganizationMembershipId(
-    event.clerkOrganizationMembershipId
-  );
+  let publicMetadata = event.publicMetadata;
+  if (
+    !membershipMetadataHasRole(publicMetadata) &&
+    deps.invitationMetadataLookup
+  ) {
+    const invitationMetadata =
+      await deps.invitationMetadataLookup.findInvitationPublicMetadata({
+        clerkOrganizationId: event.clerkOrganizationId,
+        clerkUserId: event.clerkUserId,
+      });
+    if (invitationMetadata) {
+      publicMetadata = invitationMetadata;
+    }
+  }
 
-  const role = existing?.role ??
-    mapClerkOrganizationRoleToMembershipRole(
-      event.clerkRole,
-      business.ownerUserId === applicationUserId
-    );
+  // Always recompute on created/updated — never sticky existing.role.
+  const role = resolveMembershipRole({
+    clerkRole: event.clerkRole,
+    publicMetadata,
+    isCreator: business.ownerUserId === applicationUserId,
+  });
 
   await deps.membershipRepository.upsertActiveMembership({
     userId: applicationUserId,
@@ -141,6 +204,7 @@ export async function applyTenantLifecycleEvent(
     userStore: ApplicationUserStore;
     businessRepository: BusinessRepository;
     membershipRepository: MembershipRepository;
+    invitationMetadataLookup?: InvitationMetadataLookup;
   },
   event: TenantLifecycleEvent
 ): Promise<void> {

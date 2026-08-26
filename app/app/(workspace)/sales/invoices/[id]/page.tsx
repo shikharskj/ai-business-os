@@ -14,7 +14,6 @@ import {
   CREDIT_NOTE_STATUS_TONES,
   invoicePaymentBadgePresentation,
 } from "@/components/business/status-tone";
-import { DetailMoreMenu } from "@/components/shell/detail-more-menu";
 import { PageHeader } from "@/components/shell/page-header";
 import {
   DocumentFormPreviewAside,
@@ -80,7 +79,7 @@ export default async function InvoiceDetailPage({
   const canRead = roleHasPermission(tenant.membership.role, "invoice:read");
   const canCreateCreditNote = roleHasPermission(
     tenant.membership.role,
-    "invoice:create",
+    "credit-note:create",
   );
   const canCreatePayment = roleHasPermission(
     tenant.membership.role,
@@ -211,8 +210,14 @@ export default async function InvoiceDetailPage({
                 Edit
               </Button>
             ) : null}
-            <DetailMoreMenu
-              items={[
+            <InvoiceStatusActions
+              invoiceId={invoice.id}
+              status={invoice.status}
+              canUpdate={canUpdate}
+              canCancel={canCancel}
+              canRead={canRead}
+              exportInMenu={canRecordPayment}
+              moreItems={[
                 { href: "/app/sales/invoices", label: "Back to invoices" },
                 ...(canUpdate &&
                 invoice.status === "DRAFT" &&
@@ -233,14 +238,6 @@ export default async function InvoiceDetailPage({
                     ]
                   : []),
               ]}
-            />
-            <InvoiceStatusActions
-              invoiceId={invoice.id}
-              status={invoice.status}
-              canUpdate={canUpdate}
-              canCancel={canCancel}
-              canRead={canRead}
-              exportInMenu={canRecordPayment}
             />
           </div>
         }

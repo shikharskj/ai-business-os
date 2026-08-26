@@ -12,5 +12,7 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
     setupFiles: ["tests/setup.ts"],
+    // Integration tests share one Postgres; disable file-level parallelism.
+    fileParallelism: false,
   },
 });

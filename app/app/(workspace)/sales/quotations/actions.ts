@@ -9,6 +9,7 @@ import { getStorageAdapter } from "@/lib/storage";
 import { authorize, AuthorizationError } from "@/lib/security";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
+import { scheduleNotificationOutboxProcessing } from "@/modules/notifications";
 import { CatalogError } from "@/modules/catalog";
 import { createPrismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 import { prismaDocumentRepository } from "@/modules/documents/infrastructure/prisma-document-repository";
@@ -105,9 +106,11 @@ export async function createQuotationAction(
   formData: FormData
 ): Promise<QuotationActionState> {
   let quotationId: string;
+  let tenantId: string;
 
   try {
     const tenant = await authorize("quotation:create");
+    tenantId = tenant.tenantId;
     const fields = readQuotationFields(formData);
     const quotation = await prisma.$transaction(async (tx) =>
       createQuotation({
@@ -133,6 +136,7 @@ export async function createQuotationAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/quotations");
   redirect(`/app/sales/quotations/${quotationId}?created=1`);
 }
@@ -142,9 +146,11 @@ export async function updateQuotationAction(
   formData: FormData
 ): Promise<QuotationActionState> {
   const quotationId = String(formData.get("quotationId") ?? "");
+  let tenantId: string;
 
   try {
     const tenant = await authorize("quotation:update");
+    tenantId = tenant.tenantId;
     const fields = readQuotationFields(formData);
     await prisma.$transaction(async (tx) =>
       updateQuotation({
@@ -170,6 +176,7 @@ export async function updateQuotationAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/quotations");
   revalidatePath(`/app/sales/quotations/${quotationId}`);
   redirect(`/app/sales/quotations/${quotationId}?saved=1`);
@@ -186,8 +193,10 @@ async function statusAction(
     outbox: OutboxRepository;
   }) => Promise<unknown>
 ): Promise<QuotationActionState> {
+  let tenantId: string;
   try {
     const tenant = await authorize(permission);
+    tenantId = tenant.tenantId;
     await prisma.$transaction(async (tx) =>
       run({
         tenantId: tenant.tenantId,
@@ -205,6 +214,7 @@ async function statusAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/quotations");
   revalidatePath(`/app/sales/quotations/${quotationId}`);
   return {};
@@ -232,9 +242,11 @@ export async function convertQuotationToSalesOrderAction(
   quotationId: string
 ): Promise<QuotationActionState> {
   let salesOrderId: string;
+  let tenantId: string;
 
   try {
     const tenant = await authorize("quotation:update");
+    tenantId = tenant.tenantId;
     const salesOrder = await prisma.$transaction(async (tx) =>
       convertQuotationToSalesOrder({
         tenantId: tenant.tenantId,
@@ -262,6 +274,7 @@ export async function convertQuotationToSalesOrderAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/quotations");
   revalidatePath(`/app/sales/quotations/${quotationId}`);
   revalidatePath("/app/sales/orders");
@@ -271,9 +284,11 @@ export async function convertQuotationToSalesOrderAction(
 
 export async function convertQuotationAction(quotationId: string): Promise<QuotationActionState> {
   let invoiceId: string;
+  let tenantId: string;
 
   try {
     const tenant = await authorize("invoice:create");
+    tenantId = tenant.tenantId;
     const invoice = await prisma.$transaction(async (tx) =>
       convertQuotationToInvoice({
         tenantId: tenant.tenantId,
@@ -301,6 +316,7 @@ export async function convertQuotationAction(quotationId: string): Promise<Quota
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/quotations");
   revalidatePath(`/app/sales/quotations/${quotationId}`);
   revalidatePath("/app/sales/invoices");

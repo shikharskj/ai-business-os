@@ -100,8 +100,18 @@ function RecordSupplierPaymentFormFields({
     (row) => row.purchaseId === selectedPurchaseId
   );
   const [method, setMethod] = useState<PaymentMethod>("CASH");
-  const [amount, setAmount] = useState("");
-  const [allocations, setAllocations] = useState<Record<string, string>>({});
+  const [amount, setAmount] = useState(() =>
+    selectedPurchase ? toMajorString(selectedPurchase.outstanding) : ""
+  );
+  const [allocations, setAllocations] = useState<Record<string, string>>(() =>
+    selectedPurchase
+      ? {
+          [selectedPurchase.purchaseId]: toMajorString(
+            selectedPurchase.outstanding
+          ),
+        }
+      : {}
+  );
 
   const methodItems = useMemo(
     () =>

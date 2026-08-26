@@ -5,7 +5,7 @@ import {
   subtractQuantity,
 } from "@/modules/inventory/domain/quantity";
 import { recordInventoryMovement } from "@/modules/inventory/application/stock";
-import { toMajorString, money, type Money } from "@/modules/shared-kernel/money";
+import { toMajorString, money, compareMoney, type Money } from "@/modules/shared-kernel/money";
 import { persistDomainEvent } from "@/modules/events/application/persist-domain-event";
 import { ensureChartOfAccounts } from "@/modules/accounting/application/seed-chart";
 import { postJournal } from "@/modules/accounting/application/post-journal";
@@ -56,7 +56,9 @@ import type { SupplierPaymentRepository } from "@/modules/payments/infrastructur
 import { nextPurchasePaymentStatus } from "@/modules/payments/domain/status";
 import { remainingDocumentBalance } from "@/modules/payments/domain/allocation";
 
-export type PurchaseReturnUseCaseDeps = PurchaseUseCaseDeps;
+export type PurchaseReturnUseCaseDeps = PurchaseUseCaseDeps & {
+  supplierPayments: SupplierPaymentRepository;
+};
 
 export type PurchaseReturnPostDeps = PurchasePostDeps & {
   supplierPayments: SupplierPaymentRepository;
@@ -64,6 +66,38 @@ export type PurchaseReturnPostDeps = PurchasePostDeps & {
 
 function moneySnapshot(value: Money) {
   return { amount: toMajorString(value), currency: value.currency };
+}
+
+async function assertReturnWithinRemainingBalance(input: {
+  tenantId: string;
+  purchaseId: string;
+  purchaseGrandTotal: Money;
+  returnGrandTotal: Money;
+  purchases: PurchasesRepository;
+  supplierPayments: SupplierPaymentRepository;
+}): Promise<void> {
+  const allocated =
+    (
+      await input.supplierPayments.allocatedTotalsForPurchases(input.tenantId, [
+        input.purchaseId,
+      ])
+    ).get(input.purchaseId) ?? money(0n, input.purchaseGrandTotal.currency);
+  const returned =
+    (
+      await input.purchases.returnedTotalsForPurchases(input.tenantId, [
+        input.purchaseId,
+      ])
+    ).get(input.purchaseId) ?? money(0n, input.purchaseGrandTotal.currency);
+  const remaining = remainingDocumentBalance(
+    input.purchaseGrandTotal,
+    allocated,
+    returned
+  );
+  if (compareMoney(input.returnGrandTotal, remaining) > 0) {
+    throw new PurchaseReturnValidationError(
+      "Purchase return total cannot exceed the bill remaining balance."
+    );
+  }
 }
 
 async function preparePurchaseReturn(input: {
@@ -75,6 +109,7 @@ async function preparePurchaseReturn(input: {
   catalog: PurchaseUseCaseDeps["catalog"];
   taxRates: PurchaseUseCaseDeps["taxRates"];
   hsnSac: PurchaseUseCaseDeps["hsnSac"];
+  supplierPayments: SupplierPaymentRepository;
   excludePurchaseReturnId?: string;
 }): Promise<PreparedPurchaseReturn> {
   if (input.fields.lines.length === 0) {
@@ -196,6 +231,15 @@ async function preparePurchaseReturn(input: {
   const totals = aggregatePurchaseLines(lines, currency);
   const notes = input.fields.notes?.trim() ? input.fields.notes.trim() : null;
 
+  await assertReturnWithinRemainingBalance({
+    tenantId: input.tenantId,
+    purchaseId: purchase.id,
+    purchaseGrandTotal: purchase.grandTotal,
+    returnGrandTotal: totals.grandTotal,
+    purchases: input.purchases,
+    supplierPayments: input.supplierPayments,
+  });
+
   return {
     supplierId: purchase.supplierId,
     supplierName: purchase.supplierName,
@@ -216,7 +260,7 @@ export async function previewPurchaseReturn(input: {
   excludePurchaseReturnId?: string;
 } & Pick<
   PurchaseReturnUseCaseDeps,
-  "purchases" | "parties" | "catalog" | "taxRates" | "hsnSac"
+  "purchases" | "parties" | "catalog" | "taxRates" | "hsnSac" | "supplierPayments"
 >): Promise<PreparedPurchaseReturn> {
   return preparePurchaseReturn(input);
 }
@@ -385,6 +429,15 @@ export async function listPurchaseReturns(input: {
   });
 }
 
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code: unknown }).code === "P2002"
+  );
+}
+
 export async function postPurchaseReturn(input: {
   tenantId: string;
   actorUserId: string;
@@ -392,7 +445,7 @@ export async function postPurchaseReturn(input: {
   taxContext: PurchaseTaxContext;
   closedThroughPeriodKey: string | null;
 } & PurchaseReturnPostDeps): Promise<PurchaseReturn> {
-  const existing = await input.purchases.findPurchaseReturnById(
+  const existing = await input.purchases.lockPurchaseReturnForUpdate(
     input.tenantId,
     input.purchaseReturnId
   );
@@ -420,6 +473,15 @@ export async function postPurchaseReturn(input: {
       "Purchase returns can only be posted against a posted bill."
     );
   }
+
+  await assertReturnWithinRemainingBalance({
+    tenantId: input.tenantId,
+    purchaseId: purchase.id,
+    purchaseGrandTotal: purchase.grandTotal,
+    returnGrandTotal: existing.grandTotal,
+    purchases: input.purchases,
+    supplierPayments: input.supplierPayments,
+  });
 
   await ensureChartOfAccounts({
     tenantId: input.tenantId,
@@ -472,18 +534,26 @@ export async function postPurchaseReturn(input: {
     });
   }
 
-  const journal = await postJournal({
-    tenantId: input.tenantId,
-    accountingDate: existing.issuedOn,
-    financialYearStartMonth: input.taxContext.financialYearStartMonth,
-    closedThroughPeriodKey: input.closedThroughPeriodKey,
-    sourceType: "PurchaseReturn",
-    sourceId: existing.id,
-    memo: `Purchase return ${existing.number}`,
-    lines: journalLines,
-    accountRepository: input.accounts,
-    journalRepository: input.journals,
-  });
+  let journal;
+  try {
+    journal = await postJournal({
+      tenantId: input.tenantId,
+      accountingDate: existing.issuedOn,
+      financialYearStartMonth: input.taxContext.financialYearStartMonth,
+      closedThroughPeriodKey: input.closedThroughPeriodKey,
+      sourceType: "PurchaseReturn",
+      sourceId: existing.id,
+      memo: `Purchase return ${existing.number}`,
+      lines: journalLines,
+      accountRepository: input.accounts,
+      journalRepository: input.journals,
+    });
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      throw new PurchaseReturnAlreadyPostedError();
+    }
+    throw error;
+  }
 
   const purchaseReturn = await input.purchases.markPurchaseReturnPosted({
     tenantId: input.tenantId,

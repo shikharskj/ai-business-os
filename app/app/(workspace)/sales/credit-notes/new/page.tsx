@@ -21,7 +21,7 @@ export default async function NewCreditNotePage({
 }: {
   searchParams: Promise<{ invoiceId?: string }>;
 }) {
-  const tenant = await authorize("invoice:create");
+  const tenant = await authorize("credit-note:create");
   const params = await searchParams;
   const invoices = await listInvoices({
     tenantId: tenant.tenantId,

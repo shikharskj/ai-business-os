@@ -55,6 +55,10 @@ export type PurchasesRepository = {
     tenantId: string,
     purchaseId: string
   ): Promise<Purchase | null>;
+  lockPurchaseReturnForUpdate(
+    tenantId: string,
+    purchaseReturnId: string
+  ): Promise<PurchaseReturn | null>;
   findPurchaseById(tenantId: string, purchaseId: string): Promise<Purchase | null>;
   listPurchases(filter: PurchaseListFilter): Promise<Purchase[]>;
   listPurchasesPage(
@@ -284,6 +288,12 @@ export function createMemoryPurchasesRepository(
         (item) => item.tenantId === tenantId && item.id === purchaseId
       );
       return record ? clonePurchase(record) : null;
+    },
+    async lockPurchaseReturnForUpdate(tenantId, purchaseReturnId) {
+      const record = purchaseReturns.find(
+        (item) => item.tenantId === tenantId && item.id === purchaseReturnId
+      );
+      return record ? clonePurchaseReturn(record) : null;
     },
     async findPurchaseById(tenantId, purchaseId) {
       const record = records.find(

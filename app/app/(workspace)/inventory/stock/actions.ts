@@ -9,8 +9,8 @@ import { authorize, AuthorizationError } from "@/lib/security";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 import { businessDate } from "@/modules/shared-kernel/dates";
-import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
-import { prismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";
+import { createPrismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
+import { createPrismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";
 import { scheduleNotificationOutboxProcessing } from "@/modules/notifications";
 import {
   InventoryError,
@@ -32,9 +32,6 @@ export type StockActionState = {
     direction?: InventoryMovementDirection;
   };
 };
-
-const audit = createPrismaAuditRepository(prisma);
-const outbox = createPrismaOutboxRepository(prisma);
 
 function formatZodErrors(error: ZodError): Record<string, string> {
   return Object.fromEntries(
@@ -65,18 +62,20 @@ export async function recordOpeningStockAction(
       reason: formData.get("reason") || undefined,
     });
 
-    await recordOpeningStock({
-      tenantId: tenant.tenantId,
-      actorUserId: tenant.membership.userId,
-      productId: fields.productId,
-      quantity: quantityFromMajor(fields.quantity),
-      occurredOn: businessDate(fields.occurredOn),
-      reason: fields.reason,
-      catalog: prismaCatalogRepository,
-      inventory: prismaInventoryRepository,
-      audit,
-      outbox,
-    });
+    await prisma.$transaction(async (tx) =>
+      recordOpeningStock({
+        tenantId: tenant.tenantId,
+        actorUserId: tenant.membership.userId,
+        productId: fields.productId,
+        quantity: quantityFromMajor(fields.quantity),
+        occurredOn: businessDate(fields.occurredOn),
+        reason: fields.reason,
+        catalog: createPrismaCatalogRepository(tx),
+        inventory: createPrismaInventoryRepository(tx),
+        audit: createPrismaAuditRepository(tx),
+        outbox: createPrismaOutboxRepository(tx),
+      })
+    );
     scheduleNotificationOutboxProcessing(tenant.tenantId);
   } catch (error) {
     if (error instanceof ZodError) {
@@ -123,20 +122,22 @@ export async function recordStockAdjustmentAction(
       reason: formData.get("reason"),
     });
 
-    await recordStockAdjustment({
-      tenantId: tenant.tenantId,
-      actorUserId: tenant.membership.userId,
-      productId: fields.productId,
-      direction: fields.direction,
-      quantity: quantityFromMajor(fields.quantity),
-      occurredOn: businessDate(fields.occurredOn),
-      reason: fields.reason,
-      idempotencyKey: idempotencyKey || `adjustment:${crypto.randomUUID()}`,
-      catalog: prismaCatalogRepository,
-      inventory: prismaInventoryRepository,
-      audit,
-      outbox,
-    });
+    await prisma.$transaction(async (tx) =>
+      recordStockAdjustment({
+        tenantId: tenant.tenantId,
+        actorUserId: tenant.membership.userId,
+        productId: fields.productId,
+        direction: fields.direction,
+        quantity: quantityFromMajor(fields.quantity),
+        occurredOn: businessDate(fields.occurredOn),
+        reason: fields.reason,
+        idempotencyKey: idempotencyKey || `adjustment:${crypto.randomUUID()}`,
+        catalog: createPrismaCatalogRepository(tx),
+        inventory: createPrismaInventoryRepository(tx),
+        audit: createPrismaAuditRepository(tx),
+        outbox: createPrismaOutboxRepository(tx),
+      })
+    );
     scheduleNotificationOutboxProcessing(tenant.tenantId);
   } catch (error) {
     if (error instanceof ZodError) {

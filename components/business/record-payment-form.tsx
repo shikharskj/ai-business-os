@@ -103,8 +103,14 @@ function RecordPaymentFormFields({
   const selectedInvoice = invoices.find((row) => row.invoiceId === selectedInvoiceId);
   const [method, setMethod] = useState<PaymentMethod>("CASH");
   const [receivedOn, setReceivedOn] = useState(today);
-  const [amount, setAmount] = useState("");
-  const [allocations, setAllocations] = useState<Record<string, string>>({});
+  const [amount, setAmount] = useState(() =>
+    selectedInvoice ? toMajorString(selectedInvoice.outstanding) : ""
+  );
+  const [allocations, setAllocations] = useState<Record<string, string>>(() =>
+    selectedInvoice
+      ? { [selectedInvoice.invoiceId]: toMajorString(selectedInvoice.outstanding) }
+      : {}
+  );
 
   const methodItems = useMemo(
     () =>

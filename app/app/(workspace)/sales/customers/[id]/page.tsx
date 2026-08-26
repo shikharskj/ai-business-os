@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { DeactivateCustomerButton } from "@/components/business/deactivate-customer-button";
 import { formatDisplayDate } from "@/components/business/inventory-labels";
 import { MoneyDisplay } from "@/components/business/money-display";
+import { CustomerDetailMoreMenu } from "@/components/business/customer-detail-more-menu";
 import { ReactivateCustomerButton } from "@/components/business/reactivate-customer-button";
 import { StatusBadge } from "@/components/business/status-badge";
 import {
@@ -16,7 +16,6 @@ import {
   SALES_ORDER_STATUS_TONES,
 } from "@/components/business/status-tone";
 import { PageHeader } from "@/components/shell/page-header";
-import { DetailMoreMenu } from "@/components/shell/detail-more-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -131,6 +130,13 @@ export default async function CustomerDetailPage({
   const recentSalesOrders = salesOrders.slice(0, RELATED_LIMIT);
   const canRecordPayment =
     canCreatePayment && outstanding.outstanding.amountMinor > 0n;
+  const showNewInvoicePrimary =
+    !canRecordPayment && canCreateInvoice && customer.status === "ACTIVE";
+  const showEditPrimary =
+    !canRecordPayment &&
+    !showNewInvoicePrimary &&
+    canUpdate &&
+    customer.status === "ACTIVE";
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
@@ -153,15 +159,24 @@ export default async function CustomerDetailPage({
               >
                 Record payment
               </Button>
-            ) : canCreateInvoice && customer.status === "ACTIVE" ? (
+            ) : showNewInvoicePrimary ? (
               <Button
                 nativeButton={false}
                 render={<Link href="/app/sales/invoices/new" />}
               >
                 New invoice
               </Button>
+            ) : showEditPrimary ? (
+              <Button
+                nativeButton={false}
+                render={
+                  <Link href={`/app/sales/customers/${customer.id}/edit`} />
+                }
+              >
+                Edit
+              </Button>
             ) : null}
-            <DetailMoreMenu
+            <CustomerDetailMoreMenu
               items={[
                 { href: "/app/sales/customers", label: "Back to customers" },
                 ...(canCreateInvoice &&
@@ -177,7 +192,9 @@ export default async function CustomerDetailPage({
                       },
                     ]
                   : []),
-                ...(canUpdate && customer.status === "ACTIVE"
+                ...(canUpdate &&
+                customer.status === "ACTIVE" &&
+                !showEditPrimary
                   ? [
                       {
                         href: `/app/sales/customers/${customer.id}/edit`,
@@ -186,13 +203,15 @@ export default async function CustomerDetailPage({
                     ]
                   : []),
               ]}
+              deactivate={
+                canUpdate && customer.status === "ACTIVE"
+                  ? {
+                      customerId: customer.id,
+                      customerName: customer.name,
+                    }
+                  : undefined
+              }
             />
-            {canUpdate && customer.status === "ACTIVE" ? (
-              <DeactivateCustomerButton
-                customerId={customer.id}
-                customerName={customer.name}
-              />
-            ) : null}
             {canUpdate && customer.status === "INACTIVE" ? (
               <ReactivateCustomerButton
                 customerId={customer.id}

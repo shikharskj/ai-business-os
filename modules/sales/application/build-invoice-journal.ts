@@ -10,19 +10,50 @@ export type InvoiceCogsLine = {
   amount: Money;
 };
 
-export function computeInvoiceCogsLines(
+export type InvoiceLineUnitCost = {
+  lineId: string;
+  unitCost: Money;
+};
+
+/**
+ * Resolve COGS unit costs at invoice post: prefer already-stored line.unitCost,
+ * otherwise snapshot product.purchasePrice for tracked inventory lines.
+ */
+export function resolveInvoiceLineUnitCosts(
   invoice: SalesInvoice,
   products: Map<string, Product>
+): InvoiceLineUnitCost[] {
+  const costs: InvoiceLineUnitCost[] = [];
+  for (const line of invoice.lines) {
+    const product = products.get(line.productId);
+    if (!product?.tracksInventory) {
+      continue;
+    }
+    costs.push({
+      lineId: line.id,
+      unitCost: line.unitCost ?? product.purchasePrice,
+    });
+  }
+  return costs;
+}
+
+export function computeInvoiceCogsLines(
+  invoice: SalesInvoice,
+  products: Map<string, Product>,
+  unitCosts?: InvoiceLineUnitCost[]
 ): InvoiceCogsLine[] {
+  const costByLine = new Map((unitCosts ?? []).map((c) => [c.lineId, c.unitCost]));
   const lines: InvoiceCogsLine[] = [];
   for (const line of invoice.lines) {
     const product = products.get(line.productId);
     if (!product?.tracksInventory) {
       continue;
     }
+    const unitCost =
+      costByLine.get(line.id) ?? line.unitCost ?? product.purchasePrice;
     lines.push({
       productId: line.productId,
-      amount: moneyTimesQuantity(product.purchasePrice, line.quantity),
+      amount: moneyTimesQuantity(unitCost, line.quantity),
     });
   }
   return lines;

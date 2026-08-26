@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { timingSafeEqual } from "crypto";
 
+import { authorizeCronRequest } from "@/lib/auth/cron-auth";
 import { prisma } from "@/lib/db/client";
 import { env } from "@/lib/env";
 import { createPrismaBusinessStateConsumerDeps } from "@/modules/business-state/infrastructure/prisma-consumer-deps";
@@ -15,29 +15,15 @@ import {
 
 /**
  * Background entrypoint for outbox consumer fan-out and overdue scans.
- * Protect with CRON_SECRET when configured; otherwise allow in development only.
+ * Public path (no Clerk session); authz = Bearer CRON_SECRET only.
  */
 export async function POST(request: Request) {
-  const configured = env.CRON_SECRET;
-  if (configured) {
-    const header = request.headers.get("authorization");
-    const expected = `Bearer ${configured}`;
-
-    if (!header || header.length !== expected.length) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const headerBuf = Buffer.from(header);
-    const expectedBuf = Buffer.from(expected);
-
-    if (!timingSafeEqual(headerBuf, expectedBuf)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  } else if (env.NODE_ENV === "production") {
-    return NextResponse.json(
-      { error: "CRON_SECRET is required in production." },
-      { status: 503 }
-    );
+  const unauthorized = authorizeCronRequest(request, {
+    cronSecret: env.CRON_SECRET,
+    nodeEnv: env.NODE_ENV,
+  });
+  if (unauthorized) {
+    return unauthorized;
   }
 
   const notifications = createPrismaNotificationRepository(prisma);

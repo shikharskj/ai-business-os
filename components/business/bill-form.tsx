@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { GST_STATE_CODES } from "@/modules/tax/domain/gstin";
-import { gstinStateCode, stateCodeFromName } from "@/modules/tax/domain/gstin";
 import { toMajorString } from "@/modules/shared-kernel/money";
 import { toQuantityMajorString } from "@/modules/inventory/domain/quantity";
 import type { Purchase } from "@/modules/purchases/domain/types";
@@ -60,23 +59,6 @@ const emptyLine: LineDraft = {
   unitPrice: "",
   discount: "0",
 };
-
-function supplierPlaceOfSupply(supplier: BillSupplierOption | undefined): string {
-  if (!supplier) {
-    return "";
-  }
-  if (supplier.gstin) {
-    try {
-      return gstinStateCode(supplier.gstin);
-    } catch {
-      // Fall through to the supplier's state name.
-    }
-  }
-  if (supplier.state) {
-    return stateCodeFromName(supplier.state) ?? "";
-  }
-  return "";
-}
 
 function FieldError({
   name,
@@ -141,6 +123,7 @@ export function BillForm({
   products,
   today,
   purchase,
+  businessPlaceOfSupplyStateCode,
   initialSupplierId,
   initialProductId,
   initialLineIndex,
@@ -149,6 +132,8 @@ export function BillForm({
   products: BillProductOption[];
   today: string;
   purchase?: Purchase;
+  /** Default PoS for purchases = business (recipient) state, not supplier GSTIN state. */
+  businessPlaceOfSupplyStateCode?: string;
   initialSupplierId?: string;
   initialProductId?: string;
   initialLineIndex?: number;
@@ -163,8 +148,7 @@ export function BillForm({
       resolveInitialEntityId(suppliers, initialSupplierId)
   );
   const [placeOfSupply, setPlaceOfSupply] = useState(
-    purchase?.placeOfSupplyStateCode ??
-      supplierPlaceOfSupply(suppliers.find((row) => row.id === supplierId))
+    purchase?.placeOfSupplyStateCode ?? businessPlaceOfSupplyStateCode ?? ""
   );
   const [lines, setLines] = useState<LineDraft[]>(
     purchase
@@ -225,11 +209,7 @@ export function BillForm({
           <Select
             value={supplierId}
             onValueChange={(value) => {
-              const next = String(value ?? "");
-              setSupplierId(next);
-              setPlaceOfSupply(
-                supplierPlaceOfSupply(suppliers.find((row) => row.id === next))
-              );
+              setSupplierId(String(value ?? ""));
             }}
             items={supplierItems}
           >

@@ -105,9 +105,11 @@ export async function createPurchaseAction(
   formData: FormData
 ): Promise<PurchaseActionState> {
   let purchaseId: string;
+  let tenantId: string;
 
   try {
     const tenant = await authorize("purchase:create");
+    tenantId = tenant.tenantId;
     const taxContext = taxContextFromTenant(tenant);
     const fields = readPurchaseFields(formData, taxContext.currency);
     const purchase = await prisma.$transaction(async (tx) =>
@@ -134,6 +136,7 @@ export async function createPurchaseAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/purchases/bills");
   redirect(`/app/purchases/bills/${purchaseId}?created=1`);
 }
@@ -143,9 +146,11 @@ export async function updatePurchaseAction(
   formData: FormData
 ): Promise<PurchaseActionState> {
   const purchaseId = String(formData.get("purchaseId") ?? "");
+  let tenantId: string;
 
   try {
     const tenant = await authorize("purchase:update");
+    tenantId = tenant.tenantId;
     const taxContext = taxContextFromTenant(tenant);
     const fields = readPurchaseFields(formData, taxContext.currency);
     await prisma.$transaction(async (tx) =>
@@ -172,6 +177,7 @@ export async function updatePurchaseAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/purchases/bills");
   revalidatePath(`/app/purchases/bills/${purchaseId}`);
   redirect(`/app/purchases/bills/${purchaseId}?saved=1`);
@@ -188,8 +194,10 @@ async function statusAction(
     outbox: OutboxRepository;
   }) => Promise<unknown>
 ): Promise<PurchaseActionState> {
+  let tenantId: string;
   try {
     const tenant = await authorize(permission);
+    tenantId = tenant.tenantId;
     await prisma.$transaction(async (tx) =>
       run({
         tenantId: tenant.tenantId,
@@ -207,6 +215,7 @@ async function statusAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/purchases/bills");
   revalidatePath(`/app/purchases/bills/${purchaseId}`);
   return {};

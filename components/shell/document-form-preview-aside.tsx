@@ -1,27 +1,34 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 import { cn } from "@/lib/utils";
 
 /** Match Tailwind `lg` — preview stacks below this width. */
 const PREVIEW_COLLAPSE_MAX = 1023;
 
+function subscribePreviewCollapse(onStoreChange: () => void) {
+  const mql = window.matchMedia(`(max-width: ${PREVIEW_COLLAPSE_MAX}px)`);
+  mql.addEventListener("change", onStoreChange);
+  return () => mql.removeEventListener("change", onStoreChange);
+}
+
+function getPreviewCollapseSnapshot() {
+  return window.matchMedia(`(max-width: ${PREVIEW_COLLAPSE_MAX}px)`).matches;
+}
+
+/** SSR + first client paint: assume narrow (collapsed) to avoid CLS. */
+function getPreviewCollapseServerSnapshot() {
+  return true;
+}
+
 function useCollapseDocumentPreview() {
-  const [collapse, setCollapse] = useState(false);
-
-  useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${PREVIEW_COLLAPSE_MAX}px)`);
-    const onChange = () => {
-      setCollapse(mql.matches);
-    };
-    onChange();
-    mql.addEventListener("change", onChange);
-    return () => mql.removeEventListener("change", onChange);
-  }, []);
-
-  return collapse;
+  return useSyncExternalStore(
+    subscribePreviewCollapse,
+    getPreviewCollapseSnapshot,
+    getPreviewCollapseServerSnapshot,
+  );
 }
 
 export function DocumentFormPreviewAside({
