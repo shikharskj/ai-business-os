@@ -13,6 +13,7 @@ import {
 } from "@/modules/accounting/infrastructure/prisma-accounting-repositories";
 import { PartyError } from "@/modules/party";
 import { createPrismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
+import { scheduleNotificationOutboxProcessing } from "@/modules/notifications";
 import {
   PaymentError,
   recordSupplierPayment,
@@ -103,9 +104,11 @@ export async function recordSupplierPaymentAction(
   formData: FormData
 ): Promise<SupplierPaymentActionState> {
   let paymentId: string;
+  let tenantId: string;
 
   try {
     const tenant = await authorize("payment:create");
+    tenantId = tenant.tenantId;
     const fields = readPaymentFields(formData);
     const payment = await prisma.$transaction(async (tx) => {
       const business = await tx.business.findUnique({
@@ -135,6 +138,7 @@ export async function recordSupplierPaymentAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/purchases/payments");
   revalidatePath("/app/purchases/bills");
   revalidatePath("/app/purchases/suppliers");

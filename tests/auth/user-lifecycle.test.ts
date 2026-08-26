@@ -76,4 +76,21 @@ describe("applyUserLifecycleEvent", () => {
     const recreated = await store.upsertByClerkUserId("user_123");
     expect(recreated.id).not.toBe("app_1");
   });
+
+  it("acknowledges user.deleted when store delete throws", async () => {
+    const store = createMemoryApplicationUserStore();
+    const error = new Error("FK restrict");
+    vi.spyOn(store, "deleteByClerkUserId").mockRejectedValue(error);
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(
+      applyUserLifecycleEvent(store, {
+        type: "user.deleted",
+        clerkUserId: "user_blocked",
+      })
+    ).resolves.toBeUndefined();
+
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
 });

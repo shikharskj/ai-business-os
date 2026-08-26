@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { authorize, AuthorizationError } from "@/lib/security/authorize";
+import { authzErrorResponse } from "@/lib/http/auth-errors";
+import { authorize } from "@/lib/security/authorize";
 import { resolveAiActionSecret } from "@/modules/ai/infrastructure/action-secret";
 import {
   AttentionItemNotFoundError,
@@ -9,7 +10,6 @@ import {
   proposeBriefPaymentReminder,
   proposeBriefReminderSchema,
 } from "@/modules/business-state";
-import { TenantRequiredError } from "@/modules/tenant/domain/errors";
 
 /**
  * Propose a payment reminder from a Daily Brief overdue row.
@@ -42,11 +42,9 @@ export async function POST(request: Request) {
       { headers: { "Cache-Control": "private, no-store" } }
     );
   } catch (error) {
-    if (error instanceof TenantRequiredError) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (error instanceof AuthorizationError) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const authz = authzErrorResponse(error);
+    if (authz) {
+      return authz;
     }
     if (
       error instanceof AttentionItemNotFoundError ||

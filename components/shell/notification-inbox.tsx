@@ -217,7 +217,7 @@ export function NotificationInbox() {
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-80 gap-0 p-0 sm:w-96"
+        className="w-[min(20rem,calc(100vw-1.5rem))] gap-0 p-0 sm:w-96"
         sideOffset={8}
       >
         <div className="flex items-center justify-between border-b border-border px-3 py-2">

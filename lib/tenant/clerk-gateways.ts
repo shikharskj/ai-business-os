@@ -4,6 +4,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 
 import type { ClerkInvitationGateway } from "@/modules/tenant/application/invite-member";
 import type { ClerkOrganizationGateway } from "@/modules/tenant/application/business-setup";
+import type { InvitationMetadataLookup } from "@/modules/tenant/application/org-lifecycle";
 import { toClerkOrganizationRole } from "@/modules/tenant/application/invite-member";
 import type { MembershipRole } from "@/modules/tenant/domain/types";
 import { TenantMembershipUnavailableError } from "@/modules/tenant/domain/errors";
@@ -125,9 +126,66 @@ export const clerkInvitationGateway: ClerkInvitationGateway = {
             : toClerkOrganizationRole(
                 input.role as Exclude<MembershipRole, "OWNER">
               ),
+        publicMetadata: input.publicMetadata,
       });
 
     return { id: invitation.id };
+  },
+};
+
+/**
+ * Resolve invitation publicMetadata when membership webhooks omit it.
+ * Looks up the Clerk user email, then finds a matching org invitation.
+ */
+export const clerkInvitationMetadataLookup: InvitationMetadataLookup = {
+  async findInvitationPublicMetadata(input) {
+    const client = await clerkClient();
+
+    try {
+      const user = await client.users.getUser(input.clerkUserId);
+      const email =
+        user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)
+          ?.emailAddress ?? user.emailAddresses[0]?.emailAddress;
+      if (!email) {
+        return null;
+      }
+
+      const emailLower = email.trim().toLowerCase();
+
+      // Fetch all invitations with pagination to find the accepted one
+      const allInvitations = [];
+      let hasMore = true;
+      let offset = 0;
+      const limit = 100;
+
+      while (hasMore && offset < 1000) {
+        const invitations =
+          await client.organizations.getOrganizationInvitationList({
+            organizationId: input.clerkOrganizationId,
+            limit,
+            offset,
+          });
+
+        allInvitations.push(...invitations.data);
+        hasMore = invitations.data.length === limit;
+        offset += limit;
+      }
+
+      // Find accepted invitation matching the user's email
+      const match = allInvitations.find(
+        (invitation) =>
+          invitation.emailAddress.trim().toLowerCase() === emailLower &&
+          invitation.status === "accepted"
+      );
+
+      if (!match?.publicMetadata) {
+        return null;
+      }
+
+      return match.publicMetadata as Record<string, unknown>;
+    } catch {
+      return null;
+    }
   },
 };
 

@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 
 import { requireCurrentTenant } from "@/lib/tenant/current-tenant";
-import { TenantRequiredError } from "@/modules/tenant/domain/errors";
+import {
+  TenantMembershipUnavailableError,
+  TenantRequiredError,
+} from "@/modules/tenant/domain/errors";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppFeedbackProvider } from "@/components/shell/app-feedback-provider";
 import { AppSidebar } from "@/components/shell/app-sidebar";
@@ -17,7 +20,10 @@ export default async function WorkspaceLayout({
   try {
     tenant = await requireCurrentTenant();
   } catch (error) {
-    if (error instanceof TenantRequiredError) {
+    if (
+      error instanceof TenantRequiredError ||
+      error instanceof TenantMembershipUnavailableError
+    ) {
       redirect("/app/setup");
     }
     throw error;

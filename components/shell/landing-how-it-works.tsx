@@ -26,7 +26,7 @@ export function LandingHowItWorks() {
     <RevealOnView>
       <section
         id="how-it-works"
-        className="scroll-mt-20 border-t border-border px-6 py-16"
+        className="scroll-mt-20 border-t border-border px-4 py-12 sm:px-6 sm:py-16"
       >
         <div className="mx-auto grid w-full max-w-6xl gap-10 md:grid-cols-2 md:items-center">
           <div className="flex flex-col gap-8">

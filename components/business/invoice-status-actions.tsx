@@ -1,6 +1,5 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -9,13 +8,10 @@ import {
   exportInvoicePdfAction,
   postInvoiceAction,
 } from "@/app/app/(workspace)/sales/invoices/actions";
-import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  DetailMoreMenu,
+  type DetailMoreMenuItem,
+} from "@/components/shell/detail-more-menu";
 import { PendingButton } from "@/components/ui/pending-button";
 import { notifyError, notifySuccess } from "@/lib/feedback/toast";
 import { isPostedInvoiceStatus } from "@/modules/sales/domain/invoice-status";
@@ -30,6 +26,7 @@ export function InvoiceStatusActions({
   canCancel,
   canRead,
   exportInMenu = false,
+  moreItems = [],
 }: {
   invoiceId: string;
   status: SalesInvoiceStatus;
@@ -37,6 +34,7 @@ export function InvoiceStatusActions({
   canCancel: boolean;
   canRead: boolean;
   exportInMenu?: boolean;
+  moreItems?: DetailMoreMenuItem[];
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -88,19 +86,20 @@ export function InvoiceStatusActions({
   const showPost = canUpdate && status === "DRAFT";
   const showExport = canRead && isPostedInvoiceStatus(status);
   const showCancel = canCancel && status === "DRAFT";
-  const menuItems = [
+  const actionItems = [
     showExport && exportInMenu
       ? {
           key: "export",
           label: "Export PDF",
-          action: () => run("export", null, exportInvoicePdfAction),
+          onClick: () => run("export", null, exportInvoicePdfAction),
+          disabled: isPending,
         }
       : null,
     showCancel
       ? {
           key: "cancel",
           label: "Cancel draft",
-          action: () =>
+          onClick: () =>
             run(
               "cancel",
               "Cancel this draft invoice? It will remain in your list as cancelled. Stock and accounts are not affected.",
@@ -110,9 +109,15 @@ export function InvoiceStatusActions({
                 description: "The invoice remains in your list as cancelled.",
               }
             ),
+          disabled: isPending,
         }
       : null,
-  ].filter(Boolean) as { key: string; label: string; action: () => void }[];
+  ].filter(Boolean) as {
+    key: string;
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+  }[];
 
   return (
     <div className="flex flex-col items-end gap-2">
@@ -146,24 +151,11 @@ export function InvoiceStatusActions({
             Export PDF
           </PendingButton>
         ) : null}
-        {menuItems.length > 0 ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button type="button" variant="outline" disabled={isPending} aria-label="More actions">
-                  <MoreHorizontal className="size-5" />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              {menuItems.map((item) => (
-                <DropdownMenuItem key={item.key} onClick={item.action}>
-                  {item.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
+        <DetailMoreMenu
+          items={moreItems}
+          actionItems={actionItems}
+          disabled={isPending}
+        />
       </div>
       {error ? (
         <p className="text-base text-destructive" role="alert">

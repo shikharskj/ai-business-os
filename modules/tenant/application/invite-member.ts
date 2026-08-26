@@ -1,3 +1,7 @@
+import {
+  APP_MEMBERSHIP_ROLE_METADATA_KEY,
+  type AppMembershipRoleMetadata,
+} from "@/modules/tenant/domain/invite-metadata";
 import type { MembershipRole } from "@/modules/tenant/domain/types";
 
 export type ClerkInvitationGateway = {
@@ -6,6 +10,7 @@ export type ClerkInvitationGateway = {
     emailAddress: string;
     role: MembershipRole;
     inviterClerkUserId: string;
+    publicMetadata: AppMembershipRoleMetadata;
   }): Promise<{ id: string }>;
 };
 
@@ -30,6 +35,9 @@ export async function inviteOrganizationMember(input: {
     emailAddress: input.emailAddress,
     role: input.role,
     inviterClerkUserId: input.inviterClerkUserId,
+    publicMetadata: {
+      [APP_MEMBERSHIP_ROLE_METADATA_KEY]: input.role,
+    },
   });
 }
 

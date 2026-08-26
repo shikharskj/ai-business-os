@@ -4,6 +4,11 @@ import Link from "next/link";
 import { CreditNotesDataTable } from "@/components/business/credit-notes-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
 import { ListFilterClear } from "@/components/shell/list-filter-clear";
+import {
+  ListFilterBar,
+  ListFilterField,
+  ListFilterSearch,
+} from "@/components/shell/list-filter-bar";
 import { DatePicker } from "@/components/date-picker";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -46,7 +51,7 @@ export default async function CreditNotesPage({
     pageSize?: string;
   }>;
 }) {
-  const tenant = await authorize("invoice:read");
+  const tenant = await authorize("credit-note:read");
   const params = await searchParams;
   const { page, pageSize } = parseListTableParams(params);
   const parseResult = creditNoteSearchSchema.safeParse({
@@ -65,7 +70,7 @@ export default async function CreditNotesPage({
         from: undefined,
         to: undefined,
       };
-  const canCreate = roleHasPermission(tenant.membership.role, "invoice:create");
+  const canCreate = roleHasPermission(tenant.membership.role, "credit-note:create");
   const result = await listCreditNotesPage({
     tenantId: tenant.tenantId,
     query: filters.q,
@@ -104,74 +109,87 @@ export default async function CreditNotesPage({
         }
       />
 
-      <form className="flex flex-wrap items-end gap-3" method="get">
-        {pageSize !== 10 ? (
-          <input type="hidden" name="pageSize" value={pageSize} />
-        ) : null}
-        {filters.invoiceId ? (
-          <input type="hidden" name="invoiceId" value={filters.invoiceId} />
-        ) : null}
-        <div className="flex min-w-56 flex-1 flex-col gap-2">
-          <label htmlFor="q" className="text-base font-medium">
-            Search
-          </label>
-          <Input
-            id="q"
-            name="q"
-            defaultValue={filters.q}
-            placeholder="Number, customer, or invoice..."
-            className="max-w-xl"
-            leftIcon={<Search className="size-5" />}
-          />
-        </div>
-        <div className="flex w-48 flex-col gap-2">
-          <label htmlFor="status" className="text-base font-medium">
-            Status
-          </label>
-          <Select
-            name="status"
-            defaultValue={filters.status}
-            items={STATUS_FILTER_LABELS}
-          >
-            <SelectTrigger id="status" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(STATUS_FILTER_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex w-44 flex-col gap-2">
-          <label htmlFor="from" className="text-base font-medium">
-            From
-          </label>
-          <DatePicker
-            id="from"
-            name="from"
-            defaultValue={filters.from}
-            placeholder="From"
-          />
-        </div>
-        <div className="flex w-44 flex-col gap-2">
-          <label htmlFor="to" className="text-base font-medium">
-            To
-          </label>
-          <DatePicker
-            id="to"
-            name="to"
-            defaultValue={filters.to}
-            placeholder="To"
-          />
-        </div>
-        <Button type="submit" variant="outline">
-          Filter
-        </Button>
-        {hasFilters ? <ListFilterClear href="/app/sales/credit-notes" /> : null}
-      </form>
+      <ListFilterBar
+        hiddenFields={
+          <>
+            {pageSize !== 10 ? (
+              <input type="hidden" name="pageSize" value={pageSize} />
+            ) : null}
+            {filters.invoiceId ? (
+              <input type="hidden" name="invoiceId" value={filters.invoiceId} />
+            ) : null}
+          </>
+        }
+        search={
+          <ListFilterSearch>
+            <label htmlFor="q" className="text-base font-medium">
+              Search
+            </label>
+            <Input
+              id="q"
+              name="q"
+              defaultValue={filters.q}
+              placeholder="Number, customer, or invoice..."
+              leftIcon={<Search className="size-5" />}
+            />
+          </ListFilterSearch>
+        }
+        filters={
+          <>
+            <ListFilterField>
+              <label htmlFor="status" className="text-base font-medium">
+                Status
+              </label>
+              <Select
+                name="status"
+                defaultValue={filters.status}
+                items={STATUS_FILTER_LABELS}
+              >
+                <SelectTrigger id="status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(STATUS_FILTER_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </ListFilterField>
+            <ListFilterField className="md:w-44">
+              <label htmlFor="from" className="text-base font-medium">
+                From
+              </label>
+              <DatePicker
+                id="from"
+                name="from"
+                defaultValue={filters.from}
+                placeholder="From"
+              />
+            </ListFilterField>
+            <ListFilterField className="md:w-44">
+              <label htmlFor="to" className="text-base font-medium">
+                To
+              </label>
+              <DatePicker
+                id="to"
+                name="to"
+                defaultValue={filters.to}
+                placeholder="To"
+              />
+            </ListFilterField>
+          </>
+        }
+        actions={
+          <>
+            <Button type="submit" variant="outline">
+              Filter
+            </Button>
+            {hasFilters ? <ListFilterClear href="/app/sales/credit-notes" /> : null}
+          </>
+        }
+      />
 
       {result.total === 0 ? (
         <EmptyState

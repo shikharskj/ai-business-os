@@ -56,7 +56,7 @@ export default async function BillDetailPage({
   const canUpdate = roleHasPermission(tenant.membership.role, "purchase:update");
   const canCancel = roleHasPermission(tenant.membership.role, "purchase:cancel");
   const canCreatePayment = roleHasPermission(tenant.membership.role, "payment:create");
-  const canCreateReturn = roleHasPermission(tenant.membership.role, "purchase:create");
+  const canCreateReturn = roleHasPermission(tenant.membership.role, "purchase-return:create");
   const canReadPayments = roleHasPermission(tenant.membership.role, "payment:read");
 
   let purchase;
@@ -108,35 +108,6 @@ export default async function BillDetailPage({
             <StatusBadge tone={PURCHASE_STATUS_TONES[purchase.status]}>
               {PURCHASE_STATUS_LABELS[purchase.status]}
             </StatusBadge>
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<Link href="/app/purchases/bills" />}
-            >
-              Back
-            </Button>
-            {canUpdate && purchase.status === "DRAFT" ? (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={<Link href={`/app/purchases/bills/${purchase.id}/edit`} />}
-              >
-                Edit
-              </Button>
-            ) : null}
-            {canCreateReturn && isPostedPurchaseStatus(purchase.status) ? (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={
-                  <Link
-                    href={`/app/purchases/returns/new?purchaseId=${purchase.id}`}
-                  />
-                }
-              >
-                Issue return
-              </Button>
-            ) : null}
             {canRecordPayment ? (
               <Button
                 nativeButton={false}
@@ -148,12 +119,42 @@ export default async function BillDetailPage({
               >
                 Record payment
               </Button>
+            ) : canUpdate && purchase.status === "DRAFT" ? (
+              <Button
+                nativeButton={false}
+                render={
+                  <Link href={`/app/purchases/bills/${purchase.id}/edit`} />
+                }
+              >
+                Edit
+              </Button>
             ) : null}
             <BillStatusActions
               purchaseId={purchase.id}
               status={purchase.status}
               canUpdate={canUpdate}
               canCancel={canCancel}
+              moreItems={[
+                { href: "/app/purchases/bills", label: "Back to bills" },
+                ...(canUpdate &&
+                purchase.status === "DRAFT" &&
+                canRecordPayment
+                  ? [
+                      {
+                        href: `/app/purchases/bills/${purchase.id}/edit`,
+                        label: "Edit",
+                      },
+                    ]
+                  : []),
+                ...(canCreateReturn && isPostedPurchaseStatus(purchase.status)
+                  ? [
+                      {
+                        href: `/app/purchases/returns/new?purchaseId=${purchase.id}`,
+                        label: "Issue return",
+                      },
+                    ]
+                  : []),
+              ]}
             />
           </div>
         }

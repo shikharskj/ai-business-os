@@ -52,6 +52,7 @@ function deps() {
     catalog: createMemoryCatalogRepository(),
     taxRates: createMemoryTaxRateRepository(),
     hsnSac: createMemoryHsnSacRepository(),
+    supplierPayments: createMemorySupplierPaymentRepository(),
     audit: createMemoryAuditRepository(),
     outbox: createMemoryOutboxRepository(),
   };
@@ -116,7 +117,6 @@ describe("purchase returns", () => {
     const accounts = createMemoryAccountRepository();
     const journals = createMemoryJournalRepository();
     const inventory = createMemoryInventoryRepository();
-    const supplierPayments = createMemorySupplierPaymentRepository();
     await ensureChartOfAccounts({ tenantId: "tenant-a", accountRepository: accounts });
     const supplier = await seedSupplier(d.parties);
     const product = await seedProduct(d.catalog, "tenant-a", true);
@@ -159,7 +159,6 @@ describe("purchase returns", () => {
       accounts,
       journals,
       inventory,
-      supplierPayments,
       ...d,
     });
     expect(postedReturn.status).toBe("POSTED");
@@ -184,7 +183,6 @@ describe("purchase returns", () => {
     const accounts = createMemoryAccountRepository();
     const journals = createMemoryJournalRepository();
     const inventory = createMemoryInventoryRepository();
-    const supplierPayments = createMemorySupplierPaymentRepository();
     await ensureChartOfAccounts({ tenantId: "tenant-a", accountRepository: accounts });
     const supplier = await seedSupplier(d.parties);
     const product = await seedProduct(d.catalog);
@@ -240,7 +238,6 @@ describe("purchase returns", () => {
       accounts,
       journals,
       inventory,
-      supplierPayments,
       ...d,
     });
     await expect(
@@ -253,9 +250,71 @@ describe("purchase returns", () => {
         accounts,
         journals,
         inventory,
-        supplierPayments,
         ...d,
       })
     ).rejects.toBeInstanceOf(PurchaseReturnAlreadyPostedError);
+  });
+
+  it("rejects a return that exceeds remaining bill balance after payment", async () => {
+    const d = deps();
+    const accounts = createMemoryAccountRepository();
+    const journals = createMemoryJournalRepository();
+    const inventory = createMemoryInventoryRepository();
+    await ensureChartOfAccounts({ tenantId: "tenant-a", accountRepository: accounts });
+    const supplier = await seedSupplier(d.parties);
+    const product = await seedProduct(d.catalog);
+    const draft = await createPurchase({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      fields: purchaseFields(supplier.id, product.id),
+      taxContext: taxContext(),
+      ...d,
+    });
+    const posted = await postPurchase({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      purchaseId: draft.id,
+      taxContext: taxContext(),
+      closedThroughPeriodKey: null,
+      accounts,
+      journals,
+      inventory,
+      ...d,
+    });
+    await d.supplierPayments.createPayment({
+      tenantId: "tenant-a",
+      number: "SP/FY2026-27/0001",
+      supplierId: supplier.id,
+      supplierName: supplier.name,
+      paidOn: businessDate("2026-04-03"),
+      method: "BANK_TRANSFER",
+      amount: posted.grandTotal,
+      reference: null,
+      notes: null,
+      journalId: "jr-sp-1",
+      allocations: [
+        {
+          purchaseId: posted.id,
+          purchaseNumber: posted.number,
+          amount: posted.grandTotal,
+        },
+      ],
+    });
+
+    await expect(
+      createPurchaseReturn({
+        tenantId: "tenant-a",
+        actorUserId: "user-1",
+        fields: {
+          purchaseId: posted.id,
+          issuedOn: businessDate("2026-04-04"),
+          lines: [
+            { purchaseLineId: posted.lines[0]!.id, quantity: quantityFromMajor("1") },
+          ],
+        },
+        taxContext: taxContext(),
+        ...d,
+      })
+    ).rejects.toBeInstanceOf(PurchaseReturnValidationError);
   });
 });

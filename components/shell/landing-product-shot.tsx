@@ -30,10 +30,12 @@ export function LandingProductShot({
   imageClassName,
 }: LandingProductShotProps) {
   return (
-    <figure className={cn("flex w-full flex-col gap-2", className)}>
+    <figure
+      className={cn("flex w-full min-w-0 max-w-full flex-col gap-2", className)}
+    >
       <div
         className={cn(
-          "overflow-hidden rounded-md border border-border bg-card shadow-sm",
+          "min-w-0 max-w-full overflow-hidden rounded-md border border-border bg-card shadow-sm",
           frameClassName
         )}
       >

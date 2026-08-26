@@ -5,6 +5,7 @@ import { createMemoryOutboxRepository } from "@/modules/shared-kernel/outbox";
 import { businessDate } from "@/modules/shared-kernel/dates";
 import { money, toMajorString } from "@/modules/shared-kernel/money";
 import {
+  ACCOUNT_CODES,
   createMemoryAccountRepository,
   createMemoryJournalRepository,
   ensureChartOfAccounts,
@@ -56,6 +57,7 @@ function deps() {
     catalog: createMemoryCatalogRepository(),
     taxRates: createMemoryTaxRateRepository(),
     hsnSac: createMemoryHsnSacRepository(),
+    payments: createMemoryPaymentRepository(),
     audit: createMemoryAuditRepository(),
     outbox: createMemoryOutboxRepository(),
   };
@@ -121,7 +123,6 @@ describe("sales credit notes", () => {
     const accounts = createMemoryAccountRepository();
     const journals = createMemoryJournalRepository();
     const inventory = createMemoryInventoryRepository();
-    const payments = createMemoryPaymentRepository();
     await ensureChartOfAccounts({ tenantId: "tenant-a", accountRepository: accounts });
     const customer = await seedCustomer(d.parties);
     const product = await seedProduct(d.catalog, "tenant-a", true);
@@ -178,7 +179,6 @@ describe("sales credit notes", () => {
       accounts,
       journals,
       inventory,
-      payments,
       ...d,
     });
     expect(creditPosted.status).toBe("POSTED");
@@ -204,7 +204,6 @@ describe("sales credit notes", () => {
     const accounts = createMemoryAccountRepository();
     const journals = createMemoryJournalRepository();
     const inventory = createMemoryInventoryRepository();
-    const payments = createMemoryPaymentRepository();
     await ensureChartOfAccounts({ tenantId: "tenant-a", accountRepository: accounts });
     const customer = await seedCustomer(d.parties);
     const product = await seedProduct(d.catalog);
@@ -260,7 +259,6 @@ describe("sales credit notes", () => {
       accounts,
       journals,
       inventory,
-      payments,
       ...d,
     });
     await expect(
@@ -273,10 +271,162 @@ describe("sales credit notes", () => {
         accounts,
         journals,
         inventory,
-        payments,
         ...d,
       })
     ).rejects.toBeInstanceOf(CreditNoteAlreadyPostedError);
+  });
+
+  it("rejects a credit that exceeds remaining invoice balance after payment", async () => {
+    const d = deps();
+    const accounts = createMemoryAccountRepository();
+    const journals = createMemoryJournalRepository();
+    const inventory = createMemoryInventoryRepository();
+    await ensureChartOfAccounts({ tenantId: "tenant-a", accountRepository: accounts });
+    const customer = await seedCustomer(d.parties);
+    const product = await seedProduct(d.catalog);
+    const draft = await createInvoice({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      fields: invoiceFields(customer.id, product.id),
+      taxContext: taxContext(),
+      ...d,
+    });
+    const posted = await postInvoice({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      invoiceId: draft.id,
+      taxContext: taxContext(),
+      closedThroughPeriodKey: null,
+      accounts,
+      journals,
+      inventory,
+      ...d,
+    });
+    await d.payments.createPayment({
+      tenantId: "tenant-a",
+      number: "RCP/FY2026-27/0001",
+      customerId: customer.id,
+      customerName: customer.name,
+      receivedOn: businessDate("2026-04-03"),
+      method: "BANK_TRANSFER",
+      amount: posted.grandTotal,
+      reference: null,
+      notes: null,
+      journalId: "jr-pay-1",
+      allocations: [
+        {
+          invoiceId: posted.id,
+          invoiceNumber: posted.number,
+          amount: posted.grandTotal,
+        },
+      ],
+    });
+
+    await expect(
+      createCreditNote({
+        tenantId: "tenant-a",
+        actorUserId: "user-1",
+        fields: {
+          invoiceId: posted.id,
+          issuedOn: businessDate("2026-04-04"),
+          lines: [
+            { invoiceLineId: posted.lines[0]!.id, quantity: quantityFromMajor("1") },
+          ],
+        },
+        taxContext: taxContext(),
+        ...d,
+      })
+    ).rejects.toBeInstanceOf(CreditNoteValidationError);
+  });
+
+  it("snapshots unit cost on invoice lines at post for credit-note COGS", async () => {
+    const d = deps();
+    const accounts = createMemoryAccountRepository();
+    const journals = createMemoryJournalRepository();
+    const inventory = createMemoryInventoryRepository();
+    await ensureChartOfAccounts({ tenantId: "tenant-a", accountRepository: accounts });
+    const customer = await seedCustomer(d.parties);
+    const product = await seedProduct(d.catalog, "tenant-a", true);
+    await recordOpeningStock({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      productId: product.id,
+      quantity: quantityFromMajor("10"),
+      occurredOn: businessDate("2026-04-01"),
+      catalog: d.catalog,
+      inventory,
+      audit: createMemoryAuditRepository(),
+      outbox: createMemoryOutboxRepository(),
+    });
+    const draft = await createInvoice({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      fields: invoiceFields(customer.id, product.id),
+      taxContext: taxContext(),
+      ...d,
+    });
+    const posted = await postInvoice({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      invoiceId: draft.id,
+      taxContext: taxContext(),
+      closedThroughPeriodKey: null,
+      accounts,
+      journals,
+      inventory,
+      ...d,
+    });
+    expect(posted.lines[0]!.unitCost).toEqual(product.purchasePrice);
+
+    const originalPurchasePrice = product.purchasePrice;
+    await d.catalog.updateProduct({
+      tenantId: "tenant-a",
+      productId: product.id,
+      fields: {
+        kind: product.kind,
+        name: product.name,
+        sku: product.sku,
+        unitOfMeasurement: product.unitOfMeasurement,
+        sellingPrice: product.sellingPrice,
+        purchasePrice: money(999_00n),
+        hsnSac: product.hsnSac,
+        taxRateBps: product.taxRateBps,
+        category: product.category,
+        tracksInventory: true,
+      },
+    });
+
+    const creditDraft = await createCreditNote({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      fields: {
+        invoiceId: posted.id,
+        issuedOn: businessDate("2026-04-05"),
+        lines: [
+          { invoiceLineId: posted.lines[0]!.id, quantity: quantityFromMajor("1") },
+        ],
+      },
+      taxContext: taxContext(),
+      ...d,
+    });
+    await postCreditNote({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      creditNoteId: creditDraft.id,
+      taxContext: taxContext(),
+      closedThroughPeriodKey: null,
+      accounts,
+      journals,
+      inventory,
+      ...d,
+    });
+    const creditJournal = journals
+      .listPosted()
+      .find((journal) => journal.sourceType === "CreditNote");
+    const cogsCredit = creditJournal?.lines.find(
+      (line) => line.accountCode === ACCOUNT_CODES.COGS && line.credit.amountMinor > 0n
+    );
+    expect(cogsCredit?.credit.amountMinor).toBe(originalPurchasePrice.amountMinor);
   });
 
   it("keeps credit notes tenant-scoped", async () => {

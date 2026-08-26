@@ -38,12 +38,25 @@ export function parseUserLifecycleEvent(input: {
   };
 }
 
+/**
+ * Apply Clerk user lifecycle events.
+ * For user.deleted: stores must revoke memberships and avoid hard-delete when
+ * the user owns a Business or other Restrict FKs (anonymize clerkUserId instead).
+ * Failures are logged and swallowed so the webhook can return 200.
+ */
 export async function applyUserLifecycleEvent(
   store: ApplicationUserStore,
   event: UserLifecycleEvent
 ): Promise<void> {
   if (event.type === "user.deleted") {
-    await store.deleteByClerkUserId(event.clerkUserId);
+    try {
+      await store.deleteByClerkUserId(event.clerkUserId);
+    } catch (error) {
+      console.error("user.deleted: safe handling failed; acknowledging webhook", {
+        clerkUserId: event.clerkUserId,
+        error,
+      });
+    }
     return;
   }
 

@@ -360,7 +360,9 @@ describe("sales invoices", () => {
       ...d,
     });
 
-    const brokenInventory = createMemoryInventoryRepository();
+    const brokenInventory = createMemoryInventoryRepository([
+      ...(await inventory.listMovementsForTenant("tenant-a")),
+    ]);
     brokenInventory.appendMovement = async () => {
       throw new Error("Simulated inventory failure");
     };

@@ -17,7 +17,7 @@ import { parseAssistantChatMessages } from "@/lib/ai/sanitize-assistant-messages
 import { assembleAssistantContext } from "@/modules/ai/application/assemble-assistant-context";
 import { describeAssistantFailure } from "@/modules/ai/application/assistant-failures";
 import { createAiToolContext } from "@/modules/ai/infrastructure/tool-context";
-import { TenantRequiredError } from "@/modules/tenant/domain/errors";
+import { authzErrorResponse } from "@/lib/http/auth-errors";
 
 export const AI_ASSISTANT_TEMPERATURE = 0.2;
 export const AI_ASSISTANT_MAX_OUTPUT_TOKENS = 900;
@@ -114,11 +114,9 @@ export async function POST(request: Request) {
 
     return createUIMessageStreamResponse({ stream });
   } catch (error) {
-    if (error instanceof TenantRequiredError) {
-      return Response.json(
-        { error: { code: "UNAUTHORIZED", message: "Unauthorized" } },
-        { status: 401 }
-      );
+    const authz = authzErrorResponse(error);
+    if (authz) {
+      return authz;
     }
 
     const failure = describeAssistantFailure(error);

@@ -10,6 +10,7 @@ import { CatalogError } from "@/modules/catalog";
 import { createPrismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 import { PartyError } from "@/modules/party";
 import { createPrismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
+import { scheduleNotificationOutboxProcessing } from "@/modules/notifications";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 import { toMajorString } from "@/modules/shared-kernel/money";
@@ -108,9 +109,11 @@ export async function createSalesOrderAction(
   formData: FormData
 ): Promise<SalesOrderActionState> {
   let salesOrderId: string;
+  let tenantId: string;
 
   try {
-    const tenant = await authorize("quotation:create");
+    const tenant = await authorize("sales-order:create");
+    tenantId = tenant.tenantId;
     const fields = readSalesOrderFields(formData);
     const salesOrder = await prisma.$transaction(async (tx) =>
       createSalesOrder({
@@ -136,6 +139,7 @@ export async function createSalesOrderAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/orders");
   redirect(`/app/sales/orders/${salesOrderId}?created=1`);
 }
@@ -145,9 +149,11 @@ export async function updateSalesOrderAction(
   formData: FormData
 ): Promise<SalesOrderActionState> {
   const salesOrderId = String(formData.get("salesOrderId") ?? "");
+  let tenantId: string;
 
   try {
-    const tenant = await authorize("quotation:update");
+    const tenant = await authorize("sales-order:update");
+    tenantId = tenant.tenantId;
     const fields = readSalesOrderFields(formData);
     await prisma.$transaction(async (tx) =>
       updateSalesOrder({
@@ -173,13 +179,14 @@ export async function updateSalesOrderAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/orders");
   revalidatePath(`/app/sales/orders/${salesOrderId}`);
   redirect(`/app/sales/orders/${salesOrderId}?saved=1`);
 }
 
 async function statusAction(
-  permission: "quotation:update" | "quotation:cancel",
+  permission: "sales-order:update" | "sales-order:cancel",
   salesOrderId: string,
   run: (input: {
     tenantId: string;
@@ -189,8 +196,10 @@ async function statusAction(
     outbox: OutboxRepository;
   }) => Promise<unknown>
 ): Promise<SalesOrderActionState> {
+  let tenantId: string;
   try {
     const tenant = await authorize(permission);
+    tenantId = tenant.tenantId;
     await prisma.$transaction(async (tx) =>
       run({
         tenantId: tenant.tenantId,
@@ -208,6 +217,7 @@ async function statusAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/orders");
   revalidatePath(`/app/sales/orders/${salesOrderId}`);
   return {};
@@ -216,7 +226,7 @@ async function statusAction(
 export async function confirmSalesOrderAction(
   salesOrderId: string
 ): Promise<SalesOrderActionState> {
-  return statusAction("quotation:update", salesOrderId, (ctx) =>
+  return statusAction("sales-order:update", salesOrderId, (ctx) =>
     confirmSalesOrder({ ...ctx, salesOrderId })
   );
 }
@@ -224,7 +234,7 @@ export async function confirmSalesOrderAction(
 export async function cancelSalesOrderAction(
   salesOrderId: string
 ): Promise<SalesOrderActionState> {
-  return statusAction("quotation:cancel", salesOrderId, (ctx) =>
+  return statusAction("sales-order:cancel", salesOrderId, (ctx) =>
     cancelSalesOrder({ ...ctx, salesOrderId })
   );
 }
@@ -233,9 +243,11 @@ export async function convertSalesOrderAction(
   salesOrderId: string
 ): Promise<SalesOrderActionState> {
   let invoiceId: string;
+  let tenantId: string;
 
   try {
     const tenant = await authorize("invoice:create");
+    tenantId = tenant.tenantId;
     const invoice = await prisma.$transaction(async (tx) =>
       convertSalesOrderToInvoice({
         tenantId: tenant.tenantId,
@@ -263,6 +275,7 @@ export async function convertSalesOrderAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/orders");
   revalidatePath(`/app/sales/orders/${salesOrderId}`);
   revalidatePath("/app/sales/invoices");
@@ -286,7 +299,7 @@ export async function previewSalesOrderTotalsAction(input: {
 }): Promise<SalesOrderPreviewState> {
   try {
     const tenant = await authorize(
-      input.salesOrderId ? "quotation:update" : "quotation:create"
+      input.salesOrderId ? "sales-order:update" : "sales-order:create"
     );
     const completeLines = input.lines.filter((line) => {
       try {

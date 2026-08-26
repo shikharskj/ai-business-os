@@ -26,6 +26,8 @@ export type InventoryRepository = {
     tenantId: string,
     productIds: string[]
   ): Promise<Map<string, { quantity: bigint; hasMovements: boolean }>>;
+  /** Row-lock product so concurrent OUT cannot oversell. No-op in memory. */
+  lockProductForUpdate(tenantId: string, productId: string): Promise<void>;
 };
 
 export function createMemoryInventoryRepository(
@@ -106,6 +108,9 @@ export function createMemoryInventoryRepository(
         });
       }
       return result;
+    },
+    async lockProductForUpdate() {
+      // Memory store has no row locks; application still checks on-hand before OUT.
     },
   };
 }

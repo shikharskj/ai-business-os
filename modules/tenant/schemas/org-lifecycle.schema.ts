@@ -14,6 +14,7 @@ const organizationMembershipDataSchema = z.object({
   public_user_data: z.object({
     user_id: z.string().min(1),
   }),
+  public_metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type OrganizationLifecycleEvent =
@@ -28,6 +29,7 @@ export type OrganizationMembershipLifecycleEvent =
       clerkOrganizationId: string;
       clerkUserId: string;
       clerkRole: string;
+      publicMetadata: Record<string, unknown> | null;
     }
   | {
       type: "organizationMembership.updated";
@@ -35,6 +37,7 @@ export type OrganizationMembershipLifecycleEvent =
       clerkOrganizationId: string;
       clerkUserId: string;
       clerkRole: string;
+      publicMetadata: Record<string, unknown> | null;
     }
   | {
       type: "organizationMembership.deleted";
@@ -58,6 +61,12 @@ const MEMBERSHIP_TYPES = new Set([
   "organizationMembership.updated",
   "organizationMembership.deleted",
 ]);
+
+function membershipPublicMetadata(
+  data: z.infer<typeof organizationMembershipDataSchema>
+): Record<string, unknown> | null {
+  return data.public_metadata ?? null;
+}
 
 export function parseTenantLifecycleEvent(input: {
   type: string;
@@ -108,6 +117,7 @@ export function parseTenantLifecycleEvent(input: {
         clerkOrganizationId: data.organization.id,
         clerkUserId: data.public_user_data.user_id,
         clerkRole: data.role,
+        publicMetadata: membershipPublicMetadata(data),
       };
     }
 
@@ -117,6 +127,7 @@ export function parseTenantLifecycleEvent(input: {
       clerkOrganizationId: data.organization.id,
       clerkUserId: data.public_user_data.user_id,
       clerkRole: data.role,
+      publicMetadata: membershipPublicMetadata(data),
     };
   }
 

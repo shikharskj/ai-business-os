@@ -9,6 +9,7 @@ import {
 } from "@/lib/auth/user-lifecycle";
 import { env } from "@/lib/env";
 import { applyTenantLifecycleEvent } from "@/modules/tenant/application/org-lifecycle";
+import { clerkInvitationMetadataLookup } from "@/lib/tenant/clerk-gateways";
 import {
   prismaBusinessRepository,
   prismaMembershipRepository,
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
         userStore: prismaApplicationUserStore,
         businessRepository: prismaBusinessRepository,
         membershipRepository: prismaMembershipRepository,
+        invitationMetadataLookup: clerkInvitationMetadataLookup,
       },
       tenantLifecycleEvent
     );

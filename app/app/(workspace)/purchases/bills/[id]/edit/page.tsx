@@ -14,6 +14,7 @@ import { listProducts } from "@/modules/catalog";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
 import { getPurchase, PurchaseNotFoundError } from "@/modules/purchases";
 import { prismaPurchasesRepository } from "@/modules/purchases/infrastructure/prisma-purchases-repository";
+import { stateCodeFromName } from "@/modules/tax/domain/gstin";
 
 export default async function EditBillPage({
   params,
@@ -73,6 +74,9 @@ export default async function EditBillPage({
           <BillForm
             purchase={purchase}
             today={todayInTimezone(tenant.business.timezone)}
+            businessPlaceOfSupplyStateCode={
+              stateCodeFromName(tenant.business.state) ?? ""
+            }
             suppliers={suppliers.map((supplier) => ({
               id: supplier.id,
               name: supplier.name,

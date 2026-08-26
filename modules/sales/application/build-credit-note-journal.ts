@@ -1,13 +1,19 @@
-import { addMoney, type Money } from "@/modules/shared-kernel/money";
+import { addMoney } from "@/modules/shared-kernel/money";
 import { ACCOUNT_CODES, type JournalLineDraft } from "@/modules/accounting/domain/types";
 import type { Product } from "@/modules/catalog/domain/types";
 import { moneyTimesQuantity } from "@/modules/sales/domain/pricing";
-import type { CreditNote } from "@/modules/sales/domain/types";
+import type { CreditNote, SalesInvoiceLine } from "@/modules/sales/domain/types";
 import { zeroMoney } from "@/modules/sales/domain/totals";
 import type { InvoiceCogsLine } from "@/modules/sales/application/build-invoice-journal";
 
+/**
+ * Credit note COGS uses the unit cost stored on the source invoice line at post.
+ * Falls back to current product purchase price only when the snapshot is missing
+ * (legacy lines posted before unitCost existed).
+ */
 export function computeCreditNoteCogsLines(
   creditNote: CreditNote,
+  invoiceLines: Map<string, SalesInvoiceLine>,
   products: Map<string, Product>
 ): InvoiceCogsLine[] {
   const lines: InvoiceCogsLine[] = [];
@@ -16,9 +22,11 @@ export function computeCreditNoteCogsLines(
     if (!product?.tracksInventory) {
       continue;
     }
+    const invoiceLine = invoiceLines.get(line.sourceInvoiceLineId);
+    const unitCost = invoiceLine?.unitCost ?? product.purchasePrice;
     lines.push({
       productId: line.productId,
-      amount: moneyTimesQuantity(product.purchasePrice, line.quantity),
+      amount: moneyTimesQuantity(unitCost, line.quantity),
     });
   }
   return lines;

@@ -9,7 +9,7 @@ import { runConfirmedAiAction } from "@/modules/ai/server";
 import { verifyAiActionToken } from "@/modules/ai/domain/action-token";
 import { resolveAiActionSecret } from "@/modules/ai/infrastructure/action-secret";
 import { createAiToolContext } from "@/modules/ai/infrastructure/tool-context";
-import { TenantRequiredError } from "@/modules/tenant/domain/errors";
+import { authzErrorResponse } from "@/lib/http/auth-errors";
 
 const INVALID_CONFIRMATION = {
   code: "ACTION_NOT_CONFIRMABLE",
@@ -81,11 +81,9 @@ export async function POST(request: Request) {
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch (error) {
-    if (error instanceof TenantRequiredError) {
-      return NextResponse.json(
-        { error: { code: "UNAUTHORIZED", message: "Unauthorized" } },
-        { status: 401 }
-      );
+    const authz = authzErrorResponse(error);
+    if (authz) {
+      return authz;
     }
 
     const failure = describeAssistantFailure(error);

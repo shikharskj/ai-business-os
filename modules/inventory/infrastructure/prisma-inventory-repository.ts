@@ -72,8 +72,13 @@ function compareMovements(a: InventoryMovement, b: InventoryMovement): number {
   return a.createdAt.getTime() - b.createdAt.getTime();
 }
 
+type PrismaInventoryClient = Pick<
+  PrismaClient,
+  "inventoryMovement" | "product" | "$queryRaw"
+>;
+
 export function createPrismaInventoryRepository(
-  client: Pick<PrismaClient, "inventoryMovement">
+  client: PrismaInventoryClient = prisma
 ): InventoryRepository {
   return {
     async appendMovement(input) {
@@ -152,6 +157,19 @@ export function createPrismaInventoryRepository(
         });
       }
       return result;
+    },
+    async lockProductForUpdate(tenantId, productId) {
+      if (client === prisma) {
+        throw new Error(
+          "lockProductForUpdate requires a transaction-bound Prisma client. " +
+            "Use prisma.$transaction() and pass the transaction client to createPrismaInventoryRepository()."
+        );
+      }
+      await client.$queryRaw`
+        SELECT id FROM products
+        WHERE id = ${productId} AND "tenantId" = ${tenantId}
+        FOR UPDATE
+      `;
     },
   };
 }

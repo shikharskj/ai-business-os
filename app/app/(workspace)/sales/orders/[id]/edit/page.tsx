@@ -20,7 +20,7 @@ export default async function EditSalesOrderPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const tenant = await authorize("quotation:update");
+  const tenant = await authorize("sales-order:update");
   const { id } = await params;
 
   let salesOrder;

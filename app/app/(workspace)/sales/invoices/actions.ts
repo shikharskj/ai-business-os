@@ -197,8 +197,10 @@ async function statusAction(
     outbox: OutboxRepository;
   }) => Promise<unknown>
 ): Promise<InvoiceActionState> {
+  let tenantId: string;
   try {
     const tenant = await authorize(permission);
+    tenantId = tenant.tenantId;
     await prisma.$transaction(async (tx) =>
       run({
         tenantId: tenant.tenantId,
@@ -216,6 +218,7 @@ async function statusAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/invoices");
   revalidatePath(`/app/sales/invoices/${invoiceId}`);
   return {};

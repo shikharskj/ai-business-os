@@ -16,6 +16,7 @@ import { listSuppliers } from "@/modules/party";
 import { prismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
 import { listProducts } from "@/modules/catalog";
 import { prismaCatalogRepository } from "@/modules/catalog/infrastructure/prisma-catalog-repository";
+import { stateCodeFromName } from "@/modules/tax/domain/gstin";
 
 export default async function NewBillPage({
   searchParams,
@@ -101,6 +102,9 @@ export default async function NewBillPage({
           <CardContent>
             <BillForm
               today={todayInTimezone(tenant.business.timezone)}
+              businessPlaceOfSupplyStateCode={
+                stateCodeFromName(tenant.business.state) ?? ""
+              }
               initialSupplierId={initialSupplierId}
               initialProductId={initialProductId}
               initialLineIndex={initialLineIndex}

@@ -24,6 +24,7 @@ import {
   toExpenseFields,
 } from "@/modules/expenses";
 import { createPrismaExpenseRepository } from "@/modules/expenses/infrastructure/prisma-expenses-repository";
+import { scheduleNotificationOutboxProcessing } from "@/modules/notifications";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
 import { TaxError } from "@/modules/tax";
@@ -69,9 +70,11 @@ export async function recordExpenseAction(
   formData: FormData
 ): Promise<ExpenseActionState> {
   let expenseId: string;
+  let tenantId: string;
 
   try {
     const tenant = await authorize("expense:create");
+    tenantId = tenant.tenantId;
     const fields = toExpenseFields(
       recordExpenseSchema.parse({
         category: formData.get("category"),
@@ -111,6 +114,7 @@ export async function recordExpenseAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/expenses");
   redirect(`/app/expenses/${expenseId}?created=1`);
 }

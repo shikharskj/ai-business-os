@@ -79,7 +79,7 @@ export default async function InvoiceDetailPage({
   const canRead = roleHasPermission(tenant.membership.role, "invoice:read");
   const canCreateCreditNote = roleHasPermission(
     tenant.membership.role,
-    "invoice:create",
+    "credit-note:create",
   );
   const canCreatePayment = roleHasPermission(
     tenant.membership.role,
@@ -193,43 +193,21 @@ export default async function InvoiceDetailPage({
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <StatusBadge tone={paymentBadge.tone}>{paymentBadge.label}</StatusBadge>
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<Link href="/app/sales/invoices" />}
-            >
-              Back
-            </Button>
-            {canUpdate && invoice.status === "DRAFT" ? (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={
-                  <Link href={`/app/sales/invoices/${invoice.id}/edit`} />
-                }
-              >
-                Edit
-              </Button>
-            ) : null}
-            {canCreateCreditNote && isPostedInvoiceStatus(invoice.status) ? (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={
-                  <Link
-                    href={`/app/sales/credit-notes/new?invoiceId=${invoice.id}`}
-                  />
-                }
-              >
-                Issue credit note
-              </Button>
-            ) : null}
             {canRecordPayment ? (
               <Button
                 nativeButton={false}
                 render={<Link href={recordPaymentHref} />}
               >
                 Record payment
+              </Button>
+            ) : canUpdate && invoice.status === "DRAFT" ? (
+              <Button
+                nativeButton={false}
+                render={
+                  <Link href={`/app/sales/invoices/${invoice.id}/edit`} />
+                }
+              >
+                Edit
               </Button>
             ) : null}
             <InvoiceStatusActions
@@ -239,6 +217,27 @@ export default async function InvoiceDetailPage({
               canCancel={canCancel}
               canRead={canRead}
               exportInMenu={canRecordPayment}
+              moreItems={[
+                { href: "/app/sales/invoices", label: "Back to invoices" },
+                ...(canUpdate &&
+                invoice.status === "DRAFT" &&
+                canRecordPayment
+                  ? [
+                      {
+                        href: `/app/sales/invoices/${invoice.id}/edit`,
+                        label: "Edit",
+                      },
+                    ]
+                  : []),
+                ...(canCreateCreditNote && isPostedInvoiceStatus(invoice.status)
+                  ? [
+                      {
+                        href: `/app/sales/credit-notes/new?invoiceId=${invoice.id}`,
+                        label: "Issue credit note",
+                      },
+                    ]
+                  : []),
+              ]}
             />
           </div>
         }

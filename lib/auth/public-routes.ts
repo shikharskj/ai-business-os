@@ -4,6 +4,7 @@ const PUBLIC_PREFIXES = [
   "/sign-in",
   "/sign-up",
   "/api/webhooks/clerk",
+  "/api/internal/outbox/process",
   "/__clerk",
 ];
 

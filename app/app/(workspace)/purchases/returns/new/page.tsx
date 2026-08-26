@@ -20,7 +20,7 @@ export default async function NewPurchaseReturnPage({
 }: {
   searchParams: Promise<{ purchaseId?: string }>;
 }) {
-  const tenant = await authorize("purchase:create");
+  const tenant = await authorize("purchase-return:create");
   const params = await searchParams;
   const bills = await prismaPurchasesRepository.listPurchases({
     tenantId: tenant.tenantId,

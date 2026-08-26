@@ -508,8 +508,8 @@ model Journal {
 
   @@unique([id, tenantId])
   @@unique([tenantId, reversalOfJournalId])
+  @@unique([tenantId, sourceType, sourceId])
   @@index([tenantId, periodKey])
-  @@index([tenantId, sourceType, sourceId])
   @@map("journals")
 }
 
@@ -924,6 +924,8 @@ model SalesInvoiceLine {
   taxRateBps         Int
   quantity           Decimal @db.Decimal(18, 4)
   unitPrice          Decimal @db.Decimal(18, 2)
+  /// Unit cost snapshot for COGS at invoice post (null until posted / non-tracked).
+  unitCost           Decimal? @db.Decimal(18, 2)
   discount           Decimal @db.Decimal(18, 2)
   lineSubtotal       Decimal @db.Decimal(18, 2)
   taxableAmount      Decimal @db.Decimal(18, 2)

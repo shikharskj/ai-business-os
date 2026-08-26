@@ -98,6 +98,22 @@ export async function recordInventoryMovement(input: {
     }
   }
 
+  if (input.movement.direction === "OUT") {
+    await input.inventory.lockProductForUpdate(
+      input.tenantId,
+      input.movement.productId
+    );
+    const onHand = await input.inventory.sumQuantitiesByProduct(input.tenantId, [
+      input.movement.productId,
+    ]);
+    const current = onHand.get(input.movement.productId)?.quantity ?? 0n;
+    if (current - input.movement.quantity.amountMinor < 0n) {
+      throw new InventoryValidationError(
+        "Insufficient stock. On-hand quantity cannot go below zero."
+      );
+    }
+  }
+
   let movement;
   try {
     movement = await input.inventory.appendMovement({

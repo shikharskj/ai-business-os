@@ -4,6 +4,11 @@ import Link from "next/link";
 import { QuotationsDataTable } from "@/components/business/quotations-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
 import { ListFilterClear } from "@/components/shell/list-filter-clear";
+import {
+  ListFilterBar,
+  ListFilterField,
+  ListFilterSearch,
+} from "@/components/shell/list-filter-bar";
 import { DatePicker } from "@/components/date-picker";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
@@ -83,82 +88,95 @@ export default async function QuotationsPage({
         }
       />
 
-      <form className="flex flex-wrap items-end gap-3" method="get">
-        {pageSize !== 10 ? (
-          <input type="hidden" name="pageSize" value={pageSize} />
-        ) : null}
-        {filters.customerId ? (
-          <input type="hidden" name="customerId" value={filters.customerId} />
-        ) : null}
-        <div className="flex min-w-56 flex-1 flex-col gap-2">
-          <label htmlFor="q" className="text-base font-medium">
-            Search
-          </label>
-          <Input
-            id="q"
-            name="q"
-            defaultValue={filters.q}
-            placeholder="Number or customer..."
-            className="max-w-xl"
-            leftIcon={<Search className="size-5" />}
-          />
-        </div>
-        <div className="flex w-48 flex-col gap-2">
-          <label htmlFor="status" className="text-base font-medium">
-            Status
-          </label>
-          <Select
-            name="status"
-            defaultValue={filters.status}
-            items={{
-              ALL: "All",
-              DRAFT: "Draft",
-              SENT: "Sent",
-              ACCEPTED: "Accepted",
-              CANCELLED: "Cancelled",
-              CONVERTED: "Converted",
-            }}
-          >
-            <SelectTrigger id="status" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All</SelectItem>
-              <SelectItem value="DRAFT">Draft</SelectItem>
-              <SelectItem value="SENT">Sent</SelectItem>
-              <SelectItem value="ACCEPTED">Accepted</SelectItem>
-              <SelectItem value="CANCELLED">Cancelled</SelectItem>
-              <SelectItem value="CONVERTED">Converted</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex w-44 flex-col gap-2">
-          <label htmlFor="from" className="text-base font-medium">
-            From
-          </label>
-          <DatePicker
-            id="from"
-            name="from"
-            defaultValue={filters.from}
-            placeholder="From"
-          />
-        </div>
-        <div className="flex w-44 flex-col gap-2">
-          <label htmlFor="to" className="text-base font-medium">
-            To
-          </label>
-          <DatePicker
-            id="to"
-            name="to"
-            defaultValue={filters.to}
-            placeholder="To"
-          />
-        </div>
-        <Button type="submit" variant="outline">
-          Filter
-        </Button>
-        {hasFilters ? <ListFilterClear href="/app/sales/quotations" /> : null}
-      </form>
+      <ListFilterBar
+        hiddenFields={
+          <>
+            {pageSize !== 10 ? (
+              <input type="hidden" name="pageSize" value={pageSize} />
+            ) : null}
+            {filters.customerId ? (
+              <input type="hidden" name="customerId" value={filters.customerId} />
+            ) : null}
+          </>
+        }
+        search={
+          <ListFilterSearch>
+            <label htmlFor="q" className="text-base font-medium">
+              Search
+            </label>
+            <Input
+              id="q"
+              name="q"
+              defaultValue={filters.q}
+              placeholder="Number or customer..."
+              leftIcon={<Search className="size-5" />}
+            />
+          </ListFilterSearch>
+        }
+        filters={
+          <>
+            <ListFilterField>
+              <label htmlFor="status" className="text-base font-medium">
+                Status
+              </label>
+              <Select
+                name="status"
+                defaultValue={filters.status}
+                items={{
+                  ALL: "All",
+                  DRAFT: "Draft",
+                  SENT: "Sent",
+                  ACCEPTED: "Accepted",
+                  CANCELLED: "Cancelled",
+                  CONVERTED: "Converted",
+                }}
+              >
+                <SelectTrigger id="status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All</SelectItem>
+                  <SelectItem value="DRAFT">Draft</SelectItem>
+                  <SelectItem value="SENT">Sent</SelectItem>
+                  <SelectItem value="ACCEPTED">Accepted</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  <SelectItem value="CONVERTED">Converted</SelectItem>
+                </SelectContent>
+              </Select>
+            </ListFilterField>
+            <ListFilterField className="md:w-44">
+              <label htmlFor="from" className="text-base font-medium">
+                From
+              </label>
+              <DatePicker
+                id="from"
+                name="from"
+                defaultValue={filters.from}
+                placeholder="From"
+              />
+            </ListFilterField>
+            <ListFilterField className="md:w-44">
+              <label htmlFor="to" className="text-base font-medium">
+                To
+              </label>
+              <DatePicker
+                id="to"
+                name="to"
+                defaultValue={filters.to}
+                placeholder="To"
+              />
+            </ListFilterField>
+          </>
+        }
+        actions={
+          <>
+            <Button type="submit" variant="outline">
+              Filter
+            </Button>
+            {hasFilters ? <ListFilterClear href="/app/sales/quotations" /> : null}
+          </>
+        }
+      />
 
       {result.total === 0 ? (
         <EmptyState

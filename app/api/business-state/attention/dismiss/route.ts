@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db/client";
-import { authorize, AuthorizationError } from "@/lib/security/authorize";
+import { authzErrorResponse } from "@/lib/http/auth-errors";
+import { authorize } from "@/lib/security/authorize";
 import {
   AttentionItemNotFoundError,
   AttentionTenantMismatchError,
@@ -9,7 +10,6 @@ import {
   dismissAttentionItem,
   dismissAttentionSchema,
 } from "@/modules/business-state";
-import { TenantRequiredError } from "@/modules/tenant/domain/errors";
 
 /**
  * Dismiss an attention item. Idempotent. Does not mutate invoices or stock.
@@ -40,11 +40,9 @@ export async function POST(request: Request) {
       item: attentionItemToDto(result.item),
     });
   } catch (error) {
-    if (error instanceof TenantRequiredError) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (error instanceof AuthorizationError) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const authz = authzErrorResponse(error);
+    if (authz) {
+      return authz;
     }
     if (error instanceof AttentionItemNotFoundError || error instanceof AttentionTenantMismatchError) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });

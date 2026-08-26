@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db/client";
-import { authorize, AuthorizationError } from "@/lib/security/authorize";
+import { authzErrorResponse } from "@/lib/http/auth-errors";
+import { authorize } from "@/lib/security/authorize";
 import {
   businessStateSummaryToDto,
   getBusinessStateSummary,
 } from "@/modules/business-state";
 import { createPrismaAttentionQueueRepository } from "@/modules/business-state/infrastructure/prisma-attention-repository";
 import { createPrismaBusinessStateProjectionRepository } from "@/modules/business-state/infrastructure/prisma-projection-repository";
-import { TenantRequiredError } from "@/modules/tenant/domain/errors";
 
 /**
  * Read BusinessState projections for the current tenant.
@@ -25,11 +25,9 @@ export async function GET() {
     });
     return NextResponse.json(businessStateSummaryToDto(summary));
   } catch (error) {
-    if (error instanceof TenantRequiredError) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (error instanceof AuthorizationError) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const authz = authzErrorResponse(error);
+    if (authz) {
+      return authz;
     }
     throw error;
   }

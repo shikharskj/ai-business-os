@@ -39,10 +39,10 @@ export default async function CreditNoteDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const tenant = await authorize("invoice:read");
+  const tenant = await authorize("credit-note:read");
   const { id } = await params;
-  const canUpdate = roleHasPermission(tenant.membership.role, "invoice:update");
-  const canCancel = roleHasPermission(tenant.membership.role, "invoice:cancel");
+  const canUpdate = roleHasPermission(tenant.membership.role, "credit-note:update");
+  const canCancel = roleHasPermission(tenant.membership.role, "credit-note:cancel");
   const canReadJournal = roleHasPermission(tenant.membership.role, "report:read");
 
   let creditNote;

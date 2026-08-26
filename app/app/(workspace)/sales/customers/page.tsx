@@ -4,6 +4,11 @@ import Link from "next/link";
 import { CustomersDataTable } from "@/components/business/customers-data-table";
 import { EmptyState } from "@/components/shell/empty-state";
 import { ListFilterClear } from "@/components/shell/list-filter-clear";
+import {
+  ListFilterBar,
+  ListFilterField,
+  ListFilterSearch,
+} from "@/components/shell/list-filter-bar";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,47 +92,56 @@ export default async function CustomersPage({
         }
       />
 
-      <form className="flex flex-wrap items-end gap-3" method="get">
-        {pageSize !== 10 ? (
-          <input type="hidden" name="pageSize" value={pageSize} />
-        ) : null}
-        <div className="flex min-w-56 flex-1 flex-col gap-2">
-          <label htmlFor="q" className="text-base font-medium">
-            Search
-          </label>
-          <Input
-            id="q"
-            name="q"
-            defaultValue={filters.q}
-            placeholder="Name, phone, email, or GSTIN..."
-            className="max-w-xl"
-            leftIcon={<Search className="size-5" />}
-          />
-        </div>
-        <div className="flex w-40 flex-col gap-2">
-          <label htmlFor="status" className="text-base font-medium">
-            Status
-          </label>
-          <Select
-            name="status"
-            defaultValue={filters.status}
-            items={{ ACTIVE: "Active", INACTIVE: "Inactive", ALL: "All" }}
-          >
-            <SelectTrigger id="status" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ACTIVE">Active</SelectItem>
-              <SelectItem value="INACTIVE">Inactive</SelectItem>
-              <SelectItem value="ALL">All</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <Button type="submit" variant="outline">
-          Filter
-        </Button>
-        {hasFilters ? <ListFilterClear href="/app/sales/customers" /> : null}
-      </form>
+      <ListFilterBar
+        hiddenFields={
+          pageSize !== 10 ? (
+            <input type="hidden" name="pageSize" value={pageSize} />
+          ) : null
+        }
+        search={
+          <ListFilterSearch>
+            <label htmlFor="q" className="text-base font-medium">
+              Search
+            </label>
+            <Input
+              id="q"
+              name="q"
+              defaultValue={filters.q}
+              placeholder="Name, phone, email, or GSTIN..."
+              leftIcon={<Search className="size-5" />}
+            />
+          </ListFilterSearch>
+        }
+        filters={
+          <ListFilterField className="md:w-40">
+            <label htmlFor="status" className="text-base font-medium">
+              Status
+            </label>
+            <Select
+              name="status"
+              defaultValue={filters.status}
+              items={{ ACTIVE: "Active", INACTIVE: "Inactive", ALL: "All" }}
+            >
+              <SelectTrigger id="status" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="INACTIVE">Inactive</SelectItem>
+                <SelectItem value="ALL">All</SelectItem>
+              </SelectContent>
+            </Select>
+          </ListFilterField>
+        }
+        actions={
+          <>
+            <Button type="submit" variant="outline">
+              Filter
+            </Button>
+            {hasFilters ? <ListFilterClear href="/app/sales/customers" /> : null}
+          </>
+        }
+      />
 
       {result.total === 0 ? (
         <EmptyState

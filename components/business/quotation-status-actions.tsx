@@ -1,6 +1,5 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -12,13 +11,10 @@ import {
   exportQuotationPdfAction,
   sendQuotationAction,
 } from "@/app/app/(workspace)/sales/quotations/actions";
-import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  DetailMoreMenu,
+  type DetailMoreMenuItem,
+} from "@/components/shell/detail-more-menu";
 import { PendingButton } from "@/components/ui/pending-button";
 import { notifyError, notifySuccess } from "@/lib/feedback/toast";
 import type { QuotationStatus } from "@/modules/sales/domain/types";
@@ -38,12 +34,14 @@ export function QuotationStatusActions({
   canUpdate,
   canCancel,
   canRead,
+  moreItems = [],
 }: {
   quotationId: string;
   status: QuotationStatus;
   canUpdate: boolean;
   canCancel: boolean;
   canRead: boolean;
+  moreItems?: DetailMoreMenuItem[];
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -113,31 +111,33 @@ export function QuotationStatusActions({
     });
   }
 
-  const menuItems = [
+  const actionItems = [
     canUpdate && status === "ACCEPTED"
       ? {
           key: "convert",
           label: "Convert to invoice",
-          action: () =>
+          onClick: () =>
             run(
               "convert",
               "Convert this quotation to a draft invoice? Line items and GST totals will be copied.",
               convertQuotationAction
             ),
+          disabled: isPending,
         }
       : null,
     canRead && (status === "SENT" || status === "ACCEPTED")
       ? {
           key: "export",
           label: "Export PDF",
-          action: () => run("export", null, exportQuotationPdfAction),
+          onClick: () => run("export", null, exportQuotationPdfAction),
+          disabled: isPending,
         }
       : null,
     canCancel && (status === "DRAFT" || status === "SENT" || status === "ACCEPTED")
       ? {
           key: "cancel",
           label: "Cancel quotation",
-          action: () =>
+          onClick: () =>
             run(
               "cancel",
               "Cancel this quotation? It will remain in your list as cancelled. Stock and accounts are not affected.",
@@ -147,9 +147,15 @@ export function QuotationStatusActions({
                 description: "The quotation remains in your list as cancelled.",
               }
             ),
+          disabled: isPending,
         }
       : null,
-  ].filter(Boolean) as { key: string; label: string; action: () => void }[];
+  ].filter(Boolean) as {
+    key: string;
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+  }[];
 
   return (
     <div className="flex flex-col items-end gap-2">
@@ -197,29 +203,11 @@ export function QuotationStatusActions({
             Create order
           </PendingButton>
         ) : null}
-        {menuItems.length > 0 ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isPending}
-                  aria-label="More actions"
-                >
-                  <MoreHorizontal className="size-5" />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              {menuItems.map((item) => (
-                <DropdownMenuItem key={item.key} onClick={item.action}>
-                  {item.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
+        <DetailMoreMenu
+          items={moreItems}
+          actionItems={actionItems}
+          disabled={isPending}
+        />
       </div>
       {error ? (
         <p className="text-base text-destructive" role="alert">

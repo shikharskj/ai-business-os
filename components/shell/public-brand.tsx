@@ -9,6 +9,8 @@ type PublicBrandProps = {
   /** When true, use inverted colors for a primary (dark) panel. */
   inverted?: boolean;
   size?: "default" | "sm";
+  /** Hide the wordmark (icon remains); useful in crowded mobile headers. */
+  wordmarkClassName?: string;
 };
 
 export function PublicBrand({
@@ -16,6 +18,7 @@ export function PublicBrand({
   className,
   inverted = false,
   size = "default",
+  wordmarkClassName,
 }: PublicBrandProps) {
   const tileSize = size === "sm" ? "size-8" : "size-9";
   const iconSize = size === "sm" ? "size-4" : "size-5";
@@ -24,14 +27,14 @@ export function PublicBrand({
     <Link
       href={href}
       className={cn(
-        "inline-flex items-center gap-3 text-base font-medium",
+        "inline-flex min-w-0 items-center gap-2 text-base font-medium sm:gap-3",
         inverted ? "text-primary-foreground" : "text-foreground",
         className
       )}
     >
       <span
         className={cn(
-          "flex aspect-square items-center justify-center rounded-md",
+          "flex aspect-square shrink-0 items-center justify-center rounded-md",
           tileSize,
           inverted
             ? "bg-primary-foreground text-primary"
@@ -40,7 +43,7 @@ export function PublicBrand({
       >
         <Building2 className={iconSize} aria-hidden />
       </span>
-      <span>AI Business OS</span>
+      <span className={cn("truncate", wordmarkClassName)}>AI Business OS</span>
     </Link>
   );
 }

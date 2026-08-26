@@ -548,6 +548,25 @@ export function createPrismaPurchasesRepository(
       return record ? mapPurchase(record) : null;
     },
 
+    async lockPurchaseReturnForUpdate(tenantId, purchaseReturnId) {
+      if (client === prisma) {
+        throw new Error(
+          "lockPurchaseReturnForUpdate requires a transaction-bound Prisma client. " +
+            "Use prisma.$transaction() and pass the transaction client to createPrismaPurchasesRepository()."
+        );
+      }
+      await client.$queryRaw`
+        SELECT id FROM purchase_returns
+        WHERE id = ${purchaseReturnId} AND "tenantId" = ${tenantId}
+        FOR UPDATE
+      `;
+      const record = await client.purchaseReturn.findFirst({
+        where: { id: purchaseReturnId, tenantId },
+        include: { lines: true },
+      });
+      return record ? mapPurchaseReturn(record) : null;
+    },
+
     async findPurchaseById(tenantId, purchaseId) {
       const record = await client.purchase.findFirst({
         where: { id: purchaseId, tenantId },

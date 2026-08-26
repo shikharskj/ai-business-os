@@ -98,7 +98,7 @@ export function ApplyAdvanceForm({
         </p>
       ) : (
         <div className="overflow-hidden rounded-md border border-border">
-          <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 border-b border-border bg-muted/40 px-4 py-3 text-sm font-medium">
+          <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 border-b border-border bg-muted/40 px-4 py-3 text-sm font-medium md:grid">
             <span>Invoice</span>
             <span className="text-right">Outstanding</span>
             <span className="text-right">Apply</span>
@@ -106,7 +106,7 @@ export function ApplyAdvanceForm({
           {invoices.map((invoice, index) => (
             <div
               key={invoice.invoiceId}
-              className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 border-b border-border px-4 py-3 last:border-b-0"
+              className="flex flex-col gap-3 border-b border-border px-4 py-3 last:border-b-0 md:grid md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-3"
             >
               <input
                 type="hidden"
@@ -116,23 +116,35 @@ export function ApplyAdvanceForm({
               <div>
                 <p className="font-mono text-sm font-medium">{invoice.invoiceNumber}</p>
               </div>
-              <div className="text-right">
+              <div className="flex items-center justify-between gap-2 md:block md:text-right">
+                <span className="text-sm text-muted-foreground md:hidden">
+                  Outstanding
+                </span>
                 <MoneyDisplay value={invoice.outstanding} />
               </div>
-              <Input
-                name={`allocation-${index}-amount`}
-                inputMode="decimal"
-                className="text-right"
-                placeholder={FORM_PLACEHOLDERS.price}
-                value={allocations[invoice.invoiceId] ?? ""}
-                onChange={(event) =>
-                  setAllocations((current) => ({
-                    ...current,
-                    [invoice.invoiceId]: event.target.value,
-                  }))
-                }
-                aria-label={`Apply to ${invoice.invoiceNumber}`}
-              />
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor={`allocation-${index}-amount`}
+                  className="text-sm font-medium md:hidden"
+                >
+                  Apply
+                </label>
+                <Input
+                  id={`allocation-${index}-amount`}
+                  name={`allocation-${index}-amount`}
+                  inputMode="decimal"
+                  className="w-full text-right"
+                  placeholder={FORM_PLACEHOLDERS.price}
+                  value={allocations[invoice.invoiceId] ?? ""}
+                  onChange={(event) =>
+                    setAllocations((current) => ({
+                      ...current,
+                      [invoice.invoiceId]: event.target.value,
+                    }))
+                  }
+                  aria-label={`Apply to ${invoice.invoiceNumber}`}
+                />
+              </div>
             </div>
           ))}
         </div>

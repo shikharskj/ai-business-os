@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createBusinessWithOrganization } from "@/modules/tenant/application/business-setup";
+import { createBusinessWithOrganization, attachExistingOrganizationToBusiness } from "@/modules/tenant/application/business-setup";
 import {
   createMemoryBusinessRepository,
   createMemoryMembershipRepository,
@@ -156,5 +156,117 @@ describe("createBusinessWithOrganization", () => {
     expect(clerkCalls).toEqual(["list", "create"]);
     expect(result.clerkOrganizationId).toBe("org_alpha");
     expect(result.membership.role).toBe("OWNER");
+  });
+});
+
+describe("attachExistingOrganizationToBusiness", () => {
+  const profile = {
+    name: "Beta Traders",
+    type: "PROPRIETORSHIP" as const,
+    addressLine1: "2 Market Road",
+    city: "Pune",
+    state: "Maharashtra",
+    postalCode: "411001",
+    country: "IN",
+    phone: "9876543210",
+    email: "beta@example.com",
+    gstRegistrationStatus: "REGISTERED" as const,
+    gstin: "27AABCU9603R1ZM",
+    financialYearStartMonth: 4,
+    timezone: "Asia/Kolkata",
+    currency: "INR",
+    defaultGstRateBps: 1800,
+    lowStockThreshold: "5",
+  };
+
+  it("assigns OWNER when attaching creates a new business for the creator", async () => {
+    const businessRepository = createMemoryBusinessRepository();
+    const membershipRepository = createMemoryMembershipRepository();
+
+    const result = await attachExistingOrganizationToBusiness({
+      owner: { id: "app-user-1", clerkUserId: "user_owner" },
+      clerkOrganizationId: "org_beta",
+      profile,
+      businessRepository,
+      membershipRepository,
+      clerkOrganizationGateway: {
+        async createOrganization() {
+          return { id: "unused" };
+        },
+        async deleteOrganization() {},
+        async getOrganizationMembership() {
+          return { role: "org:admin" };
+        },
+        async listUserOrganizations() {
+          return [];
+        },
+        async listOrganizationMemberships() {
+          return [];
+        },
+        async listPendingInvitations() {
+          return [];
+        },
+      },
+    });
+
+    expect(result.membership.role).toBe("OWNER");
+    expect(result.business.ownerUserId).toBe("app-user-1");
+  });
+
+  it("assigns ADMIN when org:admin attaches to an existing business they do not own", async () => {
+    const businessRepository = createMemoryBusinessRepository([
+      {
+        id: "tenant-beta",
+        clerkOrganizationId: "org_beta",
+        name: "Beta Traders",
+        type: "PROPRIETORSHIP",
+        ownerUserId: "app-owner-other",
+        addressLine1: "2 Market Road",
+        addressLine2: null,
+        city: "Pune",
+        state: "Maharashtra",
+        postalCode: "411001",
+        country: "IN",
+        phone: "9876543210",
+        email: "beta@example.com",
+        gstRegistrationStatus: "REGISTERED",
+        gstin: "27AABCU9603R1ZM",
+        financialYearStartMonth: 4,
+        timezone: "Asia/Kolkata",
+        currency: "INR",
+        defaultGstRateBps: 1800,
+        lowStockThreshold: "5",
+        closedThroughPeriodKey: null,
+      },
+    ]);
+    const membershipRepository = createMemoryMembershipRepository();
+
+    const result = await attachExistingOrganizationToBusiness({
+      owner: { id: "app-user-admin", clerkUserId: "user_admin" },
+      clerkOrganizationId: "org_beta",
+      profile,
+      businessRepository,
+      membershipRepository,
+      clerkOrganizationGateway: {
+        async createOrganization() {
+          return { id: "unused" };
+        },
+        async deleteOrganization() {},
+        async getOrganizationMembership() {
+          return { role: "org:admin" };
+        },
+        async listUserOrganizations() {
+          return [];
+        },
+        async listOrganizationMemberships() {
+          return [];
+        },
+        async listPendingInvitations() {
+          return [];
+        },
+      },
+    });
+
+    expect(result.membership.role).toBe("ADMIN");
   });
 });

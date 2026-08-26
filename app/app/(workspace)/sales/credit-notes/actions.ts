@@ -17,6 +17,7 @@ import { InventoryError } from "@/modules/inventory/domain/errors";
 import { createPrismaInventoryRepository } from "@/modules/inventory/infrastructure/prisma-inventory-repository";
 import { PartyError } from "@/modules/party";
 import { createPrismaPartyRepository } from "@/modules/party/infrastructure/prisma-party-repository";
+import { scheduleNotificationOutboxProcessing } from "@/modules/notifications";
 import { createPrismaPaymentRepository } from "@/modules/payments/infrastructure/prisma-payments-repository";
 import { createPrismaAuditRepository } from "@/modules/shared-kernel/audit";
 import { createPrismaOutboxRepository } from "@/modules/shared-kernel/outbox";
@@ -115,9 +116,11 @@ export async function createCreditNoteAction(
   formData: FormData
 ): Promise<CreditNoteActionState> {
   let creditNoteId: string;
+  let tenantId: string;
 
   try {
-    const tenant = await authorize("invoice:create");
+    const tenant = await authorize("credit-note:create");
+    tenantId = tenant.tenantId;
     const fields = readCreditNoteFields(formData);
     const creditNote = await prisma.$transaction(async (tx) =>
       createCreditNote({
@@ -130,6 +133,7 @@ export async function createCreditNoteAction(
         catalog: createPrismaCatalogRepository(tx),
         taxRates: prismaTaxRateRepository,
         hsnSac: prismaHsnSacRepository,
+        payments: createPrismaPaymentRepository(tx),
         audit: createPrismaAuditRepository(tx),
         outbox: createPrismaOutboxRepository(tx),
       })
@@ -143,6 +147,7 @@ export async function createCreditNoteAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/credit-notes");
   redirect(`/app/sales/credit-notes/${creditNoteId}?created=1`);
 }
@@ -152,9 +157,11 @@ export async function updateCreditNoteAction(
   formData: FormData
 ): Promise<CreditNoteActionState> {
   const creditNoteId = String(formData.get("creditNoteId") ?? "");
+  let tenantId: string;
 
   try {
-    const tenant = await authorize("invoice:update");
+    const tenant = await authorize("credit-note:update");
+    tenantId = tenant.tenantId;
     const fields = readCreditNoteFields(formData);
     await prisma.$transaction(async (tx) =>
       updateCreditNote({
@@ -168,6 +175,7 @@ export async function updateCreditNoteAction(
         catalog: createPrismaCatalogRepository(tx),
         taxRates: prismaTaxRateRepository,
         hsnSac: prismaHsnSacRepository,
+        payments: createPrismaPaymentRepository(tx),
         audit: createPrismaAuditRepository(tx),
         outbox: createPrismaOutboxRepository(tx),
       })
@@ -180,13 +188,14 @@ export async function updateCreditNoteAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/credit-notes");
   revalidatePath(`/app/sales/credit-notes/${creditNoteId}`);
   redirect(`/app/sales/credit-notes/${creditNoteId}?saved=1`);
 }
 
 async function statusAction(
-  permission: "invoice:update" | "invoice:cancel",
+  permission: "credit-note:update" | "credit-note:cancel",
   creditNoteId: string,
   run: (input: {
     tenantId: string;
@@ -196,8 +205,10 @@ async function statusAction(
     outbox: OutboxRepository;
   }) => Promise<unknown>
 ): Promise<CreditNoteActionState> {
+  let tenantId: string;
   try {
     const tenant = await authorize(permission);
+    tenantId = tenant.tenantId;
     await prisma.$transaction(async (tx) =>
       run({
         tenantId: tenant.tenantId,
@@ -215,6 +226,7 @@ async function statusAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/credit-notes");
   revalidatePath(`/app/sales/credit-notes/${creditNoteId}`);
   revalidatePath("/app/sales/invoices");
@@ -224,8 +236,10 @@ async function statusAction(
 export async function postCreditNoteAction(
   creditNoteId: string
 ): Promise<CreditNoteActionState> {
+  let tenantId: string;
   try {
-    const tenant = await authorize("invoice:update");
+    const tenant = await authorize("credit-note:update");
+    tenantId = tenant.tenantId;
     await prisma.$transaction(async (tx) => {
       const business = await tx.business.findUnique({
         where: { id: tenant.tenantId },
@@ -257,6 +271,7 @@ export async function postCreditNoteAction(
     throw error;
   }
 
+  scheduleNotificationOutboxProcessing(tenantId);
   revalidatePath("/app/sales/credit-notes");
   revalidatePath(`/app/sales/credit-notes/${creditNoteId}`);
   revalidatePath("/app/sales/invoices");
@@ -266,7 +281,7 @@ export async function postCreditNoteAction(
 export async function cancelCreditNoteAction(
   creditNoteId: string
 ): Promise<CreditNoteActionState> {
-  return statusAction("invoice:cancel", creditNoteId, (ctx) =>
+  return statusAction("credit-note:cancel", creditNoteId, (ctx) =>
     cancelCreditNote({ ...ctx, creditNoteId })
   );
 }
@@ -280,7 +295,7 @@ export async function previewCreditNoteTotalsAction(input: {
 }): Promise<CreditNotePreviewState> {
   try {
     const tenant = await authorize(
-      input.creditNoteId ? "invoice:update" : "invoice:create"
+      input.creditNoteId ? "credit-note:update" : "credit-note:create"
     );
     const cappedLines = input.lines.slice(0, 1000);
     const completeLines = cappedLines
@@ -313,6 +328,7 @@ export async function previewCreditNoteTotalsAction(input: {
       catalog: createPrismaCatalogRepository(prisma),
       taxRates: prismaTaxRateRepository,
       hsnSac: prismaHsnSacRepository,
+      payments: createPrismaPaymentRepository(prisma),
     });
 
     return {

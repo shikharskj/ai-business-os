@@ -19,4 +19,8 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/api/webhooks")).toBe(false);
     expect(isPublicPath("/dashboard")).toBe(false);
   });
+
+  it("allows the internal outbox cron path without a Clerk session", () => {
+    expect(isPublicPath("/api/internal/outbox/process")).toBe(true);
+  });
 });

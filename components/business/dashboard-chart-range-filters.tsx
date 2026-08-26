@@ -6,6 +6,13 @@ import {
   type DashboardDatePreset,
 } from "@/modules/reporting/domain/dashboard-range";
 
+const SHORT_LABELS: Record<(typeof DASHBOARD_CHART_RANGE_PRESETS)[number]["id"], string> =
+  {
+    last_7_days: "7d",
+    last_30_days: "30d",
+    last_3_months: "3mo",
+  };
+
 export function DashboardChartRangeFilters({
   activePreset,
 }: {
@@ -13,7 +20,7 @@ export function DashboardChartRangeFilters({
 }) {
   return (
     <div
-      className="inline-flex rounded-md border border-border bg-background p-0.5"
+      className="flex flex-wrap rounded-md border border-border bg-background p-0.5"
       role="group"
       aria-label="Chart period"
     >
@@ -24,14 +31,16 @@ export function DashboardChartRangeFilters({
             key={preset.id}
             href={`/app?range=${preset.id}`}
             className={cn(
-              "rounded-[calc(var(--radius)-2px)] px-3 py-1.5 text-sm transition-colors",
+              "rounded-[calc(var(--radius)-2px)] px-2.5 py-1.5 text-sm transition-colors sm:px-3",
               active
                 ? "border border-border bg-muted font-medium text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             )}
             aria-current={active ? "page" : undefined}
+            aria-label={preset.label}
           >
-            {preset.label}
+            <span className="sm:hidden">{SHORT_LABELS[preset.id]}</span>
+            <span className="hidden sm:inline">{preset.label}</span>
           </Link>
         );
       })}

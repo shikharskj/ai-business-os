@@ -250,6 +250,8 @@ export type SalesInvoiceLine = {
   taxRateBps: number;
   quantity: Quantity;
   unitPrice: Money;
+  /** Snapshotted at post for COGS; null on drafts / non-tracked lines. */
+  unitCost: Money | null;
   discount: Money;
   lineSubtotal: Money;
   taxableAmount: Money;

@@ -423,4 +423,38 @@ describe("sale and purchase interface", () => {
     });
     expect(formatQuantity(position.quantity!)).toBe("17");
   });
+
+  it("refuses OUT when on-hand would go below zero", async () => {
+    const { catalog, inventory, audit, outbox } = deps();
+    const product = await createTrackedProduct(catalog);
+
+    await recordOpeningStock({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      productId: product.id,
+      quantity: quantityFromMajor("2"),
+      occurredOn: businessDate("2026-04-01"),
+      catalog,
+      inventory,
+      audit,
+      outbox,
+    });
+
+    await expect(
+      recordStockAdjustment({
+        tenantId: "tenant-a",
+        actorUserId: "user-1",
+        productId: product.id,
+        direction: "OUT",
+        quantity: quantityFromMajor("3"),
+        occurredOn: businessDate("2026-04-02"),
+        reason: "Would oversell",
+        idempotencyKey: "adjustment:oversell:001",
+        catalog,
+        inventory,
+        audit,
+        outbox,
+      })
+    ).rejects.toBeInstanceOf(InventoryValidationError);
+  });
 });

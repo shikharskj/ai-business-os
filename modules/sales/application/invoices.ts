@@ -32,6 +32,7 @@ import type { HsnSacRepository, TaxRateRepository } from "@/modules/tax/infrastr
 import {
   buildSalesInvoiceJournalLines,
   computeInvoiceCogsLines,
+  resolveInvoiceLineUnitCosts,
 } from "@/modules/sales/application/build-invoice-journal";
 import { renderInvoicePdfBytes } from "@/modules/sales/application/invoice-pdf";
 import { buildInvoiceDocumentView } from "@/modules/sales/application/invoice-document-view";
@@ -498,7 +499,10 @@ export async function postInvoice(input: {
   taxContext: SalesTaxContext;
   closedThroughPeriodKey: string | null;
 } & InvoicePostDeps): Promise<SalesInvoice> {
-  const existing = await input.sales.findInvoiceById(input.tenantId, input.invoiceId);
+  const existing = await input.sales.lockInvoiceForUpdate(
+    input.tenantId,
+    input.invoiceId
+  );
   if (!existing) {
     throw new InvoiceNotFoundError();
   }
@@ -534,10 +538,27 @@ export async function postInvoice(input: {
     }
   }
 
-  const cogsLines = computeInvoiceCogsLines(existing, productMap);
-  const journalLines = buildSalesInvoiceJournalLines(existing, cogsLines);
+  const unitCosts = resolveInvoiceLineUnitCosts(existing, productMap);
+  const invoiceWithCosts =
+    unitCosts.length > 0
+      ? await input.sales.setInvoiceLineUnitCosts({
+          tenantId: input.tenantId,
+          invoiceId: existing.id,
+          costs: unitCosts,
+        })
+      : existing;
+  if (!invoiceWithCosts) {
+    throw new InvoiceNotFoundError();
+  }
 
-  for (const line of existing.lines) {
+  const cogsLines = computeInvoiceCogsLines(
+    invoiceWithCosts,
+    productMap,
+    unitCosts
+  );
+  const journalLines = buildSalesInvoiceJournalLines(invoiceWithCosts, cogsLines);
+
+  for (const line of invoiceWithCosts.lines) {
     const product = productMap.get(line.productId)!;
     if (!product.tracksInventory) {
       continue;
@@ -554,37 +575,48 @@ export async function postInvoice(input: {
         cause: "SALE",
         direction: "OUT",
         quantity: line.quantity,
-        occurredOn: existing.issuedOn,
+        occurredOn: invoiceWithCosts.issuedOn,
         sourceType: "SalesInvoice",
-        sourceId: existing.id,
-        idempotencyKey: `sale:${existing.id}:${line.id}`,
-        reason: `Invoice ${existing.number}`,
+        sourceId: invoiceWithCosts.id,
+        idempotencyKey: `sale:${invoiceWithCosts.id}:${line.id}`,
+        reason: `Invoice ${invoiceWithCosts.number}`,
       },
     });
   }
 
-  const journal = await postJournal({
-    tenantId: input.tenantId,
-    accountingDate: existing.issuedOn,
-    financialYearStartMonth: input.taxContext.financialYearStartMonth,
-    closedThroughPeriodKey: input.closedThroughPeriodKey,
-    sourceType: "SalesInvoice",
-    sourceId: existing.id,
-    memo: `Invoice ${existing.number}`,
-    lines: journalLines,
-    accountRepository: input.accounts,
-    journalRepository: input.journals,
-  });
+  let journal;
+  try {
+    journal = await postJournal({
+      tenantId: input.tenantId,
+      accountingDate: invoiceWithCosts.issuedOn,
+      financialYearStartMonth: input.taxContext.financialYearStartMonth,
+      closedThroughPeriodKey: input.closedThroughPeriodKey,
+      sourceType: "SalesInvoice",
+      sourceId: invoiceWithCosts.id,
+      memo: `Invoice ${invoiceWithCosts.number}`,
+      lines: journalLines,
+      accountRepository: input.accounts,
+      journalRepository: input.journals,
+    });
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      throw new InvoiceAlreadyPostedError();
+    }
+    throw error;
+  }
 
   const invoice = await input.sales.markInvoicePosted({
     tenantId: input.tenantId,
-    invoiceId: existing.id,
+    invoiceId: invoiceWithCosts.id,
     journalId: journal.id,
     postedAt: journal.postedAt,
     status: "POSTED",
+    expectedStatus: "DRAFT",
   });
   if (!invoice) {
-    throw new InvoiceNotFoundError();
+    throw new InvoiceStatusError(
+      "Invoice was modified or posted by another operation. Please refresh and try again."
+    );
   }
 
   await input.audit.append({
@@ -613,6 +645,15 @@ export async function postInvoice(input: {
   });
 
   return invoice;
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code: unknown }).code === "P2002"
+  );
 }
 
 export async function cancelInvoice(input: {

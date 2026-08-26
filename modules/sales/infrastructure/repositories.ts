@@ -21,7 +21,7 @@ import { paginateArray } from "@/modules/shared-kernel/list-page";
 import { isInvoiceOverdue } from "@/modules/sales/domain/invoice-status";
 import { ACTIVE_CREDIT_NOTE_STATUSES } from "@/modules/sales/domain/credit-note-status";
 import type { PaymentRepository } from "@/modules/payments/infrastructure/repositories";
-import { addMoney, money } from "@/modules/shared-kernel/money";
+import { addMoney, money, type Money } from "@/modules/shared-kernel/money";
 import {
   addQuantity,
   quantity,
@@ -108,16 +108,26 @@ export type SalesRepository = {
     journalId: string;
     postedAt: Date;
     status: SalesInvoiceStatus;
+    expectedStatus: SalesInvoiceStatus;
   }): Promise<SalesInvoice | null>;
   updateInvoiceStatus(input: {
     tenantId: string;
     invoiceId: string;
     status: SalesInvoiceStatus;
   }): Promise<SalesInvoice | null>;
+  setInvoiceLineUnitCosts(input: {
+    tenantId: string;
+    invoiceId: string;
+    costs: Array<{ lineId: string; unitCost: Money }>;
+  }): Promise<SalesInvoice | null>;
   lockInvoiceForUpdate(
     tenantId: string,
     invoiceId: string
   ): Promise<SalesInvoice | null>;
+  lockCreditNoteForUpdate(
+    tenantId: string,
+    creditNoteId: string
+  ): Promise<CreditNote | null>;
   findInvoiceById(tenantId: string, invoiceId: string): Promise<SalesInvoice | null>;
   findInvoiceByQuotationId(
     tenantId: string,
@@ -163,6 +173,7 @@ export type SalesRepository = {
     journalId: string;
     postedAt: Date;
     status: CreditNoteStatus;
+    expectedStatus: CreditNoteStatus;
   }): Promise<CreditNote | null>;
   updateCreditNoteStatus(input: {
     tenantId: string;
@@ -246,6 +257,7 @@ function withInvoiceLineIds(
     id: crypto.randomUUID(),
     tenantId,
     invoiceId,
+    unitCost: null,
   }));
 }
 
@@ -630,6 +642,9 @@ export function createMemorySalesRepository(
       if (index === -1) {
         return null;
       }
+      if (invoices[index]!.status !== input.expectedStatus) {
+        return null;
+      }
       const updated: SalesInvoice = {
         ...invoices[index]!,
         status: input.status,
@@ -655,11 +670,37 @@ export function createMemorySalesRepository(
       invoices[index] = updated;
       return cloneInvoice(updated);
     },
+    async setInvoiceLineUnitCosts(input) {
+      const index = invoices.findIndex(
+        (record) => record.tenantId === input.tenantId && record.id === input.invoiceId
+      );
+      if (index === -1) {
+        return null;
+      }
+      const costByLine = new Map(input.costs.map((c) => [c.lineId, c.unitCost]));
+      const current = invoices[index]!;
+      const updated: SalesInvoice = {
+        ...current,
+        lines: current.lines.map((line) => {
+          const unitCost = costByLine.get(line.id);
+          return unitCost !== undefined ? { ...line, unitCost } : line;
+        }),
+        updatedAt: new Date(),
+      };
+      invoices[index] = updated;
+      return cloneInvoice(updated);
+    },
     async lockInvoiceForUpdate(tenantId, invoiceId) {
       const record = invoices.find(
         (item) => item.tenantId === tenantId && item.id === invoiceId
       );
       return record ? cloneInvoice(record) : null;
+    },
+    async lockCreditNoteForUpdate(tenantId, creditNoteId) {
+      const record = creditNotes.find(
+        (item) => item.tenantId === tenantId && item.id === creditNoteId
+      );
+      return record ? cloneCreditNote(record) : null;
     },
     async findInvoiceById(tenantId, invoiceId) {
       const record = invoices.find(
@@ -839,6 +880,9 @@ export function createMemorySalesRepository(
           record.tenantId === input.tenantId && record.id === input.creditNoteId
       );
       if (index === -1) {
+        return null;
+      }
+      if (creditNotes[index]!.status !== input.expectedStatus) {
         return null;
       }
       const updated: CreditNote = {

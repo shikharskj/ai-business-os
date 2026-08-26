@@ -129,17 +129,9 @@ export default async function QuotationDetailPage({
             <StatusBadge tone={QUOTATION_STATUS_TONES[quotation.status]}>
               {QUOTATION_STATUS_LABELS[quotation.status]}
             </StatusBadge>
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<Link href="/app/sales/quotations" />}
-            >
-              Back
-            </Button>
             {canUpdate && quotation.status === "DRAFT" ? (
               <Button
                 nativeButton={false}
-                variant="outline"
                 render={
                   <Link href={`/app/sales/quotations/${quotation.id}/edit`} />
                 }
@@ -153,6 +145,12 @@ export default async function QuotationDetailPage({
               canUpdate={canUpdate}
               canCancel={canCancel}
               canRead={canRead}
+              moreItems={[
+                {
+                  href: "/app/sales/quotations",
+                  label: "Back to quotations",
+                },
+              ]}
             />
           </div>
         }

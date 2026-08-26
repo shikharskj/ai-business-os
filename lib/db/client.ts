@@ -9,8 +9,16 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+/** Neon serverless + pooled URL: keep per-instance pool small to avoid storms. */
+const SERVERLESS_POOL_MAX = 3;
+
 function createPrismaClient() {
-  const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
+  const adapter = new PrismaPg({
+    connectionString: env.DATABASE_URL,
+    max: SERVERLESS_POOL_MAX,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 10_000,
+  });
   return new PrismaClient({ adapter, errorFormat: "pretty" });
 }
 

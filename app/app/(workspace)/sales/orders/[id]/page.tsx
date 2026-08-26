@@ -43,11 +43,11 @@ export default async function SalesOrderDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ locked?: string }>;
 }) {
-  const tenant = await authorize("quotation:read");
+  const tenant = await authorize("sales-order:read");
   const { id } = await params;
   const query = await searchParams;
-  const canUpdate = roleHasPermission(tenant.membership.role, "quotation:update");
-  const canCancel = roleHasPermission(tenant.membership.role, "quotation:cancel");
+  const canUpdate = roleHasPermission(tenant.membership.role, "sales-order:update");
+  const canCancel = roleHasPermission(tenant.membership.role, "sales-order:cancel");
   const canCreateInvoice = roleHasPermission(tenant.membership.role, "invoice:create");
 
   let salesOrder;

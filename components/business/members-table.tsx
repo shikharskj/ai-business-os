@@ -96,8 +96,8 @@ export function MembersTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-md border border-border">
-      <table className="w-full text-base">
+    <div className="overflow-x-auto rounded-md border border-border">
+      <table className="w-full min-w-[36rem] text-base">
         <thead>
           <tr className="border-b border-border bg-muted/30 text-left text-sm">
             <th className="px-4 py-3 font-medium">Member</th>

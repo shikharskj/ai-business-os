@@ -474,6 +474,8 @@ STAFF
 ACCOUNTANT
 ```
 
+`OWNER` is only for the business creator (`Business.ownerUserId` / invitation creator). Clerk `org:admin` maps to `ADMIN`, not `OWNER`. Invited roles are carried on invitation `publicMetadata.appMembershipRole`. On membership create/update, the app prefers membership metadata; if empty, it looks up the matching Clerk organization invitation by invitee email and applies that metadata. Roles are always recomputed (never sticky forever). OWNER from invitation metadata is ignored.
+
 Roles are a convenience layer.
 
 Internally, authorization should be capability/permission based.
@@ -849,7 +851,7 @@ proof.noop                   dry-run on AttentionDismissed (no money mutation)
 registerWorkflow             plugin point for later verticals
 ```
 
-Default worker pass (`runOutboxProcessing` / `/api/internal/outbox/process`) fans out consumers, runs the overdue scan (notifications + AttentionQueue rebuild + `InvoiceOverdue` / `QuotationIdle` / `StockLow` catalog events), then processes due runs. Collections uses existing `send_payment_reminders` (in-app): L4 send when tenant policy allows; otherwise it prepares for Confirm on Needs attention and does not record `REMINDER_PROPOSED` until the reminder is sent or confirmed. Daily idempotency keys plus a 7-day `REMINDER_SENT` cooldown prevent reminder spam. Expansion workflows are prepare/inform only (`mode: "dry_run"`): they never post purchases or expenses, and L4 money-post classes stay absent from autonomy policy. Chat/HMAC L3 is unchanged. Settings → Recent automations lists recent runs. `GET /api/business-state/outcomes` lists reminder learning outcomes (`report:read`).
+Default worker pass (`runOutboxProcessing` / `/api/internal/outbox/process`) fans out consumers, runs the overdue scan (notifications + AttentionQueue rebuild + `InvoiceOverdue` / `QuotationIdle` / `StockLow` catalog events), then processes due runs. The outbox process route is a public API prefix (no Clerk session); authorize with `Authorization: Bearer ${CRON_SECRET}` only (fail-closed in production when the secret is unset). Collections uses existing `send_payment_reminders` (in-app): L4 send when tenant policy allows; otherwise it prepares for Confirm on Needs attention and does not record `REMINDER_PROPOSED` until the reminder is sent or confirmed. Daily idempotency keys plus a 7-day `REMINDER_SENT` cooldown prevent reminder spam. Expansion workflows are prepare/inform only (`mode: "dry_run"`): they never post purchases or expenses, and L4 money-post classes stay absent from autonomy policy. Chat/HMAC L3 is unchanged. Settings → Recent automations lists recent runs. `GET /api/business-state/outcomes` lists reminder learning outcomes (`report:read`).
 
 ---
 
@@ -971,6 +973,8 @@ Journal Lines
        ↓
 General Ledger
 ```
+
+Journals are unique per `(tenantId, sourceType, sourceId)`. Concurrent posts rely on document `FOR UPDATE` + `mark*Posted(expectedStatus: DRAFT)` and map journal unique violations to already-posted domain errors.
 
 The primary accounting invariant is:
 

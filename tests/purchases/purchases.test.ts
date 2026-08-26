@@ -336,4 +336,46 @@ describe("purchases", () => {
     expect(stillDraft.journalId).toBeNull();
     expect(d.outbox.events.some((e) => e.eventType === "PurchasePosted")).toBe(false);
   });
+
+  it("defaults place of supply to business state (IGST for KA supplier + MH business)", async () => {
+    const d = deps();
+    const karnatakaGstin = "29AABCU9603R1ZV";
+    const supplier = await createSupplier({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      fields: {
+        name: "KA Wholesalers",
+        gstRegistrationStatus: "REGISTERED",
+        gstin: karnatakaGstin,
+        state: "Karnataka",
+      },
+      parties: d.parties,
+      audit: createMemoryAuditRepository(),
+      outbox: createMemoryOutboxRepository(),
+    });
+    const product = await seedProduct(d.catalog);
+    const purchase = await createPurchase({
+      tenantId: "tenant-a",
+      actorUserId: "user-1",
+      fields: {
+        supplierId: supplier.id,
+        issuedOn: businessDate("2026-04-02"),
+        // No explicit PoS — should default to Maharashtra (business)
+        lines: [
+          {
+            productId: product.id,
+            quantity: quantityFromMajor("2"),
+            discount: money(0n),
+          },
+        ],
+      },
+      taxContext: taxContext(),
+      ...d,
+    });
+    expect(purchase.placeOfSupplyStateCode).toBe("27");
+    expect(purchase.supplyType).toBe("INTER_STATE");
+    expect(toMajorString(purchase.igst)).toBe("288.00");
+    expect(toMajorString(purchase.cgst)).toBe("0.00");
+    expect(toMajorString(purchase.sgst)).toBe("0.00");
+  });
 });

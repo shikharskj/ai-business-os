@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
     "test": "vitest run",
     "db:seed:volume": "vitest run --config vitest.seed.config.ts",
     "check:lockfile": "node scripts/check-lockfile-sync.mjs",

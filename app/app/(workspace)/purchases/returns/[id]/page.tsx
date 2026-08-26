@@ -39,10 +39,10 @@ export default async function PurchaseReturnDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const tenant = await authorize("purchase:read");
+  const tenant = await authorize("purchase-return:read");
   const { id } = await params;
-  const canUpdate = roleHasPermission(tenant.membership.role, "purchase:update");
-  const canCancel = roleHasPermission(tenant.membership.role, "purchase:cancel");
+  const canUpdate = roleHasPermission(tenant.membership.role, "purchase-return:update");
+  const canCancel = roleHasPermission(tenant.membership.role, "purchase-return:cancel");
   const canReadJournal = roleHasPermission(tenant.membership.role, "report:read");
 
   let purchaseReturn;

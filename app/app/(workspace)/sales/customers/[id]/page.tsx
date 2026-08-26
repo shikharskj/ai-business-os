@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { DeactivateCustomerButton } from "@/components/business/deactivate-customer-button";
 import { formatDisplayDate } from "@/components/business/inventory-labels";
 import { MoneyDisplay } from "@/components/business/money-display";
+import { CustomerDetailMoreMenu } from "@/components/business/customer-detail-more-menu";
 import { ReactivateCustomerButton } from "@/components/business/reactivate-customer-button";
 import { StatusBadge } from "@/components/business/status-badge";
 import {
@@ -130,6 +130,13 @@ export default async function CustomerDetailPage({
   const recentSalesOrders = salesOrders.slice(0, RELATED_LIMIT);
   const canRecordPayment =
     canCreatePayment && outstanding.outstanding.amountMinor > 0n;
+  const showNewInvoicePrimary =
+    !canRecordPayment && canCreateInvoice && customer.status === "ACTIVE";
+  const showEditPrimary =
+    !canRecordPayment &&
+    !showNewInvoicePrimary &&
+    canUpdate &&
+    customer.status === "ACTIVE";
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6">
@@ -141,35 +148,6 @@ export default async function CustomerDetailPage({
             <StatusBadge tone={PARTY_STATUS_TONES[customer.status]}>
               {PARTY_STATUS_LABELS[customer.status]}
             </StatusBadge>
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<Link href="/app/sales/customers" />}
-            >
-              Back
-            </Button>
-            {canCreateInvoice && customer.status === "ACTIVE" ? (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={<Link href="/app/sales/invoices/new" />}
-              >
-                New invoice
-              </Button>
-            ) : null}
-            {canCreatePayment && customer.status === "ACTIVE" ? (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={
-                  <Link
-                    href={`/app/sales/payments/new?advance=1&customerId=${customer.id}`}
-                  />
-                }
-              >
-                Record advance
-              </Button>
-            ) : null}
             {canRecordPayment ? (
               <Button
                 nativeButton={false}
@@ -181,24 +159,59 @@ export default async function CustomerDetailPage({
               >
                 Record payment
               </Button>
+            ) : showNewInvoicePrimary ? (
+              <Button
+                nativeButton={false}
+                render={<Link href="/app/sales/invoices/new" />}
+              >
+                New invoice
+              </Button>
+            ) : showEditPrimary ? (
+              <Button
+                nativeButton={false}
+                render={
+                  <Link href={`/app/sales/customers/${customer.id}/edit`} />
+                }
+              >
+                Edit
+              </Button>
             ) : null}
-            {canUpdate && customer.status === "ACTIVE" ? (
-              <>
-                <Button
-                  nativeButton={false}
-                  variant="outline"
-                  render={
-                    <Link href={`/app/sales/customers/${customer.id}/edit`} />
-                  }
-                >
-                  Edit
-                </Button>
-                <DeactivateCustomerButton
-                  customerId={customer.id}
-                  customerName={customer.name}
-                />
-              </>
-            ) : null}
+            <CustomerDetailMoreMenu
+              items={[
+                { href: "/app/sales/customers", label: "Back to customers" },
+                ...(canCreateInvoice &&
+                customer.status === "ACTIVE" &&
+                canRecordPayment
+                  ? [{ href: "/app/sales/invoices/new", label: "New invoice" }]
+                  : []),
+                ...(canCreatePayment && customer.status === "ACTIVE"
+                  ? [
+                      {
+                        href: `/app/sales/payments/new?advance=1&customerId=${customer.id}`,
+                        label: "Record advance",
+                      },
+                    ]
+                  : []),
+                ...(canUpdate &&
+                customer.status === "ACTIVE" &&
+                !showEditPrimary
+                  ? [
+                      {
+                        href: `/app/sales/customers/${customer.id}/edit`,
+                        label: "Edit",
+                      },
+                    ]
+                  : []),
+              ]}
+              deactivate={
+                canUpdate && customer.status === "ACTIVE"
+                  ? {
+                      customerId: customer.id,
+                      customerName: customer.name,
+                    }
+                  : undefined
+              }
+            />
             {canUpdate && customer.status === "INACTIVE" ? (
               <ReactivateCustomerButton
                 customerId={customer.id}

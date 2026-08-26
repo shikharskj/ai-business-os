@@ -679,6 +679,7 @@ async function seedVolumeDataset(): Promise<void> {
             catalog: createPrismaCatalogRepository(tx),
             taxRates,
             hsnSac,
+            payments: createPrismaPaymentRepository(tx),
             audit: createPrismaAuditRepository(tx),
             outbox: createPrismaOutboxRepository(tx),
           })
@@ -966,6 +967,7 @@ async function seedVolumeDataset(): Promise<void> {
             catalog: createPrismaCatalogRepository(tx),
             taxRates,
             hsnSac,
+            supplierPayments: createPrismaSupplierPaymentRepository(tx),
             audit: createPrismaAuditRepository(tx),
             outbox: createPrismaOutboxRepository(tx),
           })

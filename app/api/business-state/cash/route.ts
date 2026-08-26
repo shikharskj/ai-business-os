@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db/client";
-import { authorize, AuthorizationError } from "@/lib/security/authorize";
+import { authzErrorResponse } from "@/lib/http/auth-errors";
+import { authorize } from "@/lib/security/authorize";
 import {
   createPrismaAccountRepository,
   createPrismaJournalRepository,
 } from "@/modules/accounting/infrastructure/prisma-accounting-repositories";
 import { cashPositionToDto, getCashPosition } from "@/modules/business-state";
-import { TenantRequiredError } from "@/modules/tenant/domain/errors";
 
 /**
  * Cash position from ledger cash/bank account balances (not unpaid invoices).
@@ -28,11 +28,9 @@ export async function GET() {
     });
     return NextResponse.json(cashPositionToDto(snapshot));
   } catch (error) {
-    if (error instanceof TenantRequiredError) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (error instanceof AuthorizationError) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const authz = authzErrorResponse(error);
+    if (authz) {
+      return authz;
     }
     throw error;
   }
