@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 import { DailyBriefPanel } from "@/components/business/daily-brief-panel";
 import {
   DashboardActivityPanel,
@@ -95,6 +97,29 @@ export function DashboardCanvas({
   chartRangePreset: DashboardDatePreset;
   brief: DailyBriefView;
 }) {
+  // #region agent log
+  useEffect(() => {
+    fetch("http://127.0.0.1:7538/ingest/a3d20045-9ab4-4203-87e9-b51ce28a6953", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "c6ad66",
+      },
+      body: JSON.stringify({
+        sessionId: "c6ad66",
+        runId: "pre-fix",
+        hypothesisId: "E",
+        location: "components/business/dashboard-canvas.tsx:render",
+        message: "DashboardCanvas mounted",
+        data: {
+          regionIds: view.regions.map((r) => r.id),
+          briefItemCount: brief.items.length,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  }, [view.regions, brief.items.length]);
+  // #endregion
   const empty = view.regions.find((r) => r.id === "empty");
   const kpi = view.regions.find((r) => r.id === "kpi");
   const main = view.regions.find((r) => r.id === "main");
