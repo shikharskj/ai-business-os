@@ -93,7 +93,7 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 | Notifications         | Complete    |
 | Testing (`29`)        | Deferred until launch |
 | Security hardening (`30`) | Deferred until launch |
-| Production deployment | Not Started |
+| Production deployment | In Progress |
 | Intelligence Spine (R1) | Complete (`04`) |
 | Operator / Daily Brief (R2) | Complete (`05`–`06`) |
 | Copilot Depth (R3)    | Complete (`07`) |
@@ -105,6 +105,8 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 ---
 
 # Completed
+
+* **Production dashboard (Netlify):** React #441 on `/app` was a Server Component throw (localhost loads). Netlify build now runs `prisma migrate deploy` when `DATABASE_URL` is set so Neon gets credit-note / unit-cost schema. Dashboard greeting no longer fails the page if Clerk `currentUser()` throws.
 
 * **Audit Wave 0 — Auth P0/P1:**
   * Role model: `org:admin` → `ADMIN` (OWNER only when `isCreator` / `ownerUserId` match); invitations set `publicMetadata.appMembershipRole`; membership created/updated prefer metadata and always recompute (no sticky role).
@@ -118,7 +120,7 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
   * CI uses `npx prisma migrate deploy`; package script `db:migrate:deploy`.
   * Journal `@@unique([tenantId, sourceType, sourceId])` + migration `20260826020000_journal_source_unique`.
   * `lib/db/client.ts`: PrismaPg pool `max: 3` for serverless Neon; `.env.example` documents pooled Neon URL + `CRON_SECRET`.
-  * `netlify.toml` (Node 22, `npm run build`); `run-production-build.mjs` placeholder `DATABASE_URL` only for generate; fails early on Netlify without Clerk publishable key; no invented migrate URL.
+  * `netlify.toml` (Node 22, `npm run build`); `run-production-build.mjs` placeholder `DATABASE_URL` only for generate; fails early on Netlify without Clerk publishable key; `prisma migrate deploy` when a real `DATABASE_URL` is present (no invented migrate URL).
   * Dropped `openai` from `AI_PROVIDER` env enum.
   * Tests: outbox cron Bearer auth, Clerk webhook verify failure, mocked R2 adapter, Prisma search FTS smoke; vitest `fileParallelism: false`.
   * Shared note in `audit-fix-contracts.md`: all Wave 0 deferred action paths now call `scheduleNotificationOutboxProcessing`.

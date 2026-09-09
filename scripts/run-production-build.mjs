@@ -48,4 +48,15 @@ function run(command, args) {
 }
 
 run("npx", ["prisma", "generate"]);
+
+if (hasRealDatabaseUrl && (isNetlify || isVercel)) {
+  console.log("Applying Prisma migrations (prisma migrate deploy)...");
+  run("npx", ["prisma", "migrate", "deploy"]);
+} else if (isNetlify || isVercel) {
+  console.warn(
+    "Skipping prisma migrate deploy: DATABASE_URL is unset. " +
+      "Set the pooled Neon URL in the host env so production schema stays current."
+  );
+}
+
 run("npx", ["next", "build"]);
