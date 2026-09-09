@@ -106,7 +106,7 @@ Catalog: [`context/feature-specs-post-mvp/README.md`](feature-specs-post-mvp/REA
 
 # Completed
 
-* **Production dashboard (Netlify):** React #441 on `/app` was a Server Component throw (localhost loads). Netlify build now runs `prisma migrate deploy` when `DATABASE_URL` is set so Neon gets credit-note / unit-cost schema. Dashboard greeting no longer fails the page if Clerk `currentUser()` throws.
+* **Production dashboard (Netlify):** React #441 on `/app` was a Server Component throw (localhost already loaded). Netlify build now runs `prisma migrate deploy` when `DATABASE_URL` is set so Neon stays on the credit-note / unit-cost schema. Dashboard greeting uses `currentUser().catch(() => null)` so a Clerk user fetch cannot take the page down. Debug ingest removed.
 
 * **Audit Wave 0 — Auth P0/P1:**
   * Role model: `org:admin` → `ADMIN` (OWNER only when `isCreator` / `ownerUserId` match); invitations set `publicMetadata.appMembershipRole`; membership created/updated prefer metadata and always recompute (no sticky role).

@@ -1,4 +1,3 @@
-import { appendFileSync } from "node:fs";
 import { redirect } from "next/navigation";
 
 import { requireCurrentTenant } from "@/lib/tenant/current-tenant";
@@ -29,29 +28,6 @@ export default async function WorkspaceLayout({
     }
     throw error;
   }
-
-  // #region agent log
-  try {
-    appendFileSync(
-      "/Users/shikharskj/Desktop/ai-business-os/.cursor/debug-c6ad66.log",
-      `${JSON.stringify({
-        sessionId: "c6ad66",
-        runId: "pre-fix",
-        hypothesisId: "D",
-        location: "app/app/(workspace)/layout.tsx",
-        message: "workspace layout rendered",
-        data: {
-          role: tenant.membership.role,
-          timezone: tenant.business.timezone,
-          businessName: tenant.business.name,
-        },
-        timestamp: Date.now(),
-      })}\n`
-    );
-  } catch {
-    /* ignore debug log failures */
-  }
-  // #endregion
 
   return (
     <AppFeedbackProvider>
